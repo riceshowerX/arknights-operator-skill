@@ -143,11 +143,13 @@ operators/te-lei-xi-ya/
 │   ├── v1.0/
 │   │   ├── knowledge.md
 │   │   ├── persona.md
-│   │   └── meta.json
+│   │   ├── meta.json
+│   │   └── SKILL.md
 │   ├── v1.1/
 │   │   ├── knowledge.md
 │   │   ├── persona.md
-│   │   └── meta.json
+│   │   ├── meta.json
+│   │   └── SKILL.md
 │   └── ...
 └── changelog.md
 ```

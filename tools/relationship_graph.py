@@ -23,7 +23,7 @@ import argparse
 import json
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
@@ -226,25 +226,90 @@ def extract_relationships_from_text(
         for j in range(i + 1, len(entities)):
             e1, e2 = entities[i], entities[j]
 
-            # 提取两个角色名之间的上下文
-            for rel_pattern, rel_type in RELATIONSHIP_PATTERNS:
-                # 检查 "e1 ... 关键词 ... e2" 或 "e2 ... 关键词 ... e1"
-                # 简化：在包含两者的段落中搜索关系关键词
-                if re.search(rel_pattern, text):
-                    # 尝试确定方向
-                    direction = _detect_direction(text, e1, e2, rel_pattern)
+            # 提取包含这两个角色名的句子/段落
+            relevant_segments = _find_relevant_segments(text, e1, e2)
 
-                    rel = {
-                        "from": e1 if direction == "forward" else e2,
-                        "to": e2 if direction == "forward" else e1,
-                        "type": rel_type,
-                        "confidence": _calc_confidence(text, rel_pattern),
-                        "source": source_label,
-                        "context": _extract_context(text, e1, e2, rel_pattern),
-                    }
-                    relationships.append(rel)
+            for rel_pattern, rel_type in RELATIONSHIP_PATTERNS:
+                # 仅在两个角色名共现的句子/段落中搜索关系关键词
+                matched_in_segment = False
+                best_segment = ""
+                for seg in relevant_segments:
+                    if re.search(rel_pattern, seg):
+                        matched_in_segment = True
+                        best_segment = seg
+                        break
+
+                if not matched_in_segment:
+                    continue
+
+                # 尝试确定方向
+                direction = _detect_direction(best_segment, e1, e2, rel_pattern)
+
+                rel = {
+                    "from": e1 if direction == "forward" else e2,
+                    "to": e2 if direction == "forward" else e1,
+                    "type": rel_type,
+                    "confidence": _calc_confidence(best_segment, rel_pattern),
+                    "source": source_label,
+                    "context": _extract_context(best_segment, e1, e2, rel_pattern),
+                }
+                relationships.append(rel)
 
     return relationships
+
+
+def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> list[str]:
+    """
+    从文本中提取同时包含两个角色名的句子/段落
+
+    策略：按标点分句，找出同时包含 e1 和 e2 的句子。
+    如果没有单句同时包含两者，尝试合并相邻句子。
+    跳过明显是否定/纠正语境的句子（如"≠""不是""并非"开头的澄清句）。
+    """
+    # 按中文句号、换行等分句
+    sentences = re.split(r"[。！？\n]+", text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+
+    # 否定/纠正语境标记——这些句子是在澄清误解，不是在陈述关系
+    negation_markers = ["≠", "不是", "并非", "不等于", "误解", "错误"]
+
+    def _is_negation_context(s: str) -> bool:
+        return any(marker in s for marker in negation_markers)
+
+    # 找出同时包含两个角色名的句子
+    joint_sentences = []
+    for s in sentences:
+        if e1 in s and e2 in s and not _is_negation_context(s):
+            joint_sentences.append(s)
+
+    if joint_sentences:
+        return joint_sentences
+
+    # 如果没有单句同时包含，尝试合并相邻句子
+    # 找包含 e1 的句子索引和包含 e2 的句子索引
+    e1_indices = set()
+    e2_indices = set()
+    for i, s in enumerate(sentences):
+        if e1 in s:
+            e1_indices.add(i)
+        if e2 in s:
+            e2_indices.add(i)
+
+    merged = []
+    for i1 in e1_indices:
+        for i2 in e2_indices:
+            if abs(i1 - i2) <= 2:  # 允许相隔最多2句
+                start = min(i1, i2)
+                end = max(i1, i2)
+                segment = "。".join(sentences[start:end + 1])
+                # 跳过否定语境
+                if _is_negation_context(segment):
+                    continue
+                # 只取距离在 max_gap 字符内的片段
+                if len(segment) <= max_gap * 3:
+                    merged.append(segment)
+
+    return merged if merged else []  # 找不到相关片段时不 fallback 到全文
 
 
 def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:

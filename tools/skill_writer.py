@@ -4,7 +4,6 @@ Skill 文件管理器 - 用于列出和管理已创建的角色 Skill
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -78,7 +77,7 @@ def delete_skill(slug: str, base_dir: str = "./operators", force: bool = False) 
     }
 
 
-def create_default_skill(slug: str, name: str, base_dir: str = "./operators") -> dict:
+def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str = "./operators") -> dict:
     """
     创建默认的 Skill 目录结构
     """
@@ -94,10 +93,11 @@ def create_default_skill(slug: str, name: str, base_dir: str = "./operators") ->
     # 创建默认 meta.json
     meta = {
         "name": name,
+        "name_en": name_en,
         "slug": slug,
         "created_at": now,
         "updated_at": now,
-        "version": "v1",
+        "version": "v1.0",
         "profile": {
             "game": "明日方舟",
             "faction": "unknown",
@@ -133,6 +133,7 @@ def main():
     parser.add_argument("--action", choices=["list", "delete", "create"], required=True)
     parser.add_argument("--slug", help="Skill slug")
     parser.add_argument("--name", help="角色名称")
+    parser.add_argument("--name-en", default="", help="角色英文名称")
     parser.add_argument("--base-dir", default="./operators", help="基础目录")
     parser.add_argument("--force", action="store_true", help="强制删除")
     
@@ -149,7 +150,7 @@ def main():
         if not args.slug or not args.name:
             print("错误：需要指定 --slug 和 --name")
             sys.exit(1)
-        result = create_default_skill(args.slug, args.name, args.base_dir)
+        result = create_default_skill(args.slug, args.name, args.name_en, args.base_dir)
     
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

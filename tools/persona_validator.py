@@ -333,8 +333,8 @@ def validate_layer2_style(dialogues: list[str], style: dict) -> dict:
     # 口头禅检测
     catchphrases = style.get("catchphrases", "")
     if catchphrases:
-        # 提取引号中的口头禅
-        phrases = re.findall(r'[「\u201c]([^」\u201d]+)[」\u201d]', catchphrases)
+        # 提取引号中的口头禅（支持中文引号「」、弯引号""、直引号""）
+        phrases = re.findall(r'[「\u201c"]([^」\u201d"]+)[」\u201d"]', catchphrases)
         if not phrases:
             phrases = [w.strip() for w in catchphrases.split("、") if w.strip()]
 
