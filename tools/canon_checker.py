@@ -13,6 +13,9 @@
     # 从知识库 + Wiki 数据验证
     python canon_checker.py --sources ./knowledge.md --wiki-data ./prts_data.json
 
+    # 使用自定义误解库
+    python canon_checker.py --sources ./knowledge.md --misconceptions ./misconceptions.json
+
 输出:
     JSON 格式的验证报告，包含每个设定项的来源、一致性和可信度
 """
@@ -30,14 +33,21 @@ from typing import Optional
 # 已知常见误解库（明日方舟特化）
 # ──────────────────────────────────────────────
 
-KNOWN_MISCONCEPTIONS = [
+BUILTIN_MISCONCEPTIONS = [
     {
         "id": "M001",
         "wrong": "特蕾西娅是维多利亚的实际统治者",
         "correct": "特蕾西娅是卡兹戴尔正统萨卡兹魔王，维多利亚摄政王是特雷西斯",
         "check_patterns": [
-            (r"维多利亚.*(统治者|摄政|女王|掌权)", "可能混淆了特蕾西娅与特雷西斯的身份"),
-            (r"特蕾西娅.*维多利亚.*(统治|摄政)", "特蕾西娅不是维多利亚的统治者"),
+            {
+                "pattern": r"特蕾西娅.*维多利亚.*(统治|摄政|女王|掌权)",
+                "warning": "可能混淆了特蕾西娅与特雷西斯的身份",
+            },
+        ],
+        "exclude_patterns": [
+            r"特雷西斯.*维多利亚.*(摄政|统治)",
+            r"维多利亚.*摄政.*特雷西斯",
+            r"特蕾西娅[^，。]*不是.*维多利亚",
         ],
     },
     {
@@ -45,8 +55,14 @@ KNOWN_MISCONCEPTIONS = [
         "wrong": "特蕾西娅属于整合运动",
         "correct": "特蕾西娅创立的是巴别塔（罗德岛前身），整合运动是塔露拉领导的独立组织",
         "check_patterns": [
-            (r"特蕾西娅.*整合运动", "特蕾西娅不属于整合运动"),
-            (r"整合运动.*特蕾西娅", "将特蕾西娅与整合运动关联"),
+            {
+                "pattern": r"特蕾西娅.*整合运动",
+                "warning": "特蕾西娅不属于整合运动",
+            },
+        ],
+        "exclude_patterns": [
+            r"特蕾西娅[^，。]*不属于?整合运动",
+            r"特蕾西娅[^，。]*不是.*整合运动",
         ],
     },
     {
@@ -54,8 +70,18 @@ KNOWN_MISCONCEPTIONS = [
         "wrong": "「让所有人为我而死，这便是慈悲」是特蕾西娅的理念",
         "correct": "这不是她的理念或原话，她主张和平重建、尽量减少牺牲",
         "check_patterns": [
-            (r"为我而死.*慈悲|慈悲.*为我而死", "这不是特蕾西娅的理念"),
-            (r"让所有人.*死.*慈悲", "错误归因——这不是特蕾西娅的原话"),
+            {
+                "pattern": r"为我而死.*慈悲|慈悲.*为我而死",
+                "warning": "这不是特蕾西娅的理念",
+            },
+            {
+                "pattern": r"让所有人.*死.*慈悲",
+                "warning": "错误归因——这不是特蕾西娅的原话",
+            },
+        ],
+        "exclude_patterns": [
+            r"不是.*理念",
+            r"错误.*归因",
         ],
     },
     {
@@ -63,10 +89,92 @@ KNOWN_MISCONCEPTIONS = [
         "wrong": "特雷西斯是纯粹的恶人",
         "correct": "特雷西斯理念与特蕾西娅对立但并非单纯恶人，曾主动放弃魔王之位为胞妹加冕",
         "check_patterns": [
-            (r"特雷西斯.*(纯粹|完全|绝对是).*恶|邪恶", "过度简化了特雷西斯的角色"),
+            {
+                "pattern": r"特雷西斯.*(纯粹|完全|绝对是).*恶|邪恶",
+                "warning": "过度简化了特雷西斯的角色",
+            },
+        ],
+        "exclude_patterns": [
+            r"特雷西斯[^，。]*(不是|并非).*(纯粹|完全|绝对).*恶",
+            r"并非单纯.*恶人",
         ],
     },
 ]
+
+
+def load_misconceptions(filepath: Optional[str] = None) -> list[dict]:
+    """
+    加载误解库
+
+    支持从外部 JSON 文件加载自定义误解库，
+    格式与 BUILTIN_MISCONCEPTIONS 相同，但 check_patterns
+    可以是字符串数组（旧格式）或对象数组（新格式）
+
+    外部文件格式:
+    [
+        {
+            "id": "M005",
+            "wrong": "描述",
+            "correct": "正确版本",
+            "check_patterns": ["正则1", "正则2"]
+            // 或 "check_patterns": [{"pattern": "正则", "warning": "警告文字"}]
+        }
+    ]
+    """
+    if not filepath:
+        return BUILTIN_MISCONCEPTIONS
+
+    path = Path(filepath)
+    if not path.exists():
+        print(f"警告：误解库文件不存在 {filepath}，使用内置误解库", file=sys.stderr)
+        return BUILTIN_MISCONCEPTIONS
+
+    try:
+        custom = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(f"警告：误解库文件格式错误 {filepath}：{e}，使用内置误解库", file=sys.stderr)
+        return BUILTIN_MISCONCEPTIONS
+
+    if not isinstance(custom, list):
+        print(f"警告：误解库文件应为 JSON 数组 {filepath}，使用内置误解库", file=sys.stderr)
+        return BUILTIN_MISCONCEPTIONS
+
+    # 归一化格式：字符串 → 对象
+    normalized = []
+    for item in custom:
+        if not isinstance(item, dict) or "id" not in item:
+            continue
+
+        patterns = item.get("check_patterns", [])
+        norm_patterns = []
+        for p in patterns:
+            if isinstance(p, str):
+                norm_patterns.append({"pattern": p, "warning": f"匹配到误解模式: {p}"})
+            elif isinstance(p, dict) and "pattern" in p:
+                norm_patterns.append(p)
+
+        normalized.append({
+            "id": item["id"],
+            "wrong": item.get("wrong", ""),
+            "correct": item.get("correct", ""),
+            "check_patterns": norm_patterns,
+            "exclude_patterns": item.get("exclude_patterns", []),
+        })
+
+    # 合并：内置 + 自定义
+    builtin_ids = {m["id"] for m in BUILTIN_MISCONCEPTIONS}
+    extra = [m for m in normalized if m["id"] not in builtin_ids]
+    overridden = {m["id"]: m for m in normalized if m["id"] in builtin_ids}
+
+    result = []
+    for m in BUILTIN_MISCONCEPTIONS:
+        if m["id"] in overridden:
+            result.append(overridden[m["id"]])
+        else:
+            result.append(m)
+    result.extend(extra)
+
+    return result
 
 
 # ──────────────────────────────────────────────
@@ -132,25 +240,72 @@ def extract_canon_claims(text: str, source_label: str) -> list[dict]:
                         "context": context,
                     })
 
-    return claims
+    # 去重：同一字段同一值同一来源只保留一条
+    seen = set()
+    deduped = []
+    for c in claims:
+        key = (c["field"], c["value"], c["source"])
+        if key not in seen:
+            seen.add(key)
+            deduped.append(c)
+
+    return deduped
 
 
-def check_misconceptions(text: str, source_label: str) -> list[dict]:
+def check_misconceptions(
+    text: str,
+    source_label: str,
+    misconceptions: Optional[list[dict]] = None,
+) -> list[dict]:
     """
     检查文本中是否包含已知误解
 
+    改进：
+    - 支持 exclude_patterns：如果匹配到排除模式，说明文本正在纠正误解，不应报警
+    - 上下文验证：检查匹配位置前后是否有否定词，避免将"纠正误解"判定为"含有误解"
+
     返回: [{"misconception_id": "M001", "matched_pattern": "...", "warning": "...", "source": "xxx"}, ...]
     """
+    if misconceptions is None:
+        misconceptions = BUILTIN_MISCONCEPTIONS
+
     warnings = []
 
-    for m in KNOWN_MISCONCEPTIONS:
-        for pattern, warning_text in m["check_patterns"]:
-            if re.search(pattern, text):
+    for m in misconceptions:
+        # 先检查排除模式
+        excluded = False
+        for exc_pat in m.get("exclude_patterns", []):
+            if re.search(exc_pat, text):
+                excluded = True
+                break
+
+        if excluded:
+            continue
+
+        for cp in m["check_patterns"]:
+            pattern = cp["pattern"] if isinstance(cp, dict) else cp
+            warning_text = cp.get("warning", "") if isinstance(cp, dict) else f"匹配到误解模式: {pattern}"
+
+            match = re.search(pattern, text)
+            if match:
+                # 二次验证：检查匹配位置前后是否有否定词
+                start = max(0, match.start() - 40)
+                end = min(len(text), match.end() + 40)
+                surrounding = text[start:end]
+
+                negation_cues = ["不是", "并非", "并不", "没有", "错误", "误解", "不等于", "不同于"]
+                is_negation_context = any(cue in surrounding for cue in negation_cues)
+
+                if is_negation_context:
+                    # 文本正在纠正误解，不报警
+                    continue
+
                 warnings.append({
                     "misconception_id": m["id"],
                     "wrong": m["wrong"],
                     "correct": m["correct"],
                     "matched_pattern": pattern,
+                    "matched_text": match.group(0),
                     "warning": warning_text,
                     "source": source_label,
                 })
@@ -219,6 +374,11 @@ def cross_validate(all_claims: list[dict]) -> list[dict]:
                 "recommendation": "需要人工确认正确版本",
             })
 
+    # 标记仅有单一来源的字段
+    for r in results:
+        if r["status"] == "confirmed" and r.get("source_count", 0) == 1:
+            r["status"] = "unverified"
+
     return results
 
 
@@ -228,6 +388,7 @@ def cross_validate(all_claims: list[dict]) -> list[dict]:
 
 SOURCE_RELIABILITY = {
     "prts_wiki": "high",
+    "prts": "high",
     "game_text": "high",
     "official": "high",
     "community_research": "medium",
@@ -274,13 +435,18 @@ def main():
 示例:
   python canon_checker.py --sources ./knowledge.md ./other_source.md
   python canon_checker.py --sources ./knowledge.md --output validation.json
+  python canon_checker.py --sources ./knowledge.md --misconceptions ./custom_misconceptions.json
         """,
     )
 
     parser.add_argument("--sources", nargs="+", required=True, help="来源文件路径（支持多个）")
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
+    parser.add_argument("--misconceptions", help="自定义误解库 JSON 文件路径")
 
     args = parser.parse_args()
+
+    # 加载误解库
+    misconceptions = load_misconceptions(args.misconceptions)
 
     sources = load_sources(args.sources)
 
@@ -296,7 +462,7 @@ def main():
         claims = extract_canon_claims(content, source_label)
         all_claims.extend(claims)
 
-        warnings = check_misconceptions(content, source_label)
+        warnings = check_misconceptions(content, source_label, misconceptions)
         all_warnings.extend(warnings)
 
     # 交叉验证
@@ -313,6 +479,7 @@ def main():
             "total_claims": len(all_claims),
             "confirmed": confirmed,
             "conflicted": conflicted,
+            "unverified": unverified,
             "misconception_warnings": len(all_warnings),
         },
         "validated_fields": validated,

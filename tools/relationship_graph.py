@@ -81,6 +81,59 @@ ALIAS_MAP = {
 }
 
 
+def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
+    """
+    加载角色名库和别名映射
+
+    支持从外部 JSON 文件加载自定义角色名库，
+    与内置名库合并（外部覆盖内置同名项）
+
+    外部文件格式:
+    {
+        "operators": {
+            "角色名": {"en": "English", "race": "种族", "faction": "阵营"},
+            ...
+        },
+        "aliases": {
+            "英文名": "中文名",
+            ...
+        }
+    }
+    """
+    db = dict(OPERATOR_DB)
+    aliases = dict(ALIAS_MAP)
+
+    if not filepath:
+        return db, aliases
+
+    path = Path(filepath)
+    if not path.exists():
+        print(f"警告：角色名库文件不存在 {filepath}，使用内置名库", file=sys.stderr)
+        return db, aliases
+
+    try:
+        custom = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(f"警告：角色名库文件格式错误 {filepath}：{e}，使用内置名库", file=sys.stderr)
+        return db, aliases
+
+    if not isinstance(custom, dict):
+        print(f"警告：角色名库文件应为 JSON 对象，使用内置名库", file=sys.stderr)
+        return db, aliases
+
+    # 合并自定义角色
+    custom_ops = custom.get("operators", {})
+    if isinstance(custom_ops, dict):
+        db.update(custom_ops)
+
+    # 合并自定义别名
+    custom_aliases = custom.get("aliases", {})
+    if isinstance(custom_aliases, dict):
+        aliases.update(custom_aliases)
+
+    return db, aliases
+
+
 # ──────────────────────────────────────────────
 # 关系模式识别
 # ──────────────────────────────────────────────
@@ -116,33 +169,44 @@ RELATIONSHIP_PATTERNS = [
 ]
 
 
-def normalize_name(name: str) -> Optional[str]:
+def normalize_name(name: str, operator_db: Optional[dict] = None, alias_map: Optional[dict] = None) -> Optional[str]:
     """将名称标准化为中文名"""
+    db = operator_db or OPERATOR_DB
+    aliases = alias_map or ALIAS_MAP
+
     name = name.strip()
-    if name in OPERATOR_DB:
+    if name in db:
         return name
-    if name in ALIAS_MAP:
-        return ALIAS_MAP[name]
+    if name in aliases:
+        return aliases[name]
     # 尝试从英文名匹配
-    for cn, info in OPERATOR_DB.items():
+    for cn, info in db.items():
         if info.get("en", "").lower() == name.lower():
             return cn
     return None
 
 
-def extract_entities(text: str) -> list[str]:
+def extract_entities(text: str, operator_db: Optional[dict] = None, alias_map: Optional[dict] = None) -> list[str]:
     """从文本中提取出现的角色名"""
+    db = operator_db or OPERATOR_DB
+    aliases = alias_map or ALIAS_MAP
+
     found = []
-    for name in OPERATOR_DB:
+    for name in db:
         if name in text:
             found.append(name)
-    for alias, cn_name in ALIAS_MAP.items():
+    for alias, cn_name in aliases.items():
         if alias in text and cn_name not in found:
             found.append(cn_name)
     return found
 
 
-def extract_relationships_from_text(text: str, source_label: str = "") -> list[dict]:
+def extract_relationships_from_text(
+    text: str,
+    source_label: str = "",
+    operator_db: Optional[dict] = None,
+    alias_map: Optional[dict] = None,
+) -> list[dict]:
     """
     从一段文本中提取关系
 
@@ -187,7 +251,10 @@ def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
     """
     尝试判断关系方向
 
-    检查 e1 是否先于 e2 出现，且关系关键词在 e1 附近
+    策略：
+    1. 检查 "A 是 B 的 X" 或 "B 的 X 是 A" 等语法模式
+    2. 关系关键词离谁更近 → 谁是主体
+    3. 默认：先出现的为主体
     """
     pos1 = text.find(e1)
     pos2 = text.find(e2)
@@ -195,14 +262,25 @@ def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
     if pos1 < 0 or pos2 < 0:
         return "forward"
 
-    # 如果 e1 在 e2 前面，且关系关键词也在 e1 附近
+    # 策略 1：检查语法模式 "e1 是 e2 的 X" → e2 是 X，方向 e2→e1
+    # 例："特雷西斯是特蕾西娅的胞兄" → sibling 方向 特雷西斯→特蕾西娅
+    if pos1 < pos2:
+        between = text[pos1 + len(e1):pos2]
+        if "的" in between and len(between) < 15:
+            # "e1 的 X e2" → e1 拥有 X，关系从 e1 出发
+            return "forward"
+    else:
+        between = text[pos2 + len(e2):pos1]
+        if "的" in between and len(between) < 15:
+            return "reverse"
+
+    # 策略 2：关系关键词离谁更近
     keyword_pos = -1
     for match in re.finditer(rel_pattern, text):
         keyword_pos = match.start()
         break
 
     if keyword_pos >= 0:
-        # 关系关键词离谁更近
         dist1 = abs(keyword_pos - pos1)
         dist2 = abs(keyword_pos - pos2)
         if dist1 < dist2:
@@ -210,7 +288,7 @@ def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
         else:
             return "reverse"  # e2 → e1
 
-    # 默认：先出现的为主体
+    # 策略 3：默认先出现的为主体
     if pos1 < pos2:
         return "forward"
     return "reverse"
@@ -241,7 +319,7 @@ def _extract_context(text: str, e1: str, e2: str, rel_pattern: str) -> str:
 # 关系图谱合并与去重
 # ──────────────────────────────────────────────
 
-def merge_relationships(all_rels: list[dict]) -> dict:
+def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None) -> dict:
     """
     合并来自多个来源的关系，去重并计算综合可信度
 
@@ -270,8 +348,9 @@ def merge_relationships(all_rels: list[dict]) -> dict:
         node_names.add(key[1])
 
     nodes = []
+    db = operator_db or OPERATOR_DB
     for name in sorted(node_names):
-        info = OPERATOR_DB.get(name, {})
+        info = db.get(name, {})
         nodes.append({
             "name": name,
             "name_en": info.get("en", ""),
@@ -366,23 +445,27 @@ def main():
 
     parser.add_argument("--input", nargs="+", required=True, help="输入文件路径（支持多个）")
     parser.add_argument("--format", choices=["markdown", "plain"], default="markdown", help="文本格式")
+    parser.add_argument("--operator-db", help="自定义角色名库 JSON 文件路径")
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
 
     args = parser.parse_args()
+
+    # 加载角色名库
+    operator_db, alias_map = load_operator_db(args.operator_db)
 
     all_relationships = []
 
     for filepath in args.input:
         parts = load_text(filepath, args.format)
         for text, source in parts:
-            rels = extract_relationships_from_text(text, source)
+            rels = extract_relationships_from_text(text, source, operator_db, alias_map)
             all_relationships.extend(rels)
 
     if not all_relationships:
         print("警告：未识别到任何关系", file=sys.stderr)
         graph = {"nodes": [], "edges": []}
     else:
-        graph = merge_relationships(all_relationships)
+        graph = merge_relationships(all_relationships, operator_db)
 
     # 统计摘要
     node_count = len(graph["nodes"])

@@ -36,7 +36,9 @@ env/
 Thumbs.db
 
 # 项目生成文件
-operators/
+# 注意：operators/ 目录下的角色 Skill 文件应被跟踪
+# 仅忽略版本备份和临时生成文件
+operators/*/versions/
 *.log
 
 # 测试

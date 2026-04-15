@@ -2,7 +2,7 @@
 name: create-operator
 description: "Distill an Arknights operator into an AI Skill. Generate Knowledge + Persona with 5-layer structure, evolution support. | 将明日方舟角色蒸馏成AI Skill，生成知识库+5层人格，支持持续进化。"
 argument-hint: "[operator-name-or-slug]"
-version: "2.0.0"
+version: "2.1.0"
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
 ---
@@ -38,9 +38,9 @@ allowed-tools: Read, Write, Edit, Bash
 | 读取 MD/TXT/JSON 文件 | `Read` 工具 |
 | 解析游戏数据 JSON | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py` |
 | 分析角色对话指纹 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/dialogue_fingerprint.py --input {对话文件} --format {plain\|prts-json}` |
-| 构建角色关系图谱 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py --input {知识库文件} --format {markdown\|plain}` |
-| 验证 Persona 一致性 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/persona_validator.py --persona {persona路径} --dialogues {对话数据路径} --format {plain\|prts-json}` |
-| 交叉验证角色设定 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/canon_checker.py --sources {来源1} {来源2} ...` |
+| 构建角色关系图谱 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py --input {知识库文件} --format {markdown\|plain} [--operator-db {自定义角色名库}]` |
+| 验证 Persona 一致性 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/persona_validator.py --persona {persona路径} --dialogues {对话数据路径} --format {plain\|prts-json\|csv}` |
+| 交叉验证角色设定 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/canon_checker.py --sources {来源1} {来源2} ... [--misconceptions {自定义误解库}]` |
 | 写入/更新 Skill 文件 | `Write` / `Edit` 工具 |
 | 版本管理 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/version_manager.py` |
 | 列出已有 Skill | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/skill_writer.py --action list` |
@@ -63,8 +63,9 @@ allowed-tools: Read, Write, Edit, Bash
 
 #### relationship_graph.py — 关系图谱构建器
 从角色资料/剧情文本中自动提取角色关系网络：
-- 自动识别文本中的角色名（内置明日方舟角色名库）
+- 自动识别文本中的角色名（内置明日方舟角色名库，支持 `--operator-db` 加载自定义名库）
 - 检测 12 种关系类型（亲属/战友/对抗/信任/背叛/师徒/情感等）
+- 改进的方向判断（语法模式 + 关键词距离 + 语序综合判断）
 - 计算关系可信度（基于出现频率和多来源交叉）
 - 输出 JSON 格式的关系图谱（节点+边），可直接写入 Knowledge
 
@@ -79,7 +80,8 @@ allowed-tools: Read, Write, Edit, Bash
 从多个来源交叉验证角色设定，标注矛盾和可信度：
 - 自动提取设定声明（种族、阵营、身份、MBTI）
 - 多来源一致性比对（一致→confirmed / 不一致→conflicted / 单一来源→unverified）
-- 内置明日方舟常见误解检测（如"特蕾西娅是维多利亚统治者"等）
+- 内置明日方舟常见误解检测（如"特蕾西娅是维多利亚统治者"等），支持排除模式和上下文验证减少误报
+- 支持 `--misconceptions` 加载自定义误解库 JSON
 - 来源可信度评级（官方/Wiki > 社区考据 > 同人）
 
 ---

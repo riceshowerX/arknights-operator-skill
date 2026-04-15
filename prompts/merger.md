@@ -135,20 +135,21 @@ v{大版本}.{小版本}
 
 ```
 operators/te-lei-xi-ya/
-├── current/           ← 当前版本（符号链接或副本）
-│   ├── knowledge.md
-│   └── persona.md
+├── knowledge.md       ← 当前版本
+├── persona.md         ← 当前版本
+├── meta.json
+├── SKILL.md
 ├── versions/
 │   ├── v1.0/
 │   │   ├── knowledge.md
 │   │   ├── persona.md
-│   │   └── changelog.md
+│   │   └── meta.json
 │   ├── v1.1/
 │   │   ├── knowledge.md
 │   │   ├── persona.md
-│   │   └── changelog.md
+│   │   └── meta.json
 │   └── ...
-└── meta.json
+└── changelog.md
 ```
 
 ---
@@ -157,7 +158,7 @@ operators/te-lei-xi-ya/
 
 如果新版本引入了问题：
 
-1. 从 `versions/` 目录恢复目标版本的文件
-2. 将 `current/` 指向目标版本
-3. 在 changelog 中记录回滚操作
+1. 从 `versions/` 目录恢复目标版本的文件（覆盖当前版本的 knowledge.md、persona.md 等）
+2. 在 meta.json 中记录回滚操作
+3. 在 changelog 中记录回滚原因
 4. 回滚不算新版本，但需要记录原因

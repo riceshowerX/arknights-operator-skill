@@ -128,6 +128,18 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[str]:
             return [v.get("text", "") for v in data["voice_lines"] if v.get("text")]
         return []
 
+    elif fmt == "csv":
+        lines = []
+        for i, row in enumerate(content.strip().split("\n")):
+            if i == 0 and "label" in row.lower():
+                continue  # skip header
+            parts = row.split(",", 1)
+            if len(parts) == 2:
+                lines.append(parts[1].strip())
+            elif len(parts) == 1 and parts[0].strip():
+                lines.append(parts[0].strip())
+        return lines
+
     else:  # plain
         lines = []
         for line in content.strip().split("\n"):
@@ -142,6 +154,53 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[str]:
             else:
                 lines.append(line)
         return lines
+
+
+# ──────────────────────────────────────────────
+# 对话/叙述区分
+# ──────────────────────────────────────────────
+
+def _is_likely_dialogue(text: str) -> bool:
+    """
+    判断文本是否更可能是角色直接说出的台词而非叙述性文本
+
+    启发式规则：
+    - 包含引号包裹的直接引语 → 是
+    - 第一人称 + 口语化表达 → 是
+    - 包含感叹号/问号等情绪标记 → 是
+    - 纯叙述（第三人称、时间线、描述性语言）→ 否
+    """
+    # 有引号包裹的内容
+    if re.search(r'[「\u201c\u2018].*[」\u201d\u2019]', text):
+        return True
+
+    # 有明显的口语化标记
+    if re.search(r"[！!？?……—]", text) and len(text) < 60:
+        return True
+
+    # 包含第一人称且是短句（更像台词）
+    if re.search(r"^(我|吾|我们|咱们)", text) and len(text) < 50:
+        return True
+
+    # 明显的叙述特征（年份、人名开头、长描述）
+    if re.search(r"^泰拉历|^\d{4}|^[A-Z][a-z]+（|成立于|属于|是.*组织|是.*角色", text):
+        return False
+
+    # 超长文本（>200字）通常是叙述
+    if len(text) > 200:
+        return False
+
+    # 默认：短文本倾向当作对话，长文本倾向当作叙述
+    return len(text) < 80
+
+
+def _filter_dialogue_lines(lines: list[str]) -> list[str]:
+    """
+    过滤输入文本，只保留可能是角色直接说出的台词
+
+    这样可以避免叙述性文本（如时间线、关系描述）触发禁忌检测
+    """
+    return [line for line in lines if _is_likely_dialogue(line)]
 
 
 # ──────────────────────────────────────────────
@@ -163,8 +222,12 @@ def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
         violation_examples = []
 
         # 从规则中提取否定模式
-        # 如 "从不用感叹号" → 检查对话是否有感叹号
         negation_patterns = _extract_negation_patterns(rule)
+
+        # 无可检测模式 → 标记为 untested
+        if not negation_patterns:
+            passes.append(rule[:100] + " (不可自动检测)")
+            continue
 
         for i, dialogue in enumerate(dialogues):
             for pattern, description in negation_patterns:
@@ -186,12 +249,14 @@ def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
             passes.append(rule[:100])
 
     total = len(rules)
+    testable = total - sum(1 for p in passes if "不可自动检测" in p)
     pass_count = len(passes)
     score = round(pass_count / total * 100, 1) if total > 0 else 100
 
     return {
         "score": score,
         "total_rules": total,
+        "testable_rules": testable,
         "passed": pass_count,
         "violated": total - pass_count,
         "violations": violations,
@@ -203,33 +268,53 @@ def _extract_negation_patterns(rule: str) -> list[tuple[str, str]]:
     """
     从 Layer 0 规则文本中提取可检测的否定模式
 
-    返回: [(正则模式, 违反描述), ...]
+    支持两种提取方式：
+    1. 内置模式匹配（常见否定结构）
+    2. 从引号内容提取（规则中的具体反例）
     """
     patterns = []
 
-    # "从不用感叹号" → 检测 ！或!
-    if "不用感叹号" in rule or "不用！" in rule or "没有感叹号" in rule:
+    # === 内置模式 ===
+
+    # "从不用感叹号" / "没有感叹号" / "不用感叹号"
+    if re.search(r"不.*感叹号|没有感叹号|不用！", rule):
         patterns.append((r"[！!]", "使用了感叹号"))
 
-    # "从不用命令" / "不用命令口吻" → 检测命令式语气词
-    if "不用命令" in rule or "不用" in rule and "命令" in rule:
+    # "从不用命令" / "不用命令口吻"
+    if re.search(r"不.*命令", rule):
         patterns.append((r"命令|给我|必须|立刻|马上", "使用了命令式语气"))
 
-    # "从不说'我的子民'" → 检测该词
-    if "不说" in rule and "子民" in rule:
-        patterns.append((r"我的子民", "使用了'我的子民'"))
+    # "不说'xxx'" / "从不说'xxx'" / "不用'xxx'"
+    say_negation = re.findall(r'不(?:会|用|说|能)?[「\u201c\u2018]([^」\u201d\u2019]{2,20})[」\u201d\u2019]', rule)
+    for phrase in say_negation:
+        patterns.append((re.escape(phrase), f"使用了'{phrase}'"))
 
-    # "不会说'这是慈悲'" → 检测
-    if "不会说" in rule and "慈悲" in rule:
-        patterns.append((r"这是慈悲", "使用了'这是慈悲'的表述"))
-
-    # "不会哭" / "不会流泪" → 检测哭泣表达
-    if "不会哭" in rule or "不会流泪" in rule:
+    # "不会哭" / "不会流泪"
+    if re.search(r"不.*(?:哭|流泪|泪水)", rule):
         patterns.append((r"哭了|流泪|泪流|泪水", "出现了哭泣描写"))
 
-    # "不会咆哮" / "不会吼" → 检测咆哮
-    if "不会咆哮" in rule or "不会吼" in rule:
-        patterns.append((r"咆哮|怒吼|大吼|吼道", "出现了咆哮描写"))
+    # "不会咆哮" / "不会吼"
+    if re.search(r"不.*(?:咆哮|吼|大喊)", rule):
+        patterns.append((r"咆哮|怒吼|大吼|吼道|大喊", "出现了咆哮描写"))
+
+    # "从不...用..." — 通用否定结构
+    never_use = re.findall(r"从不用?([^\s，。]{2,10})", rule)
+    for phrase in never_use:
+        if phrase not in ["感叹号", "命令", "口吻"]:  # 已处理
+            escaped = re.escape(phrase)
+            if len(phrase) >= 2:  # 只匹配 2 字以上，避免误报
+                patterns.append((escaped, f"使用了'{phrase}'"))
+
+    # === 从引号内容提取反例 ===
+    # 规则中常见格式："不应该'xxx'，应该'yyy'"
+    # 我们检测 'xxx'（反例）是否出现在对话中
+    quoted_phrases = re.findall(r'[「\u201c\u2018]([^」\u201d\u2019]+)[」\u201d\u2019]', rule)
+    # 检查引号内容是否在"不/从不/不会"后面 → 是反例
+    for phrase in quoted_phrases:
+        # 如果引号内容在"不"后面，说明这是反例，应该检测
+        if re.search(rf"不[^」\u201d\u2019]*{re.escape(phrase)}", rule):
+            if len(phrase) >= 2:
+                patterns.append((re.escape(phrase), f"使用了反例表达'{phrase}'"))
 
     return patterns
 
@@ -249,16 +334,18 @@ def validate_layer2_style(dialogues: list[str], style: dict) -> dict:
     catchphrases = style.get("catchphrases", "")
     if catchphrases:
         # 提取引号中的口头禅
-        phrases = re.findall(r"[「""]([^」""]+)[」""]", catchphrases)
+        phrases = re.findall(r'[「\u201c]([^」\u201d]+)[」\u201d]', catchphrases)
         if not phrases:
             phrases = [w.strip() for w in catchphrases.split("、") if w.strip()]
 
         for phrase in phrases:
-            count = sum(1 for d in dialogues if phrase in d)
+            # 去掉引号标记，只检测核心词
+            clean_phrase = phrase.strip("「」""''")
+            count = sum(1 for d in dialogues if clean_phrase in d)
             freq = round(count / len(dialogues) * 100, 1) if dialogues else 0
             checks.append({
                 "type": "catchphrase",
-                "item": phrase,
+                "item": clean_phrase,
                 "occurrence_count": count,
                 "frequency_pct": freq,
                 "status": "consistent" if freq > 5 or count > 0 else "absent",
@@ -304,21 +391,24 @@ def validate_layer5_taboos(dialogues: list[str], taboos: list[str]) -> dict:
     """
     验证对话是否触碰 Layer 5 禁忌
 
-    检测策略：从禁忌描述中提取关键词，检查对话是否包含
+    改进：只检测可能是角色直接说出的台词，跳过叙述性文本，
+    避免将时间线、关系描述等叙述内容误判为角色违反禁忌。
     """
+    # 过滤出可能是角色台词的行
+    dialogue_lines = _filter_dialogue_lines(dialogues)
+
     hits = []
 
     for taboo in taboos:
         # 提取禁忌中的核心词
         keywords = _extract_taboo_keywords(taboo)
 
-        for i, dialogue in enumerate(dialogues):
+        for i, dialogue in enumerate(dialogue_lines):
             for kw in keywords:
                 if kw in dialogue:
                     hits.append({
                         "taboo": taboo[:80],
                         "keyword": kw,
-                        "dialogue_index": i + 1,
                         "dialogue": dialogue[:100],
                     })
 
@@ -327,6 +417,9 @@ def validate_layer5_taboos(dialogues: list[str], taboos: list[str]) -> dict:
     return {
         "score": score,
         "taboo_count": len(taboos),
+        "total_lines": len(dialogues),
+        "dialogue_lines_checked": len(dialogue_lines),
+        "narrative_lines_skipped": len(dialogues) - len(dialogue_lines),
         "violation_count": len(hits),
         "violations": hits[:5],
     }
@@ -336,13 +429,23 @@ def _extract_taboo_keywords(taboo: str) -> list[str]:
     """从禁忌描述中提取可检测的关键词"""
     keywords = []
 
-    # 检测引号中的词
-    quoted = re.findall(r"[「""'']([^」""]+)[」""]", taboo)
-    keywords.extend(quoted)
+    # 检测引号中的词（优先级最高，最精确）
+    quoted = re.findall(r'[「\u201c\u2018]([^」\u201d\u2019]+)[」\u201d\u2019]', taboo)
+    for q in quoted:
+        if len(q) >= 2:  # 只用 2 字以上关键词，避免单字误报
+            keywords.append(q)
 
-    # 检测常见的敏感行为词
-    sensitive = ["牺牲", "棋子", "放弃", "消灭", "杀", "死", "贱民", "低等"]
+    # 检测常见的敏感行为词（仅 2 字以上）
+    sensitive = ["牺牲", "棋子", "放弃", "消灭", "贱民", "低等"]
     for s in sensitive:
+        if s in taboo and s not in keywords:
+            keywords.append(s)
+
+    # 注意：不再包含"杀"和"死"等单字关键词，
+    # 因为在叙述文本中误报率极高（如"以勒什死去"）
+    # 如果需要检测死亡相关，用更精确的 2 字词组
+    death_phrases = ["去死", "杀了", "弄死", "处死"]
+    for s in death_phrases:
         if s in taboo:
             keywords.append(s)
 
@@ -407,12 +510,13 @@ def main():
 示例:
   python persona_validator.py --persona ./persona.md --dialogues ./lines.txt
   python persona_validator.py --persona ./persona.md --dialogues ./voices.json --format prts-json
+  python persona_validator.py --persona ./persona.md --dialogues ./data.csv --format csv
         """,
     )
 
     parser.add_argument("--persona", required=True, help="persona.md 文件路径")
     parser.add_argument("--dialogues", required=True, help="对话数据文件路径")
-    parser.add_argument("--format", choices=["plain", "prts-json"], default="plain", help="对话格式")
+    parser.add_argument("--format", choices=["plain", "prts-json", "csv"], default="plain", help="对话格式")
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
 
     args = parser.parse_args()

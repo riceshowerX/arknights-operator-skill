@@ -5,10 +5,49 @@
 
 import json
 import os
+import re
 import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
+
+
+def _get_next_version(versions_dir: Path) -> str:
+    """
+    确定下一个版本号
+
+    规则：使用 v{大版本}.{小版本} 格式
+    - 首次备份 → v1.0
+    - 后续备份 → 小版本 +1
+    - 如果目录名不规范（如旧格式 v1, v2），兼容处理
+    """
+    existing = list(versions_dir.glob("v*"))
+    max_major = 1
+    max_minor = -1  # -1 表示还没有任何版本
+
+    for v in existing:
+        # 支持 v1.0, v1.1 格式
+        m = re.match(r"v(\d+)\.(\d+)", v.name)
+        if m:
+            major = int(m.group(1))
+            minor = int(m.group(2))
+            if major == max_major and minor > max_minor:
+                max_minor = minor
+            elif major > max_major:
+                max_major = major
+                max_minor = minor
+            continue
+
+        # 兼容旧格式 v1, v2 等 → 视为 v1.1, v1.2
+        m2 = re.match(r"v(\d+)$", v.name)
+        if m2:
+            num = int(m2.group(1))
+            if num > max_minor:
+                max_minor = num
+
+    if max_minor < 0:
+        return "v1.0"
+    return f"v{max_major}.{max_minor + 1}"
 
 
 def backup_version(slug: str, base_dir: str = "./operators") -> dict:
@@ -25,9 +64,7 @@ def backup_version(slug: str, base_dir: str = "./operators") -> dict:
     versions_dir.mkdir(exist_ok=True)
     
     # 生成版本号
-    existing_versions = list(versions_dir.glob("v*"))
-    version_num = len(existing_versions) + 1
-    version_name = f"v{version_num}"
+    version_name = _get_next_version(versions_dir)
     version_dir = versions_dir / version_name
     
     # 复制文件
@@ -130,7 +167,7 @@ def main():
     parser = argparse.ArgumentParser(description="角色 Skill 版本管理器")
     parser.add_argument("--action", choices=["backup", "rollback", "list"], required=True)
     parser.add_argument("--slug", help="Skill slug")
-    parser.add_argument("--version", help="版本号 (如 v1, v2)")
+    parser.add_argument("--version", help="版本号 (如 v1.0, v1.1)")
     parser.add_argument("--base-dir", default="./operators", help="基础目录")
     
     args = parser.parse_args()

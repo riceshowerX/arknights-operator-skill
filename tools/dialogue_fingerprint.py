@@ -38,7 +38,7 @@ EMOTION_LEXICON = {
     "愤怒": ["愤怒", "不可饶恕", "绝不允许", "休想", "愚蠢", "可恶", "不可原谅"],
     "坚定": ["坚定", "决不", "一定", "必须", "绝不", "无论如何", "必然", "必将"],
     "恐惧": ["恐惧", "害怕", "可怕", "战栗", "颤抖", "不安", "危险"],
-    "希望": ["希望", "相信", "未来", "光明", "黎明", "明天", "一定会", "终将"],
+    "希望": ["希望", "未来", "黎明", "明天", "一定会", "终将"],
     "孤独": ["孤独", "独自", "一个人", "无人", "寂寞", "空旷", "遥远"],
     "信任": ["信任", "相信", "托付", "交付", "依靠", "在一起", "同行"],
 }
@@ -47,7 +47,7 @@ EMOTION_LEXICON = {
 FIRST_PERSON = ["我", "吾", "本王", "吾辈", "在下", "朕", "本人", "咱"]
 
 # 中文语气标记
-PAUSE_MARKERS = ["……", "……", "…", "——", "—", "···"]
+PAUSE_MARKERS = ["……", "…", "——", "—", "···"]
 EXCLAMATION = ["！", "!", "？！", "!?"]
 QUESTION = ["？", "?"]
 
@@ -198,11 +198,11 @@ def analyze_pause_markers(dialogues: list[dict]) -> dict:
         return {"ellipsis_freq": 0, "exclamation_freq": 0}
 
     return {
-        "ellipsis_freq": round(ellipsis_count / total_lines * 100, 1),
-        "ellipsis_start_freq": round(ellipsis_start / total_lines * 100, 1),
-        "dash_freq": round(dash_count / total_lines * 100, 1),
-        "exclamation_freq": round(exclamation_count / total_lines * 100, 1),
-        "question_freq": round(question_count / total_lines * 100, 1),
+        "ellipsis_pct": round(ellipsis_count / total_lines * 100, 1),
+        "ellipsis_start_pct": round(ellipsis_start / total_lines * 100, 1),
+        "dash_pct": round(dash_count / total_lines * 100, 1),
+        "exclamation_pct": round(exclamation_count / total_lines * 100, 1),
+        "question_pct": round(question_count / total_lines * 100, 1),
         "interpretation": _interpret_pause(
             ellipsis_count / total_lines,
             exclamation_count / total_lines,
@@ -376,10 +376,10 @@ def analyze_rhetoric_patterns(dialogues: list[dict]) -> dict:
         return {"rhetorical_question_freq": 0}
 
     return {
-        "rhetorical_question_freq": round(rhetorical_question / total_lines * 100, 1),
-        "metaphor_freq": round(metaphor / total_lines * 100, 1),
-        "parallelism_freq": round(parallelism / total_lines * 100, 1),
-        "negation_freq": round(negation / total_lines * 100, 1),
+        "rhetorical_question_pct": round(rhetorical_question / total_lines * 100, 1),
+        "metaphor_pct": round(metaphor / total_lines * 100, 1),
+        "parallelism_pct": round(parallelism / total_lines * 100, 1),
+        "negation_pct": round(negation / total_lines * 100, 1),
         "interpretation": _interpret_rhetoric(
             rhetorical_question / total_lines,
             metaphor / total_lines,
@@ -447,8 +447,8 @@ def analyze_address_pattern(dialogues: list[dict]) -> dict:
 
     return {
         "pattern": pattern,
-        "honorific_freq": round(honorific_count / total * 100, 1),
-        "intimate_freq": round(intimate_count / total * 100, 1),
+        "honorific_pct": round(honorific_count / total * 100, 1),
+        "intimate_pct": round(intimate_count / total * 100, 1),
         "examples": address_examples,
     }
 
@@ -458,13 +458,15 @@ def analyze_natural_imagery(dialogues: list[dict]) -> dict:
     维度 7：自然意象偏好
 
     量化角色是否偏好使用自然意象（花、风、光、影等）
+    使用 2 字词组匹配以减少误报（如"花费"不含"花"意象）
     """
+    # 使用 2 字词组匹配，减少"花费""风格""光明"等误报
     nature_words = {
-        "植物": ["花", "草", "树", "叶", "枝", "藤", "根", "林", "森"],
-        "天文": ["星", "月", "日", "光", "影", "天", "云", "霞", "虹"],
-        "气象": ["风", "雨", "雪", "霜", "雾", "雷", "露"],
-        "大地": ["山", "河", "海", "地", "土", "石", "沙", "泉"],
-        "时间": ["晨", "暮", "夜", "昼", "春", "夏", "秋", "冬"],
+        "植物": ["花朵", "花瓣", "花开", "花落", "草木", "树叶", "枝头", "藤蔓", "森林", "丛林", "花草"],
+        "天文": ["星空", "星辰", "月光", "阳光", "光影", "天空", "云霞", "彩虹", "星光", "夜空", "日光"],
+        "气象": ["风雨", "风声", "微风", "暴风", "雨幕", "雪花", "霜降", "雾气", "雷鸣", "露水", "晨露"],
+        "大地": ["山河", "大海", "大地", "土地", "岩石", "沙漠", "泉水", "山峦", "河川", "海洋", "山巅"],
+        "时间": ["清晨", "日暮", "夜晚", "白昼", "春天", "夏日", "秋色", "冬雪", "黄昏", "黎明", "破晓"],
     }
 
     category_counts = Counter()
