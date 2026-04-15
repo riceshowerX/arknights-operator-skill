@@ -10,7 +10,7 @@ from pathlib import Path
 from datetime import datetime
 
 
-def list_skills(base_dir: str = "./theresas") -> dict:
+def list_skills(base_dir: str = "./operators") -> dict:
     """
     列出所有已创建的 Skill
     """
@@ -51,7 +51,7 @@ def list_skills(base_dir: str = "./theresas") -> dict:
     return {"success": True, "skills": skills}
 
 
-def delete_skill(slug: str, base_dir: str = "./theresas", force: bool = False) -> dict:
+def delete_skill(slug: str, base_dir: str = "./operators", force: bool = False) -> dict:
     """
     删除指定的 Skill
     """
@@ -78,7 +78,7 @@ def delete_skill(slug: str, base_dir: str = "./theresas", force: bool = False) -
     }
 
 
-def create_default_skill(slug: str, name: str, base_dir: str = "./theresas") -> dict:
+def create_default_skill(slug: str, name: str, base_dir: str = "./operators") -> dict:
     """
     创建默认的 Skill 目录结构
     """
@@ -133,7 +133,7 @@ def main():
     parser.add_argument("--action", choices=["list", "delete", "create"], required=True)
     parser.add_argument("--slug", help="Skill slug")
     parser.add_argument("--name", help="角色名称")
-    parser.add_argument("--base-dir", default="./theresas", help="基础目录")
+    parser.add_argument("--base-dir", default="./operators", help="基础目录")
     parser.add_argument("--force", action="store_true", help="强制删除")
     
     args = parser.parse_args()

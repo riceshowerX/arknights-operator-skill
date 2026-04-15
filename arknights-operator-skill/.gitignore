@@ -36,7 +36,7 @@ env/
 Thumbs.db
 
 # 项目生成文件
-theresas/
+operators/
 *.log
 
 # 测试

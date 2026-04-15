@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def backup_version(slug: str, base_dir: str = "./theresas") -> dict:
+def backup_version(slug: str, base_dir: str = "./operators") -> dict:
     """
     备份当前版本到 versions 目录
     """
@@ -55,7 +55,7 @@ def backup_version(slug: str, base_dir: str = "./theresas") -> dict:
     }
 
 
-def rollback_version(slug: str, version: str, base_dir: str = "./theresas") -> dict:
+def rollback_version(slug: str, version: str, base_dir: str = "./operators") -> dict:
     """
     回滚到指定版本
     """
@@ -95,7 +95,7 @@ def rollback_version(slug: str, version: str, base_dir: str = "./theresas") -> d
     }
 
 
-def list_versions(slug: str, base_dir: str = "./theresas") -> dict:
+def list_versions(slug: str, base_dir: str = "./operators") -> dict:
     """
     列出所有版本
     """
@@ -131,7 +131,7 @@ def main():
     parser.add_argument("--action", choices=["backup", "rollback", "list"], required=True)
     parser.add_argument("--slug", help="Skill slug")
     parser.add_argument("--version", help="版本号 (如 v1, v2)")
-    parser.add_argument("--base-dir", default="./theresas", help="基础目录")
+    parser.add_argument("--base-dir", default="./operators", help="基础目录")
     
     args = parser.parse_args()
     
