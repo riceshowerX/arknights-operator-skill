@@ -37,11 +37,50 @@ allowed-tools: Read, Write, Edit, Bash
 | 读取图片/立绘 | `Read` 工具（原生支持图片） |
 | 读取 MD/TXT/JSON 文件 | `Read` 工具 |
 | 解析游戏数据 JSON | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py` |
+| 分析角色对话指纹 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/dialogue_fingerprint.py --input {对话文件} --format {plain\|prts-json}` |
+| 构建角色关系图谱 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py --input {知识库文件} --format {markdown\|plain}` |
+| 验证 Persona 一致性 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/persona_validator.py --persona {persona路径} --dialogues {对话数据路径} --format {plain\|prts-json}` |
+| 交叉验证角色设定 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/canon_checker.py --sources {来源1} {来源2} ...` |
 | 写入/更新 Skill 文件 | `Write` / `Edit` 工具 |
 | 版本管理 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/version_manager.py` |
 | 列出已有 Skill | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/skill_writer.py --action list` |
 
 **基础目录**：Skill 文件写入 `./operators/{slug}/`（相对于本项目目录）。
+
+### 工具详情
+
+#### dialogue_fingerprint.py — 对话指纹分析器
+从角色语音/对话文本中自动提取 7 个维度的量化语言特征：
+1. **句式长度分布** — 长句/短句/碎片比例
+2. **停顿标记** — 省略号、破折号的使用频率与模式
+3. **自称模式** — "我"/"吾"/省略自称的频率
+4. **情感词汇** — 8 类情感（温柔/悲伤/愤怒/坚定/恐惧/希望/孤独/信任）的词汇密度
+5. **修辞模式** — 反问、排比、隐喻、设问的使用频率
+6. **称呼模式** — 对不同人的差异化称呼
+7. **自然意象偏好** — 花朵/星空/大地等意象的出现频率
+
+输出 JSON 报告，可直接用于 Persona Layer 2 的数据支撑。
+
+#### relationship_graph.py — 关系图谱构建器
+从角色资料/剧情文本中自动提取角色关系网络：
+- 自动识别文本中的角色名（内置明日方舟角色名库）
+- 检测 12 种关系类型（亲属/战友/对抗/信任/背叛/师徒/情感等）
+- 计算关系可信度（基于出现频率和多来源交叉）
+- 输出 JSON 格式的关系图谱（节点+边），可直接写入 Knowledge
+
+#### persona_validator.py — Persona 一致性验证器
+用角色已知对话验证生成的 Persona 是否准确：
+- **Layer 0 验证**：检测对话是否违反核心性格规则（如"从不用感叹号"→检测感叹号）
+- **Layer 2 验证**：检查口头禅出现频率、高频词是否确实高频、自称模式是否一致
+- **Layer 5 验证**：检测对话是否触碰禁忌
+- 综合评分 A-D 等级，标注具体违反示例
+
+#### canon_checker.py — 设定交叉验证器
+从多个来源交叉验证角色设定，标注矛盾和可信度：
+- 自动提取设定声明（种族、阵营、身份、MBTI）
+- 多来源一致性比对（一致→confirmed / 不一致→conflicted / 单一来源→unverified）
+- 内置明日方舟常见误解检测（如"特蕾西娅是维多利亚统治者"等）
+- 来源可信度评级（官方/Wiki > 社区考据 > 同人）
 
 ---
 
@@ -106,14 +145,23 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 
 **线路 A（Knowledge Skill）**：
 - 参考 `${OPERATOR_SKILL_DIR}/prompts/knowledge_analyzer.md` 中的提取维度
+- 运行 `relationship_graph.py` 自动提取关系网络（如有剧情文本）
+- 运行 `canon_checker.py` 交叉验证设定一致性（如有多个来源）
 
 **线路 B（Persona）**：
 - 参考 `${OPERATOR_SKILL_DIR}/prompts/persona_analyzer.md` 中的提取维度
+- 运行 `dialogue_fingerprint.py` 提取语言指纹（如有语音/对话数据）
+- 语言指纹结果直接用于支撑 Layer 2 表达风格的量化描述
 
 ### Step 4：生成并预览
 
 参考 `${OPERATOR_SKILL_DIR}/prompts/knowledge_builder.md` 生成 Knowledge Skill 内容。
 参考 `${OPERATOR_SKILL_DIR}/prompts/persona_builder.md` 生成 Persona 内容（5 层结构）。
+
+**自动验证**（如有对话数据）：
+- 运行 `persona_validator.py` 验证生成的 Persona 与角色实际对话的一致性
+- 如果评分低于 B（75分），根据违反示例调整 Layer 0 规则或补充 Correction
+- 将验证结果展示给用户
 
 向用户展示摘要，询问确认。
 

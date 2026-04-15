@@ -356,7 +356,11 @@ arknights-operator-skill/
 │   ├── persona_builder.md         #   Step 4B：人格生成模板
 │   ├── merger.md                  #   进化：合并逻辑与冲突解决策略
 │   └── correction_handler.md      #   进化：对话纠正处理
-├── tools/                         # Python 工具
+├── tools/                         # Python 工具链
+│   ├── dialogue_fingerprint.py    #   对话指纹分析（7维度量化语言特征）
+│   ├── relationship_graph.py      #   关系图谱构建（12种关系类型自动提取）
+│   ├── persona_validator.py       #   Persona 验证器（反向验证一致性 A-D评分）
+│   ├── canon_checker.py           #   设定交叉验证器（多来源一致性+误解检测）
 │   ├── game_data_parser.py        #   游戏资料解析（PRTS Wiki / 本地文件 / slug 生成）
 │   ├── skill_writer.py            #   Skill 文件管理（list / create / delete）
 │   └── version_manager.py         #   版本存档与回滚（backup / rollback / list）
@@ -421,15 +425,86 @@ arknights-operator-skill/
 - **[ex-skill](https://github.com/perkfly/ex-skill)** — 前任蒸馏技能
 - **[colleague-skill](https://github.com/titanwings/colleague-skill)** — 同事蒸馏技能
 
-核心改进：
+### 核心差异化：从"Prompt 模板"到"数据驱动工具链"
+
+ex-skill 和 colleague-skill 的蒸馏方式是**基于 Prompt 模板的手动蒸馏**：分析者阅读角色资料，凭主观判断填写 Persona 描述。这种方式的问题在于——主观描述不可量化、不可验证、不同分析者结果差异大。
+
+arknights-operator-skill 引入了**数据驱动的自动化分析工具链**，将主观判断转化为可量化、可验证的技术流程：
 
 | 维度 | ex/colleague-skill | arknights-operator-skill |
 |------|-------------------|-------------------------|
-| 蒸馏对象 | 真人（前任/同事） | 游戏角色（有明确的官方设定可考证） |
-| 架构 | 单层人格描述 | Knowledge + Persona 两层分离 + 5层优先级结构 |
-| 纠正方式 | 重新生成 | Correction 层即时写入，无需重写整个 Skill |
-| 版本管理 | 无 | 自动快照 + 回滚 + 冲突解决 |
-| 设定准确性 | 依赖主观记忆 | 多来源交叉验证 + 常见误解防护 |
+| **蒸馏对象** | 真人（前任/同事） | 游戏角色（有明确的官方设定可考证） |
+| **架构** | 单层人格描述 | Knowledge + Persona 两层分离 + 5层优先级结构 |
+| **语言风格** | 主观描述（"她说话很温柔"） | 量化语言指纹（7维度自动分析，输出"省略号密度0.3/句、自称省略率68%"等硬数据） |
+| **关系网络** | 手动罗列 | 自动提取（12种关系类型识别 + 多来源交叉验证 + 可信度评级） |
+| **一致性验证** | 无（生成就完事） | Persona 验证器（用角色实际对话反向验证 Persona 准确度，A-D评分） |
+| **设定准确性** | 依赖主观记忆 | 多来源交叉验证 + 内置常见误解检测 |
+| **纠正方式** | 重新生成 | Correction 层即时写入，无需重写整个 Skill |
+| **版本管理** | 无 | 自动快照 + 回滚 + 冲突解决 |
+
+### 工具链架构
+
+```
+原始资料                    自动化分析工具链                   生成产物
+───────                    ───────────────                   ────────
+
+对话/语音 ──────────→  dialogue_fingerprint.py  ──→  Layer 2 量化风格描述
+                        (7维度语言指纹)              (句式/停顿/自称/情感/修辞/称呼/意象)
+
+剧情/知识库 ─────────→  relationship_graph.py    ──→  Knowledge 关系网络
+                        (12种关系类型自动识别)        (节点+边+可信度)
+
+Persona ─────────────→ persona_validator.py     ──→  一致性评分 + 修正建议
++ 角色实际对话           (反向验证3层匹配度)            (A-D等级, 具体违反示例)
+
+多来源设定 ──────────→  canon_checker.py         ──→  交叉验证报告
+                        (一致性比对+误解检测)           (confirmed/conflicted/unverified)
+```
+
+### 量化语言指纹：7 个维度
+
+`dialogue_fingerprint.py` 不做主观描述，而是从角色实际对话中提取 7 个可量化的语言特征：
+
+| 维度 | 分析内容 | 示例输出 |
+|------|---------|---------|
+| 句式长度分布 | 长句/短句/碎片的比例和均值 | 碎片句占 42%，平均句长 8.3 字 |
+| 停顿标记 | 省略号、破折号的频率与分布 | 省略号密度 0.31/句，倾向句尾 |
+| 自称模式 | 各类第一人称的频率 | "我"出现率 32%，省略自称率 68% |
+| 情感词汇 | 8 类情感的词汇密度 | 温柔类 0.45，坚定类 0.28 |
+| 修辞模式 | 反问/排比/隐喻/设问频率 | 反问 0.12/句，排比 0.08/句 |
+| 称呼模式 | 对不同人的差异化称呼 | 对阿米娅直呼名，对博士省略称呼 |
+| 自然意象 | 花朵/星空/大地等意象频率 | 花朵意象 0.15/句 |
+
+这些量化结果直接写入 Persona Layer 2，取代主观的"她说话很温柔"式描述。
+
+### 关系图谱：从手动罗列到自动提取
+
+`relationship_graph.py` 不依赖手动填写关系，而是从剧情文本中自动识别：
+
+- **实体识别**：内置明日方舟角色名库（含中英文名和别名），自动匹配
+- **关系分类**：12 种关系类型（sibling / comrade / opponent / trust / betrayal / mentor / student / affection / hatred / superior / subordinate / parent_child）
+- **方向判断**：根据文本语序和关键词位置推断关系方向（A→B 还是 B→A）
+- **可信度评级**：基于出现频率和多来源交叉，标注 high / medium / low
+- **去重合并**：多段文本中的同一关系自动合并，来源数越多可信度越高
+
+### Persona 验证：生成不是终点
+
+`persona_validator.py` 实现了"生成→验证→修正"的闭环：
+
+1. 用角色已知对话反向验证 Persona 的准确性
+2. Layer 0 验证：检测对话是否违反核心性格规则
+3. Layer 2 验证：检查口头禅频率、自称模式一致性
+4. Layer 5 验证：检测是否触碰禁忌
+5. 综合评分（A/B/C/D），低于 B 级自动提示修正方向
+
+### 设定交叉验证：多来源一致性
+
+`canon_checker.py` 解决游戏角色设定中常见的"社区误解"和"翻译差异"问题：
+
+- 从多个来源文件中提取同一字段的声明（种族/阵营/身份/MBTI）
+- 一致 → confirmed；不一致 → conflicted + 各版本；单一来源 → unverified
+- 内置明日方舟常见误解检测库（如"特蕾西娅是维多利亚统治者"等 4 类高频误解）
+- 来源可信度评级：官方/Wiki > 社区考据 > 同人
 
 ---
 
