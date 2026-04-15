@@ -244,6 +244,65 @@ git clone https://github.com/riceshowerX/arknights-operator-skill .claude/skills
 git clone https://github.com/riceshowerX/arknights-operator-skill ~/.claude/skills/create-operator
 ```
 
+### OpenClaw
+
+OpenClaw 从三个位置加载 Skills（优先级从高到低）：`<workspace>/skills` > `~/.openclaw/skills` > bundled skills。本项目未发布到 ClawHub，需手动安装。
+
+**方式一：全局安装（推荐）**
+
+```bash
+# 克隆到 OpenClaw 全局 Skills 目录
+git clone https://github.com/riceshowerX/arknights-operator-skill ~/.openclaw/skills/arknights-operator-skill
+```
+
+**方式二：项目级安装**
+
+在当前工作区（项目根目录）下安装，仅对该项目生效：
+
+```bash
+# 在工作区根目录执行
+mkdir -p skills
+git clone https://github.com/riceshowerX/arknights-operator-skill skills/arknights-operator-skill
+```
+
+**方式三：通过 extraDirs 配置**
+
+将仓库克隆到任意位置，然后在 `~/.openclaw/openclaw.json` 中添加扫描路径：
+
+```bash
+# 克隆到自定义位置
+git clone https://github.com/riceshowerX/arknights-operator-skill ~/Projects/arknights-operator-skill
+```
+
+```jsonc
+// ~/.openclaw/openclaw.json
+{
+  "skills": {
+    "load": {
+      "extraDirs": ["~/Projects/arknights-operator-skill"],
+      "watch": true
+    }
+  }
+}
+```
+
+**验证安装**
+
+```bash
+# 检查技能加载状态
+openclaw skills list
+openclaw skills check
+
+# 确认技能可被识别
+openclaw skills info create-operator
+```
+
+状态应为 **Ready to use**。若显示 **Missing requirements**，请确认 Python 3 已安装且 `requirements.txt` 依赖已满足。
+
+**使用**
+
+安装成功后，在 OpenClaw 中发送 `/skill create-operator` 或自然语言触发即可开始蒸馏角色。
+
 ### 其他兼容 AgentSkills 的客户端
 
 将本项目克隆到客户端的 skills 目录下，确保 `SKILL.md` 位于根目录即可被识别。
