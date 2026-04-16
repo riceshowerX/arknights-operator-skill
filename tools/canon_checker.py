@@ -309,14 +309,14 @@ def check_misconceptions(
                 continue
 
             warnings.append({
-                    "misconception_id": m["id"],
-                    "wrong": m["wrong"],
-                    "correct": m["correct"],
-                    "matched_pattern": pattern,
-                    "matched_text": match.group(0),
-                    "warning": warning_text,
-                    "source": source_label,
-                })
+                "misconception_id": m["id"],
+                "wrong": m["wrong"],
+                "correct": m["correct"],
+                "matched_pattern": pattern,
+                "matched_text": match.group(0),
+                "warning": warning_text,
+                "source": source_label,
+            })
 
     return warnings
 

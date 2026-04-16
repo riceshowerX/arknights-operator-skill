@@ -300,23 +300,30 @@ def _extract_negation_patterns(rule: str) -> list[tuple[str, str]]:
     if re.search(r"不.*(?:咆哮|吼|大喊)", rule):
         patterns.append((r"咆哮|怒吼|大吼|吼道|大喊", "出现了咆哮描写"))
 
-    # "从不/不会/不用 + 引号内容" — 通用否定结构，仅提取引号内的具体反例
+    # "从不说/从不用/从不会 + 引号内容" — 通用否定结构，仅提取引号内的具体反例
     # 避免匹配过宽：只从引号内容中提取，不匹配自由文本
+    # 同时去重：跳过已被前面 "不说/不用/不会" 捕获的短语
+    already_matched = {p for p, _ in patterns}
     never_say = re.findall(r'从不(?:会|用|说|能)?[「\u201c\u2018]([^」\u201d\u2019]{2,20})[」\u201d\u2019]', rule)
     for phrase in never_say:
-        if phrase not in ["感叹号", "命令", "口吻"]:
-            patterns.append((re.escape(phrase), f"使用了'{phrase}'"))
+        escaped = re.escape(phrase)
+        if escaped not in already_matched:
+            patterns.append((escaped, f"使用了'{phrase}'"))
 
     # === 从引号内容提取反例 ===
     # 规则中常见格式："不应该'xxx'，应该'yyy'"
     # 我们检测 'xxx'（反例）是否出现在对话中
+    # 去重：跳过已被前面模式捕获的短语
+    already_matched = {p for p, _ in patterns}
     quoted_phrases = re.findall(r'[「\u201c\u2018]([^」\u201d\u2019]+)[」\u201d\u2019]', rule)
-    # 检查引号内容是否在"不/从不/不会"后面 → 是反例
+    # 检查引号内容是否在"不"后面 → 是反例
     for phrase in quoted_phrases:
         # 如果引号内容在"不"后面，说明这是反例，应该检测
         if re.search(rf"不[^」\u201d\u2019]*{re.escape(phrase)}", rule):
             if len(phrase) >= 2:
-                patterns.append((re.escape(phrase), f"使用了反例表达'{phrase}'"))
+                escaped = re.escape(phrase)
+                if escaped not in already_matched:
+                    patterns.append((escaped, f"使用了反例表达'{phrase}'"))
 
     return patterns
 

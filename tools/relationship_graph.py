@@ -142,7 +142,7 @@ def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
 RELATIONSHIP_PATTERNS = [
     # 亲属关系
     (r"胞兄|哥哥|兄长|亲兄", "sibling"),
-    (r"胞妹|妹妹|亲妹|姐姐|姐姐", "sibling"),
+    (r"胞妹|妹妹|亲妹|姐姐", "sibling"),
     (r"父亲|母亲|父|母|养育|抚养", "parent_child"),
     (r"女儿|儿子|孩子|继承者|传人", "parent_child"),
 

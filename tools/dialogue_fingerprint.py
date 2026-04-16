@@ -381,7 +381,7 @@ def analyze_rhetoric_patterns(dialogues: list[dict]) -> dict:
             r"没有",                                    # 没有
             r"无法",                                    # 无法
             r"并非",                                    # 并非
-            r"从不|从不",                               # 从不
+            r"从不",                                    # 从不
             r"绝不|决不",                               # 绝不
             r"无人|无物|无端|无从",                     # 无+名词性成分
         ]

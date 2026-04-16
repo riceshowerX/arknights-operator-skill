@@ -156,6 +156,27 @@ def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str 
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
     
+    # 创建默认 SKILL.md
+    skill_md_path = skill_dir / "SKILL.md"
+    if not skill_md_path.exists():
+        skill_md_content = f"""# {name} — Skill
+
+> 本文件由 arknights-operator-skill 自动生成
+
+## 使用说明
+
+- `knowledge.md`：角色知识库（背景、关系、事件、理念）
+- `persona.md`：角色人格定义（5 层性格结构 + Correction）
+- `meta.json`：角色元数据
+
+## 进化方式
+
+- 追加资料 → 更新 knowledge.md
+- 对话纠正 → 追加 persona.md 的 Correction 层
+- 版本管理 → 使用 version_manager.py
+"""
+        skill_md_path.write_text(skill_md_content, encoding="utf-8")
+
     # 创建后校验目录结构
     missing = _validate_skill_dir(skill_dir)
     result = {

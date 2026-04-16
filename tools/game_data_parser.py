@@ -185,7 +185,7 @@ def parse_prts_operator_name(name: str) -> dict:
     PRTS URL 格式: https://prts.wiki/w/{角色名}
     """
     slug = to_slug(name)
-    url = f"https://prts.wiki/w/{name}"
+    url = f"https://prts.wiki/w/{quote(name)}"
     return {"slug": slug, "source_url": url}
 
 
