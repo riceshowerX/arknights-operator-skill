@@ -29,6 +29,8 @@
 - [效果示例](#效果示例)
 - [项目结构](#项目结构)
 - [设计原理](#设计原理)
+- [免责声明](#免责声明)
+- [许可证](#许可证)
 - [AI 开发声明](#ai-开发声明)
 
 ---
@@ -727,3 +729,47 @@ echo "OPERATOR_SKILL_DIR=/path/to/arknights-operator-skill" >> .env
 - 代码和文档可能存在 AI 生成内容常见的疏漏或偏差，使用前请自行审查
 - 工具链的分析结果（语言指纹、关系图谱、一致性评分等）是**辅助参考**，不替代人工判断
 - 角色设定的准确性最终依赖人工校验，尤其是常见误解和核心性格规则（Layer 0）
+
+---
+
+## 免责声明
+
+1. **非官方项目**：本项目与《明日方舟》开发商鹰角网络（Hypergryph）及 PRTS Wiki 无任何关联。所有游戏角色、剧情、设定的著作权归原权利人所有。
+
+2. **数据来源**：本工具通过 PRTS Wiki 公开 API 获取页面数据，仅用于个人学习和研究目的。请遵守 PRTS Wiki 的使用条款和 robots.txt 规则，避免高频请求对其服务器造成负担。
+
+3. **角色设定准确性**：工具链提取的角色数据（种族、阵营、关系等）基于 Wiki 页面的 wikitext 结构自动解析，可能因页面格式变动或解析逻辑局限而产生偏差。**不保证与游戏官方设定完全一致**，重要内容请以游戏内实际文本为准。
+
+4. **AI 角色扮演风险**：通过本项目生成的角色 Skill 用于 AI 角色扮演时，模型的输出可能与角色原始设定存在偏差。请勿将 AI 生成的角色对话视为官方剧情或设定。
+
+5. **使用边界**：本项目仅供学习、研究和技术探索。禁止用于任何商业用途或可能损害原作品权益的场景。
+
+---
+
+## 许可证
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+```
+MIT License
+
+Copyright (c) 2024-2026 Arknights Operator Skill Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
