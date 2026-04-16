@@ -36,7 +36,7 @@ allowed-tools: Read, Write, Edit, Bash
 | 读取游戏文本/剧情文本 | `Read` 工具（原生支持） |
 | 读取图片/立绘 | `Read` 工具（原生支持图片） |
 | 读取 MD/TXT/JSON 文件 | `Read` 工具 |
-| 解析游戏数据 JSON | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py` |
+| 解析游戏数据 / PRTS Wiki | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py --source prts --name {角色名}` 或 `--source local --file {文件路径}` |
 | 分析角色对话指纹 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/dialogue_fingerprint.py --input {对话文件} --format {plain\|prts-json}` |
 | 构建角色关系图谱 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py --input {知识库文件} --format {markdown\|plain} [--operator-db {自定义角色名库}]` |
 | 验证 Persona 一致性 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/persona_validator.py --persona {persona路径} --dialogues {对话数据路径} --format {plain\|prts-json\|csv}` |
@@ -121,23 +121,34 @@ allowed-tools: Read, Write, Edit, Bash
 
 ---
 
-#### 方式 C：游戏数据 JSON
+#### 方式 C：PRTS Wiki 直接获取 / 游戏数据 JSON
+
+**方式 C-1：从 PRTS Wiki 直接获取并解析（推荐）**
 
 ```bash
 python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
-  --source local \
-  --file {json_path} \
+  --source prts \
+  --name {角色名} \
   --output /tmp/operator_data_out.txt
 ```
 
 然后 `Read /tmp/operator_data_out.txt`
 
-支持格式：
-- PRTS Wiki 导出的角色数据 JSON（需先通过浏览器或 fetch-url 工具获取页面内容，再使用 `--source local` 解析）
-- 游戏解包数据 JSON
-- 自定义格式的角色资料 JSON
+自动从 PRTS Wiki API 获取角色页面 wikitext，提取基本信息、档案、语音记录等结构化数据。
+支持干员页面和敌人/NPC 页面，自动识别页面类型。
 
-> ⚠️ **注意**：`--source prts` 模式仅生成元数据（slug 和 URL），不会自动爬取 PRTS Wiki 页面。请先用浏览器或 fetch-url 工具获取 PRTS 页面内容保存为本地文件，再使用 `--source local --file {本地文件}` 解析。
+**方式 C-2：解析本地文件**
+
+```bash
+python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
+  --source local \
+  --file {文件路径} \
+  --output /tmp/operator_data_out.txt
+```
+
+支持格式：游戏解包数据 JSON、自定义格式的角色资料、已保存的 PRTS 页面 wikitext。
+
+> **提示**：部分角色在 PRTS 上可能使用不同名称（如特蕾西娅的干员版为「魔王」）。若 `--source prts` 提示页面未找到，可尝试使用该角色的其他名称。网络不可用时会自动降级为元数据模式（仅输出 slug + URL）。
 
 ---
 
