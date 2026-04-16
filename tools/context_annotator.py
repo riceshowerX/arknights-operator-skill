@@ -31,6 +31,19 @@ import re
 import sys
 from pathlib import Path
 
+# 导入自动推断引擎
+try:
+    from phase_inferrer import (
+        infer_phase_from_content,
+        infer_default_phase_for_operator,
+        infer_phase_from_content_cluster,
+        generate_inference_report,
+        PhaseInferenceResult,
+    )
+    HAS_PHASE_INFERRER = True
+except ImportError:
+    HAS_PHASE_INFERRER = False
+
 
 # ──────────────────────────────────────────────
 # 语音行对话对象推断
@@ -77,13 +90,16 @@ PHASE_PATTERNS = [
     (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
 ]
 
-# 干员页面名 → 语音行默认时期
-# 当语音内容无法推断时期时，使用干员页面名对应的默认时期
-# 例如"魔王"是复活后的特蕾西娅，其语音行默认属于 resurrected 时期
+# 干员页面名 → 语音行默认时期（快速路径 / 离线缓存）
+# 优先使用 phase_inferrer 自动推断；此表仅作为离线 fallback 和已知结果的缓存
+# 新增角色时无需手动添加 — phase_inferrer 会从 PRTS 分类标签自动推断
 OPERATOR_DEFAULT_PHASE = {
     "魔王": "resurrected",    # Civilight Eterna = 复活后特蕾西娅
     "W": "early",            # W 的语音行默认为早期（切尔诺伯格/整合运动时期）
 }
+
+# 自动推断缓存（运行时填充，避免重复查询 PRTS）
+_auto_inferred_phases: dict[str, PhaseInferenceResult] = {}
 
 # 时间线正则（从 knowledge.md 提取）
 TIMELINE_RE = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
@@ -137,12 +153,14 @@ def load_timeline(knowledge_path: str) -> list[dict]:
 # 标注函数
 # ──────────────────────────────────────────────
 
-def annotate_voice_line(line: dict, index: int, default_phase: str = "unknown") -> dict:
+def annotate_voice_line(line: dict, index: int, default_phase: str = "unknown",
+                        all_voice_texts: list[str] | None = None) -> dict:
     """标注单条语音行
 
     Args:
         default_phase: 当内容无法推断时期时使用的默认时期
-            （例如"魔王"页面的语音行默认属于 resurrected 时期）
+            优先使用 phase_inferrer 自动推断
+        all_voice_texts: 所有语音行文本（用于内容聚类 fallback）
     """
     # game_data_parser 输出字段名为 "label"，兼容旧格式 "title"
     title = line.get("label") or line.get("title", "")
@@ -162,24 +180,50 @@ def annotate_voice_line(line: dict, index: int, default_phase: str = "unknown") 
             situation = sit_type
             break
 
-    # 推断时期
+    # 推断时期 — 多层级推断链
     phase = "unknown"
-    # 优先使用精确模式匹配
-    for pattern, phase_id in PHASE_PATTERNS:
-        if pattern.search(text):
-            phase = phase_id
-            break
-    # 退而使用关键词包含
+    inference_source = "unknown"
+    inference_confidence = "low"
+
+    # 层级 1-2：内容匹配（正则 → 关键词）
+    if HAS_PHASE_INFERRER:
+        result = infer_phase_from_content(text)
+        if result:
+            phase = result.phase
+            inference_source = result.source
+            inference_confidence = result.confidence
+
+    # fallback：使用原有逻辑（兼容无 phase_inferrer 的场景）
+    if phase == "unknown":
+        for pattern, phase_id in PHASE_PATTERNS:
+            if pattern.search(text):
+                phase = phase_id
+                inference_source = "本地正则匹配"
+                inference_confidence = "high"
+                break
     if phase == "unknown":
         for phase_id, keywords in PHASE_KEYWORDS.items():
             if any(kw in text for kw in keywords):
                 phase = phase_id
+                inference_source = "本地关键词匹配"
+                inference_confidence = "medium"
                 break
-    # 最终回退到默认时期（基于干员页面名推断）
+
+    # 层级 6：内容聚类 fallback（仅当内容匹配和默认时期都失败时）
+    if phase == "unknown" and HAS_PHASE_INFERRER and all_voice_texts:
+        result = infer_phase_from_content_cluster(all_voice_texts)
+        if result:
+            phase = result.phase
+            inference_source = result.source
+            inference_confidence = result.confidence
+
+    # 最终回退到默认时期
     if phase == "unknown" and default_phase != "unknown":
         phase = default_phase
+        inference_source = f"默认时期({default_phase})"
+        inference_confidence = "medium"
 
-    return {
+    result = {
         "id": f"V{index:03d}",
         "text": text,
         "source": "voice",
@@ -194,6 +238,10 @@ def annotate_voice_line(line: dict, index: int, default_phase: str = "unknown") 
         "speech_acts": [],    # 由 speech_act_analyzer 填充
         "emotion": {},        # 由情感分析填充
     }
+    # 内部字段：推断记录（不输出到最终 JSON，仅用于报告）
+    result["_inference_source"] = inference_source
+    result["_inference_confidence"] = inference_confidence
+    return result
 
 
 def annotate_story_line(line: dict, index: int) -> dict:
@@ -239,28 +287,68 @@ def annotate_archive_text(archive_text: str, index: int) -> dict:
 # 构建语境化数据
 # ──────────────────────────────────────────────
 
+def _get_default_phase(operator_name: str, operator_data: dict = None) -> str:
+    """获取干员的默认时期
+
+    推断优先级：
+    1. OPERATOR_DEFAULT_PHASE 缓存（快速路径，离线可用）
+    2. phase_inferrer 自动推断（PRTS 分类标签 + 阵营信息 + 内容聚类）
+    """
+    # 快速路径：已有缓存
+    if operator_name in OPERATOR_DEFAULT_PHASE:
+        return OPERATOR_DEFAULT_PHASE[operator_name]
+
+    # 自动推断
+    if HAS_PHASE_INFERRER:
+        if operator_name not in _auto_inferred_phases:
+            result = infer_default_phase_for_operator(operator_name, operator_data)
+            _auto_inferred_phases[operator_name] = result
+            # 缓存到 OPERATOR_DEFAULT_PHASE 供后续使用
+            if result.phase != "unknown":
+                OPERATOR_DEFAULT_PHASE[operator_name] = result.phase
+                print(f"[context_annotator] 自动推断: {operator_name} → {result.phase} "
+                      f"(来源: {result.source}, 置信度: {result.confidence})",
+                      file=sys.stderr)
+        return _auto_inferred_phases[operator_name].phase
+
+    return "unknown"
+
+
 def build_context_json(
     operator_data: dict,
     story_data_list: list[list[dict]],
     timeline: list[dict],
+    interactive: bool = False,
 ) -> dict:
     """构建完整的 context.json"""
     annotated_lines = []
+    inference_results = []  # 推断记录，用于生成报告
 
-    # 确定语音行的默认时期（基于干员页面名）
+    # 确定语音行的默认时期（自动推断）
     operator_name = operator_data.get("name_zh") or operator_data.get("name", "")
-    default_phase = OPERATOR_DEFAULT_PHASE.get(operator_name, "unknown")
+    default_phase = _get_default_phase(operator_name, operator_data)
+
+    # 收集所有语音行文本，用于内容聚类 fallback
+    voice_texts = [vl.get("text", "") for vl in operator_data.get("voice_lines", [])]
 
     # 1. 标注语音
     for i, vl in enumerate(operator_data.get("voice_lines", [])):
-        annotated_lines.append(annotate_voice_line(vl, i, default_phase))
+        result = annotate_voice_line(vl, i, default_phase, voice_texts)
+        annotated_lines.append(result)
+        inference_results.append({
+            "id": result["id"],
+            "phase": result["context"]["phase"],
+            "source": result.get("_inference_source", "default"),
+            "confidence": result.get("_inference_confidence", "unknown"),
+        })
 
     # 2. 标注剧情对话
     story_idx = 0
     for story_data in story_data_list:
         for line in story_data:
             if line.get("is_target"):
-                annotated_lines.append(annotate_story_line(line, story_idx))
+                result = annotate_story_line(line, story_idx)
+                annotated_lines.append(result)
                 story_idx += 1
 
     # 3. 标注档案段落
@@ -287,6 +375,9 @@ def build_context_json(
         sit = line["context"]["situation_type"]
         situation_dist[sit] = situation_dist.get(sit, 0) + 1
 
+    # 生成推断报告
+    inference_report = generate_inference_report(inference_results) if HAS_PHASE_INFERRER else None
+
     return {
         "character": operator_data.get("name_zh") or operator_data.get("name", ""),
         "slug": operator_data.get("slug", ""),
@@ -295,6 +386,7 @@ def build_context_json(
         "timeline": timeline,
         "annotated_lines": annotated_lines,
         "annotated_relations": [],  # 由升级后的 relationship_graph 填充
+        "inference_report": inference_report,
         "stats": {
             "total_lines": len(annotated_lines),
             "source_distribution": source_dist,
@@ -323,26 +415,48 @@ def main():
         help="knowledge.md 路径（用于提取时间线）"
     )
     parser.add_argument("--output", required=True, help="输出 context.json 路径")
+    parser.add_argument(
+        "--interactive", action="store_true",
+        help="启用交互式时期推断（当自动推断失败时提示用户）"
+    )
     args = parser.parse_args()
 
     operator_data = load_operator_data(args.operator_json)
     story_data_list = [load_story_data(p) for p in args.story_json]
     timeline = load_timeline(args.knowledge_md)
 
-    context = build_context_json(operator_data, story_data_list, timeline)
+    context = build_context_json(operator_data, story_data_list, timeline,
+                                interactive=args.interactive)
+
+    # 清理内部字段（不输出到最终 JSON）
+    for line in context["annotated_lines"]:
+        line.pop("_inference_source", None)
+        line.pop("_inference_confidence", None)
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(context, f, ensure_ascii=False, indent=2)
 
-    print(json.dumps({
+    output_summary = {
         "success": True,
         "total_lines": context["stats"]["total_lines"],
         "source_distribution": context["stats"]["source_distribution"],
         "phase_distribution": context["stats"]["phase_distribution"],
         "timeline_phases": len(context["timeline"]),
         "output": args.output,
-    }, ensure_ascii=False))
+    }
+
+    # 添加推断报告摘要
+    if context.get("inference_report"):
+        report = context["inference_report"]
+        output_summary["inference_report"] = {
+            "unknown_pct": report["unknown_pct"],
+            "confidence_distribution": report["confidence_distribution"],
+        }
+        if report["suggestions"]:
+            output_summary["inference_suggestions"] = report["suggestions"]
+
+    print(json.dumps(output_summary, ensure_ascii=False))
 
 
 if __name__ == "__main__":

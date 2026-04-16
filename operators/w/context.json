@@ -2691,6 +2691,20 @@
     }
   ],
   "annotated_relations": [],
+  "inference_report": {
+    "total_lines": 38,
+    "phase_distribution": {
+      "early": 38
+    },
+    "source_distribution": {
+      "内容聚类: early (8/11 次匹配, 关键词: 佣兵, 雇佣兵, 感染者, 战场, 撤退)": 38
+    },
+    "confidence_distribution": {
+      "medium": 38
+    },
+    "unknown_pct": 0.0,
+    "suggestions": []
+  },
   "stats": {
     "total_lines": 160,
     "source_distribution": {

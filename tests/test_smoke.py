@@ -445,6 +445,101 @@ class TestSkillWriter(unittest.TestCase):
             self.assertTrue(Path(tmpdir, "test-op").exists())
 
 
+class TestPhaseInferrer(unittest.TestCase):
+    """phase_inferrer.py 冒烟测试"""
+
+    def test_infer_from_content_pattern(self):
+        from phase_inferrer import infer_phase_from_content
+        result = infer_phase_from_content("魔王在卡兹戴尔归来")
+        self.assertIsNotNone(result)
+        self.assertEqual(result.phase, "babel")
+
+    def test_infer_from_content_keyword(self):
+        from phase_inferrer import infer_phase_from_content
+        result = infer_phase_from_content("在巴别塔的时候......")
+        self.assertIsNotNone(result)
+        self.assertEqual(result.phase, "babel")
+
+    def test_infer_from_content_no_match(self):
+        from phase_inferrer import infer_phase_from_content
+        result = infer_phase_from_content("你好。")
+        self.assertIsNone(result)
+
+    def test_infer_from_chapter_code(self):
+        from phase_inferrer import infer_phase_from_chapter_code
+        result = infer_phase_from_chapter_code("BB-ST-3 灵魂尽头/NBT")
+        self.assertIsNotNone(result)
+        self.assertEqual(result.phase, "babel")
+
+    def test_infer_from_chapter_code_unknown(self):
+        from phase_inferrer import infer_phase_from_chapter_code
+        result = infer_phase_from_chapter_code("UNKNOWN-ST-1 测试/NBT")
+        self.assertIsNone(result)
+
+    def test_infer_from_content_cluster(self):
+        from phase_inferrer import infer_phase_from_content_cluster
+        texts = [
+            "巴别塔的日子......",
+            "特蕾西娅是一个好人",
+            "卡兹戴尔的战场上满是萨卡兹",
+            "内战时期我们失去了很多",
+        ]
+        result = infer_phase_from_content_cluster(texts)
+        self.assertIsNotNone(result)
+        self.assertEqual(result.phase, "babel")
+
+    def test_infer_from_content_cluster_empty(self):
+        from phase_inferrer import infer_phase_from_content_cluster
+        result = infer_phase_from_content_cluster(["你好。", "谢谢。"])
+        self.assertIsNone(result)
+
+    def test_inference_result_to_dict(self):
+        from phase_inferrer import PhaseInferenceResult
+        r = PhaseInferenceResult("babel", "test", "high")
+        d = r.to_dict()
+        self.assertEqual(d["phase"], "babel")
+        self.assertEqual(d["source"], "test")
+        self.assertEqual(d["confidence"], "high")
+
+    def test_generate_inference_report(self):
+        from phase_inferrer import generate_inference_report
+        results = [
+            {"phase": "babel", "source": "content", "confidence": "high"},
+            {"phase": "unknown", "source": "none", "confidence": "low"},
+            {"phase": "babel", "source": "cluster", "confidence": "medium"},
+        ]
+        report = generate_inference_report(results)
+        self.assertEqual(report["total_lines"], 3)
+        self.assertEqual(report["phase_distribution"]["babel"], 2)
+        self.assertEqual(report["unknown_pct"], 33.3)
+
+    def test_faction_category_phase_mapping(self):
+        from phase_inferrer import FACTION_CATEGORY_PHASE
+        self.assertIn("属于巴别塔的干员", FACTION_CATEGORY_PHASE)
+        self.assertIn("属于罗德岛的干员", FACTION_CATEGORY_PHASE)
+        self.assertEqual(FACTION_CATEGORY_PHASE["属于巴别塔的干员"], "babel")
+
+    def test_unified_infer_entry(self):
+        from phase_inferrer import infer_phase
+        # Content match
+        result = infer_phase("在巴别塔的时候")
+        self.assertEqual(result.phase, "babel")
+
+        # Unknown with no context
+        result2 = infer_phase("你好。")
+        self.assertEqual(result2.phase, "unknown")
+
+    def test_cluster_fallback_in_unified_infer(self):
+        from phase_inferrer import infer_phase
+        # Single line unknown, but with all_texts for cluster
+        result = infer_phase(
+            "这些萨卡兹都很坚强",
+            chapter="UNKNOWN-ST-1",
+            all_texts=["卡兹戴尔的萨卡兹", "巴别塔的日子", "特蕾西娅"],
+        )
+        self.assertEqual(result.phase, "babel")
+
+
 class TestEndToEndPipeline(unittest.TestCase):
     """端到端管线测试（使用本地数据，不依赖网络）"""
 

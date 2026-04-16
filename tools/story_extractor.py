@@ -36,6 +36,17 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+# 导入自动推断引擎
+try:
+    from phase_inferrer import (
+        infer_phase as _infer_phase_auto,
+        infer_phase_from_chapter_code,
+        infer_phase_from_activity_meta,
+    )
+    HAS_PHASE_INFERRER = True
+except ImportError:
+    HAS_PHASE_INFERRER = False
+
 
 # ──────────────────────────────────────────────
 # 常量
@@ -401,8 +412,14 @@ def detect_situation_type(scene: str, text: str, narration: list) -> str:
 
 
 def infer_phase(scene: str, chapter: str) -> str:
-    """基于章节名和场景关键词推断时间阶段"""
-    # 优先用章节名映射
+    """基于章节名和场景关键词推断时间阶段
+
+    推断优先级：
+    1. 章节/活动代码快速映射（CHAPTER_PHASE_MAP）
+    2. phase_inferrer 自动推断（活动元数据 + 内容聚类）
+    3. 场景关键词匹配
+    """
+    # 优先用章节代码映射（快速路径）
     for ch_key, phase in CHAPTER_PHASE_MAP.items():
         if ch_key in chapter:
             return phase
@@ -411,6 +428,12 @@ def infer_phase(scene: str, chapter: str) -> str:
     for activity, phase in ACTIVITY_PHASE_MAP.items():
         if activity in chapter:
             return phase
+
+    # phase_inferrer 自动推断（从 PRTS 获取元数据）
+    if HAS_PHASE_INFERRER:
+        result = infer_phase_from_activity_meta(chapter)
+        if result and result.phase != "unknown":
+            return result.phase
 
     # 退而用场景关键词（使用更精确的词组减少误判）
     scene_lower = scene.lower()
