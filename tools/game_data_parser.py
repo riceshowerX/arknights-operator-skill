@@ -3,9 +3,11 @@
 游戏资料解析器 —— 从 PRTS Wiki 等来源提取角色信息
 
 用法:
-    python game_data_parser.py --source prts --name 特蕾西娅
-    python game_data_parser.py --source prts --name Theresa --lang zh
+    # 推荐：先用 fetch-url 工具获取 PRTS 页面内容，再用 --source local 解析
     python game_data_parser.py --source local --file ./raw_data/theresa.md
+
+    # --source prts 仅生成 slug + URL 元数据，不做 HTTP 请求
+    python game_data_parser.py --source prts --name 特蕾西娅
 
 输出:
     JSON 格式的结构化角色数据，写入 stdout
@@ -90,9 +92,12 @@ def parse_prts_operator_name(name: str) -> dict:
     从 PRTS Wiki 角色名构造 URL 和 slug
 
     PRTS URL 格式: https://prts.wiki/w/{角色名}
+
+    注意：此函数仅生成元数据（slug + URL），不做 HTTP 请求。
+    实际数据获取需用户自行用 fetch-url 工具或浏览器下载页面内容，
+    再用 --source local 解析。
     """
-    slug = name.lower().replace(" ", "-")
-    # 中文角色名直接使用
+    slug = to_slug(name)
     url = f"https://prts.wiki/w/{name}"
     return {"slug": slug, "source_url": url}
 
@@ -355,13 +360,15 @@ def main():
     elif args.source == "prts":
         if not args.name:
             parser.error("--source prts 需要 --name 参数")
-        # 构造元数据（实际爬取需调用方自行实现 HTTP 请求）
+        # 构造元数据（prts 模式不做 HTTP 请求，仅输出 slug + URL）
         result = {
             **parse_prts_operator_name(args.name),
             "lang": args.lang,
-            "note": "PRTS Wiki 爬取需外部 HTTP 请求支持，此处仅输出元数据。"
-            "请使用 fetch-url 工具或浏览器获取页面内容后，"
-            "使用 --source local 解析。",
+            "note": (
+                "PRTS 模式仅生成元数据，不会自动爬取页面。"
+                "推荐工作流：1) 用 fetch-url 工具获取 PRTS 页面内容并保存为本地文件；"
+                "2) 使用 --source local --file {本地文件} 解析实际数据。"
+            ),
         }
     else:
         parser.error(f"不支持的来源: {args.source}")
