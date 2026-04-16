@@ -599,7 +599,10 @@ def _lines_to_dialogues(annotated_lines: list[dict], source_filter: str = None) 
             continue
         if line.get("source") == "archive":
             continue
-        result.append({"label": line.get("source_detail", ""), "text": line.get("text", "")})
+        text = line.get("text", "")
+        if not text or not text.strip():  # 跳过空文本
+            continue
+        result.append({"label": line.get("source_detail", ""), "text": text})
     return result
 
 

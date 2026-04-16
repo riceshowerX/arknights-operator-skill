@@ -115,18 +115,32 @@ CLUSTER_KEYWORDS = {
 
 
 # ──────────────────────────────────────────────
-# PRTS API 工具
+# PRTS API 工具（含速率限制）
 # ──────────────────────────────────────────────
 
+_last_request_time = 0.0
+_REQUEST_INTERVAL = 0.5  # 最小请求间隔（秒）
+
+
 def _prts_api_get(params: dict) -> dict:
-    """调用 PRTS MediaWiki API"""
+    """调用 PRTS MediaWiki API（含速率限制）"""
+    import time
+    global _last_request_time
+
+    # 速率限制：确保两次请求间隔 >= _REQUEST_INTERVAL
+    elapsed = time.time() - _last_request_time
+    if elapsed < _REQUEST_INTERVAL:
+        time.sleep(_REQUEST_INTERVAL - elapsed)
+
     params["format"] = "json"
     url = f"{PRTS_API}?{urllib.parse.urlencode(params)}"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "arknights-operator-skill/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "arknights-operator-skill/2.0"})
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+            _last_request_time = time.time()
             return json.loads(resp.read().decode("utf-8"))
     except Exception as e:
+        _last_request_time = time.time()
         print(f"[phase_inferrer] PRTS API 请求失败: {e}", file=sys.stderr)
         return {}
 

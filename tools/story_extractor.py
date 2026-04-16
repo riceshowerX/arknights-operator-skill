@@ -42,6 +42,8 @@ try:
         infer_phase as _infer_phase_auto,
         infer_phase_from_chapter_code,
         infer_phase_from_activity_meta,
+        CHAPTER_PHASE_MAP,
+        ACTIVITY_PHASE_MAP,
     )
     HAS_PHASE_INFERRER = True
 except ImportError:
@@ -53,52 +55,59 @@ except ImportError:
 # ──────────────────────────────────────────────
 
 PRTS_API_URL = "https://prts.wiki/api.php"
-PRTS_USER_AGENT = "arknights-operator-skill/2.0 (https://github.com/riceshowerX/arknights-operator-skill)"
+PRTS_USER_AGENT = "arknights-operator-skill/2.0"
 REQUEST_TIMEOUT = 20
 
+# 速率限制
+_last_request_time = 0.0
+_REQUEST_INTERVAL = 0.5  # 最小请求间隔（秒）
+
 # 章节名 → 时间阶段映射
-# 注意：此映射以特蕾西娅的视角为主，其他角色可能需要调整
-CHAPTER_PHASE_MAP = {
-    "第0章": "early",
-    "第1章": "early",
-    "第2章": "early",
-    "第3章": "early",
-    "第4章": "early",
-    "第5章": "early",
-    "第6章": "early",
-    "第7章": "early",       # 苦难摇篮：切尔诺伯格/整合运动
-    "第8章": "babel",       # 怒号光明：巴别塔回忆
-    "第9章": "babel",       # 风暴瞭望：巴别塔末期
-    "第10章": "resurrected", # 碎鳞：复活后
-    "第11章": "resurrected",
-    "第12章": "resurrected",
-    "第13章": "resurrected",
-    "第14章": "resurrected", # 慈悲灯塔
-    # 巴别塔活动（BB 系列）
-    "BB-": "babel",
-    # 伦蒂尼姆/第 10-14 章相关
-    "LT-": "resurrected",
-    "H10-": "resurrected",
-    "H11-": "resurrected",
-    "H12-": "resurrected",
-    "H14-": "resurrected",
-    # 生于黑夜（W 的活动，切尔诺伯格/早期回忆）
-    "DM-": "early",
-    # 遗尘漫步（凯尔希回忆，跨越多时期，归为 early）
-    "WD-": "early",
-    # 危机合约等
-    "CC-": "unknown",
-}
+# 优先从 phase_inferrer import，本地定义仅作离线 fallback
+if not HAS_PHASE_INFERRER:
+    CHAPTER_PHASE_MAP = {
+        "第0章": "early",
+        "第1章": "early",
+        "第2章": "early",
+        "第3章": "early",
+        "第4章": "early",
+        "第5章": "early",
+        "第6章": "early",
+        "第7章": "early",       # 苦难摇篮：切尔诺伯格/整合运动
+        "第8章": "babel",       # 怒号光明：巴别塔回忆
+        "第9章": "babel",       # 风暴瞭望：巴别塔末期
+        "第10章": "resurrected", # 碎鳞：复活后
+        "第11章": "resurrected",
+        "第12章": "resurrected",
+        "第13章": "resurrected",
+        "第14章": "resurrected", # 慈悲灯塔
+        # 巴别塔活动（BB 系列）
+        "BB-": "babel",
+        # 伦蒂尼姆/第 10-14 章相关
+        "LT-": "resurrected",
+        "H10-": "resurrected",
+        "H11-": "resurrected",
+        "H12-": "resurrected",
+        "H14-": "resurrected",
+        # 生于黑夜（W 的活动，切尔诺伯格/早期回忆）
+        "DM-": "early",
+        # 遗尘漫步（凯尔希回忆，跨越多时期，归为 early）
+        "WD-": "early",
+        # 危机合约等
+        "CC-": "unknown",
+    }
 
 # 活动关键词 → 时期
-ACTIVITY_PHASE_MAP = {
-    "巴别塔": "babel",
-    "慈悲灯塔": "resurrected",
-    "伦蒂尼姆": "resurrected",
-    "生于黑夜": "early",
-    "切尔诺伯格": "early",
-    "遗尘漫步": "early",
-}
+# 优先从 phase_inferrer import，本地定义仅作离线 fallback
+if not HAS_PHASE_INFERRER:
+    ACTIVITY_PHASE_MAP = {
+        "巴别塔": "babel",
+        "慈悲灯塔": "resurrected",
+        "伦蒂尼姆": "resurrected",
+        "生于黑夜": "early",
+        "切尔诺伯格": "early",
+        "遗尘漫步": "early",
+    }
 
 # 场景类型关键词
 SITUATION_KEYWORDS = {
@@ -156,8 +165,19 @@ SCRIPT_NOISE_RE = re.compile(
 
 
 # ──────────────────────────────────────────────
-# PRTS API
+# PRTS API（含速率限制）
 # ──────────────────────────────────────────────
+
+def _rate_limited_urlopen(req, timeout=None):
+    """带速率限制的 urlopen 调用"""
+    import time
+    global _last_request_time
+    elapsed = time.time() - _last_request_time
+    if elapsed < _REQUEST_INTERVAL:
+        time.sleep(_REQUEST_INTERVAL - elapsed)
+    result = urlopen(req, timeout=timeout or REQUEST_TIMEOUT)
+    _last_request_time = time.time()
+    return result
 
 def fetch_chapter_wikitext(chapter: str) -> str:
     """获取剧情页面的 wikitext 原文，自动跟随 redirect"""
@@ -173,7 +193,7 @@ def fetch_chapter_wikitext(chapter: str) -> str:
     req = Request(url, headers={'User-Agent': PRTS_USER_AGENT})
 
     try:
-        with urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+        with _rate_limited_urlopen(req) as resp:
             data = json.loads(resp.read().decode('utf-8'))
     except (HTTPError, URLError) as e:
         print(json.dumps({
@@ -228,7 +248,7 @@ def _fetch_raw_wikitext(page: str) -> str:
     req = Request(url, headers={'User-Agent': PRTS_USER_AGENT})
 
     try:
-        with urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+        with _rate_limited_urlopen(req) as resp:
             data = json.loads(resp.read().decode('utf-8'))
     except (HTTPError, URLError):
         return ""
@@ -303,8 +323,10 @@ def _extract_script_dialogues(wikitext: str, character: str) -> list[dict]:
     for m in SCENE_HEADER_RE.finditer(wikitext):
         pos = m.start()
         title = m.group(1).strip()
-        if not re.match(r'^[=\s]+$', title):
-            scene_map[pos] = title
+        # 跳过空标题或仅含等号/空白的标题
+        if not title or re.match(r'^[=\s]+$', title):
+            continue
+        scene_map[pos] = title
 
     # 提取 [name="xxx"] 对话行
     for m in SCRIPT_DIALOGUE_RE.finditer(wikitext):
@@ -364,8 +386,8 @@ def _extract_wikitext_dialogues(wikitext: str, character: str) -> list[dict]:
         scene_match = SCENE_HEADER_RE.match(line_stripped)
         if scene_match:
             current_scene = scene_match.group(1).strip()
-            # 跳过纯格式标题
-            if re.match(r'^[=\s]+$', current_scene):
+            # 跳过空标题或仅含等号/空白的标题
+            if not current_scene or re.match(r'^[=\s]+$', current_scene):
                 continue
             continue
 

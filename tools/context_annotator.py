@@ -67,8 +67,8 @@ VOICE_SITUATION_MAP = [
     ("信赖", "comfort"),
     ("战斗开始", "confront"),
     ("战斗失败", "confront"),
+    ("精二晋升后交谈", "casual"),   # 必须在"晋升后交谈"之前，否则"精二晋升后交谈1"被误匹配
     ("晋升后交谈", "casual"),
-    ("精二晋升后交谈", "casual"),
     ("晋升", "casual"),
     ("助理", "casual"),
     ("交谈", "casual"),
@@ -79,16 +79,19 @@ VOICE_SITUATION_MAP = [
 
 # 语音内容 → 时期推断关键词
 # 注意：使用更精确的词组避免误匹配（"和平"→"和平协议"，"魔王"→需同时含卡兹戴尔语境）
-PHASE_KEYWORDS = {
-    "babel": ["巴别塔", "内战", "卡兹戴尔重建", "和平协议", "卡兹戴尔的和平"],
-    "resurrected": ["黑冠", "赦罪师", "巫术"],
-}
+# 优先从 phase_inferrer import，本地定义仅作离线 fallback
+if HAS_PHASE_INFERRER:
+    from phase_inferrer import PHASE_KEYWORDS, PHASE_PATTERNS
+else:
+    PHASE_KEYWORDS = {
+        "babel": ["巴别塔", "内战", "卡兹戴尔重建", "和平协议", "卡兹戴尔的和平"],
+        "resurrected": ["黑冠", "赦罪师", "巫术"],
+    }
 
-# 语音内容 → 时期推断（精确匹配模式，优先级高于关键词包含）
-PHASE_PATTERNS = [
-    (re.compile(r"魔王.{0,10}(?:卡兹戴尔|回归|归来)"), "babel"),
-    (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
-]
+    PHASE_PATTERNS = [
+        (re.compile(r"魔王.{0,10}(?:卡兹戴尔|回归|归来)"), "babel"),
+        (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
+    ]
 
 # 干员页面名 → 语音行默认时期（快速路径 / 离线缓存）
 # 优先使用 phase_inferrer 自动推断；此表仅作为离线 fallback 和已知结果的缓存
@@ -106,18 +109,45 @@ TIMELINE_RE = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
 
 
 # ──────────────────────────────────────────────
+# 安全工具
+# ──────────────────────────────────────────────
+
+# 允许读取的目录前缀（白名单）
+_ALLOWED_PATH_PREFIXES = [
+    str(Path.cwd()),
+    str(Path.home()),
+    "/tmp",
+]
+
+
+def _validate_path(path: str) -> str:
+    """验证文件路径是否在允许范围内，防止路径遍历攻击"""
+    resolved = Path(path).resolve()
+    # 检查路径是否在允许的目录内
+    for prefix in _ALLOWED_PATH_PREFIXES:
+        if str(resolved).startswith(prefix):
+            return str(resolved)
+    raise ValueError(
+        f"安全限制：路径 '{path}' 不在允许的目录内。"
+        f"允许的目录: {', '.join(_ALLOWED_PATH_PREFIXES)}"
+    )
+
+
+# ──────────────────────────────────────────────
 # 加载函数
 # ──────────────────────────────────────────────
 
 def load_operator_data(path: str) -> dict:
     """加载 game_data_parser 的输出"""
-    with open(path, encoding='utf-8') as f:
+    safe_path = _validate_path(path)
+    with open(safe_path, encoding='utf-8') as f:
         return json.load(f)
 
 
 def load_story_data(path: str) -> list[dict]:
     """加载 story_extractor 的输出"""
-    with open(path, encoding='utf-8') as f:
+    safe_path = _validate_path(path)
+    with open(safe_path, encoding='utf-8') as f:
         data = json.load(f)
     return data.get("dialogues", [])
 
@@ -125,7 +155,8 @@ def load_story_data(path: str) -> list[dict]:
 def load_timeline(knowledge_path: str) -> list[dict]:
     """从 knowledge.md 中提取时间线定义"""
     try:
-        text = Path(knowledge_path).read_text(encoding='utf-8')
+        safe_path = _validate_path(knowledge_path)
+        text = Path(safe_path).read_text(encoding='utf-8')
     except FileNotFoundError:
         return []
 

@@ -48,7 +48,7 @@ def parse_persona(filepath: str) -> dict:
 
     # 提取 Layer 0 规则
     layer0_match = re.search(
-        r"## Layer 0.*?\n(.*?)(?=\n## Layer|\n## Correction|\Z)",
+        r"##\s+Layer\s*0.*?\n(.*?)(?=\n##\s+Layer|\n##\s+Correction|\Z)",
         content,
         re.DOTALL,
     )
@@ -61,7 +61,7 @@ def parse_persona(filepath: str) -> dict:
 
     # 提取 Layer 2 表达风格
     layer2_match = re.search(
-        r"## Layer 2.*?\n(.*?)(?=\n## Layer|\n## Correction|\Z)",
+        r"##\s+Layer\s*2.*?\n(.*?)(?=\n##\s+Layer|\n##\s+Correction|\Z)",
         content,
         re.DOTALL,
     )
@@ -84,7 +84,7 @@ def parse_persona(filepath: str) -> dict:
 
     # 提取 Layer 5 禁忌
     layer5_match = re.search(
-        r"## Layer 5.*?\n(.*?)(?=\n## Correction|\Z)",
+        r"##\s+Layer\s*5.*?\n(.*?)(?=\n##\s+Correction|\Z)",
         content,
         re.DOTALL,
     )
@@ -97,7 +97,7 @@ def parse_persona(filepath: str) -> dict:
 
     # 提取 Correction
     correction_match = re.search(
-        r"## Correction 记录.*?\n(.*?)(?=\n## |\Z)",
+        r"##\s+Correction\s*记录.*?\n(.*?)(?=\n##\s+|\Z)",
         content,
         re.DOTALL,
     )

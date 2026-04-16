@@ -34,8 +34,12 @@ from urllib.request import Request, urlopen
 # ──────────────────────────────────────────────
 
 PRTS_API_URL = "https://prts.wiki/api.php"
-PRTS_USER_AGENT = "arknights-operator-skill/1.0 (https://github.com/riceshowerX/arknights-operator-skill)"
+PRTS_USER_AGENT = "arknights-operator-skill/2.0"
 REQUEST_TIMEOUT = 15  # 秒
+
+# 速率限制
+_last_request_time = 0.0
+_REQUEST_INTERVAL = 0.5  # 最小请求间隔（秒）
 
 
 # ──────────────────────────────────────────────
@@ -71,6 +75,14 @@ OPERATOR_SCHEMA = {
 # ──────────────────────────────────────────────
 
 def _prts_api_request(params: dict) -> dict:
+    """向 PRTS Wiki API 发送请求（含速率限制）"""
+    import time
+    global _last_request_time
+
+    # 速率限制：确保两次请求间隔 >= _REQUEST_INTERVAL
+    elapsed = time.time() - _last_request_time
+    if elapsed < _REQUEST_INTERVAL:
+        time.sleep(_REQUEST_INTERVAL - elapsed)
     """
     向 PRTS Wiki MediaWiki API 发送 GET 请求
 
@@ -92,12 +104,16 @@ def _prts_api_request(params: dict) -> dict:
 
     try:
         with urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+            _last_request_time = time.time()
             return json.loads(resp.read().decode("utf-8"))
     except HTTPError as e:
+        _last_request_time = time.time()
         raise RuntimeError(f"PRTS API HTTP 错误: {e.code} {e.reason}") from e
     except URLError as e:
+        _last_request_time = time.time()
         raise RuntimeError(f"无法连接 PRTS Wiki: {e.reason}") from e
     except json.JSONDecodeError as e:
+        _last_request_time = time.time()
         raise RuntimeError(f"PRTS API 返回了无效的 JSON: {e}") from e
 
 
@@ -200,12 +216,18 @@ def _extract_charinfo(wikitext: str) -> dict:
     info = {}
 
     # 匹配 {{CharinfoV2 ... }} 或 {{Charinfo ... }}
-    # 使用 \}\} 而非 \n\}\} 以支持模板结束标记前无换行的情况
+    # 拆分为精确匹配，避免 Charinfo 误匹配 CharinfoV2 的内容
     template_match = re.search(
-        r"\{\{CharinfoV?2?\s*\n(.*?)\n?\}\}",
+        r"\{\{CharinfoV2\s*\n(.*?)\n?\}\}",
         wikitext,
         re.DOTALL,
     )
+    if not template_match:
+        template_match = re.search(
+            r"\{\{Charinfo\s*\n(.*?)\n?\}\}",
+            wikitext,
+            re.DOTALL,
+        )
     if not template_match:
         return info
 
@@ -713,10 +735,10 @@ def to_slug(name: str) -> str:
     if re.match(r"^[a-zA-Z\s]+$", name):
         return re.sub(r"\s+", "-", name.lower())
 
-    # 无法转换，使用 Unicode 转义作为 fallback
+    # 无法转换，提示用户手动指定
     slug = re.sub(r"\s+", "-", name.lower())
     if not re.match(r"^[a-z0-9-]+$", slug):
-        # 将非 ASCII 字符转为 Unicode 编码形式（如 te-lei-xi-ya 的 fallback）
+        # 使用拼音映射表中逐字符查找，剩余字符用简短标记替代
         safe_slug = ""
         for ch in name:
             if re.match(r"[a-zA-Z0-9\s-]", ch):
@@ -724,12 +746,16 @@ def to_slug(name: str) -> str:
             elif ch in PINYIN_MAP:
                 safe_slug += PINYIN_MAP[ch]
             else:
-                safe_slug += f"u{ord(ch):04x}"
+                # 不再使用冗长的 Unicode 编码，改用简短标记
+                safe_slug += f"?"
+        safe_slug = re.sub(r"\?+", "", safe_slug)  # 移除未知字符标记
         safe_slug = re.sub(r"\s+", "-", safe_slug).strip("-")
+        if not safe_slug:
+            safe_slug = f"op-{hash(name) % 10000:04d}"
         print(
             f"警告：角色名 '{name}' 无法自动转为 URL-safe slug，"
-            f"已使用 Unicode 编码 fallback '{safe_slug}'，"
-            "建议手动指定英文 slug 或 pip install -r requirements-optional.txt",
+            f"已使用 fallback '{safe_slug}'，"
+            "建议手动指定英文 slug 或 pip install pypinyin",
             file=sys.stderr,
         )
         return safe_slug

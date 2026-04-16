@@ -31,6 +31,12 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
+# 从 phase_inferrer import 共享的 PHASE_ORDER
+try:
+    from phase_inferrer import PHASE_ORDER
+except ImportError:
+    PHASE_ORDER = ["early", "babel", "resurrected"]
+
 
 # ──────────────────────────────────────────────
 # 明日方舟角色名库（用于文本中的实体识别）
@@ -561,8 +567,7 @@ def compute_relation_trajectories(
     trajectories = []
 
     # 按时序排列时期（而非字母序）
-    # 使用预定义的时间顺序，未知时期排在最后
-    PHASE_ORDER = ["early", "babel", "resurrected"]
+    # 使用从 phase_inferrer import 的预定义时间顺序，未知时期排在最后
     phases_sorted = []
     for p in PHASE_ORDER:
         if p in phase_graphs:
