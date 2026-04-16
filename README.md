@@ -1,6 +1,7 @@
 <div align="center">
 
-# arknights-operator-skill
+<!-- Logo -->
+<img src="docs/icon.svg" alt="arknights-operator-skill" width="360"/>
 
 **将明日方舟角色蒸馏成 AI Skill**
 
