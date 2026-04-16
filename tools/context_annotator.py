@@ -77,6 +77,14 @@ PHASE_PATTERNS = [
     (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
 ]
 
+# 干员页面名 → 语音行默认时期
+# 当语音内容无法推断时期时，使用干员页面名对应的默认时期
+# 例如"魔王"是复活后的特蕾西娅，其语音行默认属于 resurrected 时期
+OPERATOR_DEFAULT_PHASE = {
+    "魔王": "resurrected",    # Civilight Eterna = 复活后特蕾西娅
+    "W": "early",            # W 的语音行默认为早期（切尔诺伯格/整合运动时期）
+}
+
 # 时间线正则（从 knowledge.md 提取）
 TIMELINE_RE = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
 
@@ -129,8 +137,13 @@ def load_timeline(knowledge_path: str) -> list[dict]:
 # 标注函数
 # ──────────────────────────────────────────────
 
-def annotate_voice_line(line: dict, index: int) -> dict:
-    """标注单条语音行"""
+def annotate_voice_line(line: dict, index: int, default_phase: str = "unknown") -> dict:
+    """标注单条语音行
+
+    Args:
+        default_phase: 当内容无法推断时期时使用的默认时期
+            （例如"魔王"页面的语音行默认属于 resurrected 时期）
+    """
     # game_data_parser 输出字段名为 "label"，兼容旧格式 "title"
     title = line.get("label") or line.get("title", "")
     text = line.get("text", "")
@@ -162,6 +175,9 @@ def annotate_voice_line(line: dict, index: int) -> dict:
             if any(kw in text for kw in keywords):
                 phase = phase_id
                 break
+    # 最终回退到默认时期（基于干员页面名推断）
+    if phase == "unknown" and default_phase != "unknown":
+        phase = default_phase
 
     return {
         "id": f"V{index:03d}",
@@ -231,9 +247,13 @@ def build_context_json(
     """构建完整的 context.json"""
     annotated_lines = []
 
+    # 确定语音行的默认时期（基于干员页面名）
+    operator_name = operator_data.get("name_zh") or operator_data.get("name", "")
+    default_phase = OPERATOR_DEFAULT_PHASE.get(operator_name, "unknown")
+
     # 1. 标注语音
     for i, vl in enumerate(operator_data.get("voice_lines", [])):
-        annotated_lines.append(annotate_voice_line(vl, i))
+        annotated_lines.append(annotate_voice_line(vl, i, default_phase))
 
     # 2. 标注剧情对话
     story_idx = 0

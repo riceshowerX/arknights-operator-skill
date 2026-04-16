@@ -1,0 +1,2711 @@
+{
+  "character": "W",
+  "slug": "w",
+  "source_url": "https://prts.wiki/w/W",
+  "page_type": "operator",
+  "timeline": [
+    {
+      "id": "早期",
+      "label": "早期",
+      "range": "893-898",
+      "summary": ""
+    },
+    {
+      "id": "巴别塔时期",
+      "label": "巴别塔时期",
+      "range": "1031-1094",
+      "summary": ""
+    },
+    {
+      "id": "整合运动时期",
+      "label": "整合运动时期",
+      "range": "1094-1097",
+      "summary": ""
+    }
+  ],
+  "annotated_lines": [
+    {
+      "id": "V000",
+      "text": "我倒是想过无数种回到这里的可能性，看见她当日看见的这幅风景......可怎么也没想到会和你站在一起，这还真过分啊，“博士”。",
+      "source": "voice",
+      "source_detail": "任命助理",
+      "context": {
+        "phase": "early",
+        "scene": "任命助理",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V001",
+      "text": "问我去了哪里？不能说诶，凯尔希绕过了你直接给我下达了命令......你不信？好，你对她的信任真是令人信服呢。好啦，只是去挥霍了一下财产。衣服而已，已经检查过了，怎么，很意外吗？",
+      "source": "voice",
+      "source_detail": "交谈1",
+      "context": {
+        "phase": "early",
+        "scene": "交谈1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V002",
+      "text": "有几个小干员总是会咬牙切齿地看着我，他们什么时候才会真的动手呢......凯尔希解释过？在忍耐？什么嘛，尊重个人欲望可是很重要的一件事哦，就让他们放开手做吧，我正无聊呢。",
+      "source": "voice",
+      "source_detail": "交谈2",
+      "context": {
+        "phase": "early",
+        "scene": "交谈2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V003",
+      "text": "你过去很喜欢和我们打交道，雇佣兵是高效的战争工具，像快餐一样，开袋即食，用之即弃。你问我发生过什么？嗯，有些人不希望我话太多哎~但什么都记不得可真是幸福，是吧？",
+      "source": "voice",
+      "source_detail": "交谈3",
+      "context": {
+        "phase": "early",
+        "scene": "交谈3",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V004",
+      "text": "拯救感染者？几乎所有卡兹戴尔的萨卡兹都是感染者，压迫和矛盾却多种多样......“拯救”具体来说能做到哪一步？连她一个萨卡兹都保护不好的凯尔希和现在的你，又打算怎么做？",
+      "source": "voice",
+      "source_detail": "晋升后交谈1",
+      "context": {
+        "phase": "early",
+        "scene": "晋升后交谈1",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V005",
+      "text": "我真想知道，如果这些天真的干员们亲眼目睹那些善良的人温柔的人逐个死去，他们还能坚持说这些话，做这些事吗？欸，没有瞧不起谁，只是提醒你们，不要随便把那个人的想法临摹得这么简单。",
+      "source": "voice",
+      "source_detail": "晋升后交谈2",
+      "context": {
+        "phase": "early",
+        "scene": "晋升后交谈2",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V006",
+      "text": "你啊，阿米娅身上的那个，怎么看凯尔希都有事情瞒着你吧？亏你能在什么都记不得的时候取得其他人的信任，不，你会信任其他人才更奇怪，真不知道那两个人看见你现在的样子会怎么想。",
+      "source": "voice",
+      "source_detail": "信赖提升后交谈1",
+      "context": {
+        "phase": "early",
+        "scene": "信赖提升后交谈1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V007",
+      "text": "这里还真是什么人都有啊。比起过去，奇怪的家伙更多了。啊，别误会，那些人的想法我完全不在乎，只是，阿米娅做得似乎还不错，至少她也努力想成为那个人的样子，我还不算讨厌。",
+      "source": "voice",
+      "source_detail": "信赖提升后交谈2",
+      "context": {
+        "phase": "early",
+        "scene": "信赖提升后交谈2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V008",
+      "text": "{{DrName|前缀=Dr.",
+      "source": "voice",
+      "source_detail": "信赖提升后交谈3",
+      "context": {
+        "phase": "early",
+        "scene": "信赖提升后交谈3",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V009",
+      "text": "真是优哉游哉的呢，谁会想到有一天那个{{DrName",
+      "source": "voice",
+      "source_detail": "闲置",
+      "context": {
+        "phase": "early",
+        "scene": "闲置",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V010",
+      "text": "萨卡兹佣兵，W，真是好久不见，虽然这个“好久”可能含义不同。但没关系，既然现在的你不是我要找的你，那你暂时是安全的，暂时哦。",
+      "source": "voice",
+      "source_detail": "干员报到",
+      "context": {
+        "phase": "early",
+        "scene": "干员报到",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "console",
+          "label": "宽慰",
+          "confidence": 0.8
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V011",
+      "text": "真是熟悉到让人害怕的风格，我说你啊，真的失忆了吗？",
+      "source": "voice",
+      "source_detail": "观看作战记录",
+      "context": {
+        "phase": "early",
+        "scene": "观看作战记录",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V012",
+      "text": "好，我在听。没想到你会亲自负责这种小事，比起被人给予，我还是更乐意自己抢过来啊。",
+      "source": "voice",
+      "source_detail": "精英化晋升1",
+      "context": {
+        "phase": "early",
+        "scene": "精英化晋升1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "affirm_presence",
+          "label": "存在确认",
+          "confidence": 0.9
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V013",
+      "text": "和一个这样的你并肩作战，真是种奇妙的体验。看来，在你回想起那天发生的事情之前，我们还是可以好好相处的嘛。",
+      "source": "voice",
+      "source_detail": "精英化晋升2",
+      "context": {
+        "phase": "early",
+        "scene": "精英化晋升2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V014",
+      "text": "彼此，都尽量活下来吧。",
+      "source": "voice",
+      "source_detail": "编入队伍",
+      "context": {
+        "phase": "early",
+        "scene": "编入队伍",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "invite",
+          "label": "邀请",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V015",
+      "text": "雇佣兵的指挥都是实用风格，可别指望我会照顾其他人喔。",
+      "source": "voice",
+      "source_detail": "任命队长",
+      "context": {
+        "phase": "early",
+        "scene": "任命队长",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.85
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V016",
+      "text": "嗯，又是美好的一天。",
+      "source": "voice",
+      "source_detail": "行动出发",
+      "context": {
+        "phase": "early",
+        "scene": "行动出发",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V017",
+      "text": "只要全部干掉就完事了吧？别想那么简单？那真麻烦啊......",
+      "source": "voice",
+      "source_detail": "行动开始",
+      "context": {
+        "phase": "early",
+        "scene": "行动开始",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V018",
+      "text": "收到。",
+      "source": "voice",
+      "source_detail": "选中干员1",
+      "context": {
+        "phase": "early",
+        "scene": "选中干员1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V019",
+      "text": "明白。",
+      "source": "voice",
+      "source_detail": "选中干员2",
+      "context": {
+        "phase": "early",
+        "scene": "选中干员2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V020",
+      "text": "说不定我会偷偷溜到其他地方去呢。",
+      "source": "voice",
+      "source_detail": "部署1",
+      "context": {
+        "phase": "early",
+        "scene": "部署1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.85
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V021",
+      "text": "好啦，我就在这里好好休息吧。",
+      "source": "voice",
+      "source_detail": "部署2",
+      "context": {
+        "phase": "early",
+        "scene": "部署2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "soothe",
+          "label": "安抚",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V022",
+      "text": "是谁会抽中大奖呢？",
+      "source": "voice",
+      "source_detail": "作战中1",
+      "context": {
+        "phase": "early",
+        "scene": "作战中1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V023",
+      "text": "遍地惊喜，任君自取~",
+      "source": "voice",
+      "source_detail": "作战中2",
+      "context": {
+        "phase": "early",
+        "scene": "作战中2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V024",
+      "text": "我数到三，你们还有投降的机会，三~",
+      "source": "voice",
+      "source_detail": "作战中3",
+      "context": {
+        "phase": "early",
+        "scene": "作战中3",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V025",
+      "text": "砰！哈哈哈——",
+      "source": "voice",
+      "source_detail": "作战中4",
+      "context": {
+        "phase": "early",
+        "scene": "作战中4",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V026",
+      "text": "嗯，能在这样的战场上发挥到这种地步，这种感觉真让人怀念。",
+      "source": "voice",
+      "source_detail": "完成高难行动",
+      "context": {
+        "phase": "early",
+        "scene": "完成高难行动",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V027",
+      "text": "你看到刚才那个人的表情了吗？那种意识到自己将要四分五裂却无能为力的绝望感，还挺有趣的不是吗！",
+      "source": "voice",
+      "source_detail": "3星结束行动",
+      "context": {
+        "phase": "early",
+        "scene": "3星结束行动",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V028",
+      "text": "会出现这种失误真是少见，是你的本领生疏了，还是你顾虑的东西变多了？",
+      "source": "voice",
+      "source_detail": "非3星结束行动",
+      "context": {
+        "phase": "early",
+        "scene": "非3星结束行动",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V029",
+      "text": "撤退？把伤亡控制在最小？欸，从你嘴里听到这种命令，还真让人难以适应啊。",
+      "source": "voice",
+      "source_detail": "行动失败",
+      "context": {
+        "phase": "early",
+        "scene": "行动失败",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V030",
+      "text": "这扇门，已经修好了啊。",
+      "source": "voice",
+      "source_detail": "进驻设施",
+      "context": {
+        "phase": "early",
+        "scene": "进驻设施",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "soothe",
+          "label": "安抚",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V031",
+      "text": "看起来，这儿多了很多东西，也少了很多人。",
+      "source": "voice",
+      "source_detail": "戳一下",
+      "context": {
+        "phase": "early",
+        "scene": "戳一下",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V032",
+      "text": "......哪边才是本来的你？",
+      "source": "voice",
+      "source_detail": "信赖触摸",
+      "context": {
+        "phase": "early",
+        "scene": "信赖触摸",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V033",
+      "text": "明日方舟。",
+      "source": "voice",
+      "source_detail": "标题",
+      "context": {
+        "phase": "early",
+        "scene": "标题",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V034",
+      "text": "很少见到这么热闹的罗德岛，什么，这是可以放松享受的意思吗？很不巧，我只准备了一些惊吓礼盒，至于里面有什么，你应该清楚得很吧？那还想要吗？不要了？真可惜。",
+      "source": "voice",
+      "source_detail": "新年祝福",
+      "context": {
+        "phase": "early",
+        "scene": "新年祝福",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V035",
+      "text": "{{DrName|前缀=Dr.",
+      "source": "voice",
+      "source_detail": "问候",
+      "context": {
+        "phase": "early",
+        "scene": "问候",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V036",
+      "text": "是今天吧？罗德岛博士的详细资料，这么容易就能被我偷到手，你们的防护系统和我三岁时搓出来的炸弹一样糟糕啊。而且你居然在过生日哎？听到了几首充满爱意的生日歌啊？",
+      "source": "voice",
+      "source_detail": "生日",
+      "context": {
+        "phase": "early",
+        "scene": "生日",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V037",
+      "text": "真是愉快的其乐融融，这就是你和凯尔希在这里安心举办的庆祝现状的宴会？真正应该看到这个景象的，绝对不是现在的你，也不是现在的我，更不应该是明明什么都没有忘的凯尔希。",
+      "source": "voice",
+      "source_detail": "周年庆典",
+      "context": {
+        "phase": "early",
+        "scene": "周年庆典",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.8
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S000",
+      "text": "你们还要往前走吗？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S001",
+      "text": "不进行治疗的话，你会感染的。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S002",
+      "text": "魔族、魔族呢。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S003",
+      "text": "身边尽是些魔族，我都快忘记这个称呼了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S004",
+      "text": "我已经离得很远了吧？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S005",
+      "text": "嗯哼......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S006",
+      "text": "这附近有一家废弃的医院。切尔诺伯格区级医院。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S007",
+      "text": "你们想知道在哪里吗？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S008",
+      "text": "跑的还挺快。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S009",
+      "text": "......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S010",
+      "text": "前面的街道，左拐，能看到一处被毁掉的广场。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S011",
+      "text": "广场西边，那座最大的白色建筑，是医院。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S012",
+      "text": "废弃的医院。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S013",
+      "text": "一时兴起啊。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S014",
+      "text": "你们两个，什么关系？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S015",
+      "text": "嗯......所以你听他的？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S016",
+      "text": "算了，随便吧，现在，轮到你帮帮你自己的救命恩人了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S017",
+      "text": "没什么。我说过，前面不远，就有一家医院。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S018",
+      "text": "当然，整合运动也不傻，不会干放着那些医疗物资视作无物......所以，如果你想救这位卢布廖夫小朋友......就去偷。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S019",
+      "text": "那里都是感染者暴徒，是杀了你们的家人、亲人、朋友的暴徒。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S020",
+      "text": "也只有那里有抑制矿石病早期症状的药剂。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S021",
+      "text": "去偷，去抢，怎么都好。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S022",
+      "text": "但是不要指望那边的人会帮你。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S023",
+      "text": "别去？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S024",
+      "text": "他知道你的名字，卢布廖夫，你知道他的吗？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S025",
+      "text": "他没有义务听你的话。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S026",
+      "text": "想要救那些人，想法很好。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S027",
+      "text": "记住我说的那家医院，医疗物资已经被集中在了地下仓库。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S028",
+      "text": "你可以从停车场的通风管道潜进去，或者从排水沟里走，只要化学废料没那么多。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S029",
+      "text": "说不定，你会死在那里。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S030",
+      "text": "龙门发生了不少事......也让这里出现了一些缺口。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S031",
+      "text": "在如今的切尔诺伯格，那可是难得的战地医院，怎么会没有别的人打它的主意呢？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S032",
+      "text": "你们觉得为什么......身为魔族的我，会对那里有一家医院这么清楚？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S033",
+      "text": "他很痛苦，而且照这个势头发展下去，他无药可救。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S034",
+      "text": "如果你不做决定的话......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "decide"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S035",
+      "text": "你们就死在这里吧。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S036",
+      "text": "去。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S037",
+      "text": "还是不去？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S038",
+      "text": "啊......不过你现在去说不定也晚了，既然已经发生暴乱，去偷东西就更难了吧——",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S039",
+      "text": "——嗯......会死哦。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S040",
+      "text": "连他的名字都不知道，想出声阻止都没法子，真可怜。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S041",
+      "text": "骗？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S042",
+      "text": "我可没有说一句谎话。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S043",
+      "text": "当然，信不信我，由你。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S044",
+      "text": "信不信他，也随便你。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S045",
+      "text": "为什么？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S046",
+      "text": "你在担心他会逃跑。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S047",
+      "text": "你在想......他为什么要把你一个人留给我，留给一个魔族。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S048",
+      "text": "闭嘴。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S049",
+      "text": "......就在这里等他。一步都不许动。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S050",
+      "text": "否则，我现在就可以杀了你。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S051",
+      "text": "你以为我是谁？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S052",
+      "text": "我是凶手。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S053",
+      "text": "是毁了这座城市，伤害你父母和朋友的凶手。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S054",
+      "text": "......啊，哈哈，对了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S055",
+      "text": "忘记你还有这把刀。那刀柄上的是萨卡兹的配饰，还染着血。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S056",
+      "text": "你猜猜看是谁的血？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S057",
+      "text": "哭吧，孩子是可以哭的。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S058",
+      "text": "至于之后的死活......就要看你们的表现了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S059",
+      "text": "是吗。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S060",
+      "text": "......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S061",
+      "text": "没有谁......是不能没有另一个人的。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S062",
+      "text": "没有。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S063",
+      "text": "又安静下来了，这座废城。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S064",
+      "text": "自从那场屠杀之后，反抗者就少了很多。不错啊，这样才能少费点力气，少死点人。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S065",
+      "text": "不过，医院的方向，好像也没动静了呢。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S066",
+      "text": "嗯？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S067",
+      "text": "他逃跑了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S068",
+      "text": "但是你救了他，他也会为了救你而努力，不是吗？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S069",
+      "text": "还是说，只有你才能救他，他不能救你？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S070",
+      "text": "......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S071",
+      "text": "你要去哪儿？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S072",
+      "text": "我说过，离开这儿你就会死。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S073",
+      "text": "嚯——",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S074",
+      "text": "你的眼神，你在恨他。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S075",
+      "text": "——住嘴。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S076",
+      "text": "在他回来之前，你什么都不知道。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S077",
+      "text": "你可以觉得他会回来，也可以觉得不会。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S078",
+      "text": "但觉得他不会，怀疑他，恨他，是你的问题。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S079",
+      "text": "你假定他的失败，他的逃走，为什么？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S080",
+      "text": "因为你是救了他的人？你是强的那一方？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S081",
+      "text": "你还有劲哭啊。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S082",
+      "text": "放心吧，很快你就会痛得哭不出来。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S083",
+      "text": "念在你年纪小，又不是萨卡兹，如果你真撑不下去的话，可以告诉我。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S084",
+      "text": "我来帮你解脱。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S085",
+      "text": "......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S086",
+      "text": "已经意识模糊了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S087",
+      "text": "算了......看来是真的来不及。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S088",
+      "text": "......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S089",
+      "text": "你重新信任他，只是因为你太怕死了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S090",
+      "text": "小孩总是善于察言观色的。想这样从我这里博好感，可没戏呢。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S091",
+      "text": "不过，的确已经耽误太长时间了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S092",
+      "text": "最后十分钟。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S093",
+      "text": "放心，真到了那个时候，我倒也不至于让一个孩子在痛苦中死去。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S094",
+      "text": "......已经连呜咽的力气都没有了吗。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S095",
+      "text": "你在想什么？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S096",
+      "text": "你在恨我吗？还是在恨他？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S097",
+      "text": "又或者，在后悔自己要多管闲事，救一个人，害得自己负伤？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S098",
+      "text": "是吗。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S099",
+      "text": "你还有力气说话，倒是让我刮目相看。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S100",
+      "text": "听着，卢布廖夫。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S101",
+      "text": "决定一个人所作所为的，是什么？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "decide"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S102",
+      "text": "是出身？身份？还是过去？一直以来扣在他身上的行为枷锁？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "reminisce"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S103",
+      "text": "都不是。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S104",
+      "text": "是他生命中的一切对他产生的影响，是时刻在改变的，他自己的信念和想法。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S105",
+      "text": "以及，他到底多么相信自己的这个信念。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S106",
+      "text": "你救了他，但你自己心底里都不相信他，瞧不起他，因为你把自己当做了他的救世主。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S107",
+      "text": "他呢，也很单纯。你救了他，所以他想救你。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S108",
+      "text": "在这方面，他的确比你强一点。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S109",
+      "text": "收好你的刀，那是萨卡兹的刀。我替它的主人把它送给你了。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S110",
+      "text": "使用它，学会使用它，或者拿去卖了换点钱，随你喜欢。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S111",
+      "text": "那么，就这样。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "坚强的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S112",
+      "text": "你说是吧。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": "孱弱的孩子",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S113",
+      "text": "......塔露拉。\n}}\n{{剧情导航}}",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "early",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "A000",
+      "text": "【代号】W\n【性别】女\n【战斗经验】十一年\n【出身地】卡兹戴尔\n【生日】本人表示遗忘\n【种族】萨卡兹\n【身高】165cm\n【矿石病感染情况】\n参照医学检测报告，确认为感染者。",
+      "source": "archive",
+      "source_detail": "档案#1",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A001",
+      "text": "【物理强度】标准\n【战场机动】标准\n【生理耐受】优良\n【战术规划】卓越\n【战斗技巧】优良\n【源石技艺适应性】标准",
+      "source": "archive",
+      "source_detail": "档案#2",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A002",
+      "text": "萨卡兹佣兵头目，W。曾参与卡兹戴尔漫长的内战，其小队以残暴而高效的作战手段闻名。在切尔诺伯格事件中与罗德岛发生冲突，后因为某些原因叛出整合运动，在凯尔希医生亲自进行了充分交涉后，与罗德岛签订战略合作条款。",
+      "source": "archive",
+      "source_detail": "档案#3",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A003",
+      "text": "造影检测结果显示，W的体内脏器轮廓模糊，可见异常阴影，循环系统内源石颗粒检测异常，有矿石病感染迹象，现阶段可确认为矿石病感染者。\n\n【体细胞与源石融合率】 14%\n雇佣兵W有明显的感染迹象。缺乏进一步检查。\n\n【血液源石结晶密度】0.29u/L\n因常年在卡兹戴尔地区活动，并毫不节制地滥用源石军工制品，雇佣兵W的感染情况不容乐观。但其本人从未有身为感染者的自觉，又或者，对于大部分萨卡兹而言，他们早已习惯了这种备受煎熬的双重身份。\n\n你们都知道，W的性格非常糟糕，即使与罗德岛合作之后，她也从来没有配合过我们的检查——是检查，不是治疗。说真的，我知道没有太多人愿意照顾她，只是出于医疗干员的身份负一份责任而已。就算这样，那个魔族也从来不懂好好听人说话，她总是说什么“不想帮我就不要勉强帮我啦”、“我都对你们的人出过手，何必为难自己呢”之类的，废话！这我当然知道，但是......但是一码归一码，现在立刻把她给我带回来！\n——某位医疗部门负责人",
+      "source": "archive",
+      "source_detail": "档案#4",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A004",
+      "text": "在卡兹戴尔战乱时期，W曾隶属于卡兹戴尔某支独立雇佣兵小队。该队伍曾频繁袭击拉特兰商旅队伍并因此闻名，队伍中的很多人都曾收缴过守护铳作为战利品。而在卡兹戴尔臭名昭著的地下黑市疤痕商场中，经过正式仪式而被授予的守护铳往往能卖到很高的价钱。W本人至今仍收藏有多把守护铳，为了避免这样的“藏品”引起舰内部分拉特兰干员的抵触情绪，在登记后作为违禁品被收缴。而其本人常用的多种武器之中，也有一把有着明显改造痕迹的爆炸物发射装置，其来源......根据综合考量，不予深究。\n在战乱结束后，W以雇佣兵身份接受整合运动领袖塔露拉的邀请，成为整合运动的帮凶之一。再之后，W单方面撕毁了与整合运动的合作，转而与罗德岛达成合作共识，并持续至今。综上所述，可以认为我们对W在卡兹戴尔内战期间的具体立场、加入并迅速背叛整合运动的动机、与罗德岛合作的目的都无从得知。有关卡兹戴尔内战早期，以及加入整合运动后这两个时间点的行动履历则是完全空白，考虑到W如今仍以萨卡兹雇佣兵的身份行事，以及其在整合运动事件中的所作所为，我们建议任何普通干员都尽量与W保持距离，并敦促各个部门谨慎对待这些危险的合作者。\n【权限记录】\n让普通的文员来负责W？实在是有点难为人，他们不知道的事情也太多了。不过既然是老相识，还是让我亲自下场吧。\n好啦好啦，光是W几乎不用待在船上这一点，我们就该好好庆幸一番了。其他人只是对她感觉到讨厌啦，恐怖啦，但哪有那么简单呢？我是说，她哪有那么复杂呢？要是见过她以前的样子，你就知道该怎么和这种疯子相处。如果她没点什么本事，怎么从塔露拉手里把那些萨卡兹雇佣兵彻底独立出来呢？没关系，就算她敢闹出点什么事儿，也有凯尔希医生看着嘛。\n但是，她的确是个应该远离的对象。特别对咱们这么多不谙世事的可爱干员来说，W的刺激性还是太强了一些。更别提咱们那些精英干员......在酒精作用下和W摩擦出一点小火花然后炸掉咱们半艘船，不，说不定整艘船，这种事情真的不要发生比较好，我认真的。\n最后，请记住，我们人事部绝不会轻易让不安定分子加入罗德岛，毕竟是工作条款里最重要的一条嘛。所以，要么是情况已经足够危险，要么是......我们本来就知根知底。现在，二者皆有，你说对吧？\n——■■■",
+      "source": "archive",
+      "source_detail": "档案#5",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A005",
+      "text": "萨卡兹雇佣兵。在卡兹戴尔的内战结束——至少明面上结束之前，始终是卡兹戴尔荒芜的疆土上最常见的武装力量。他们各自以小队为单位，有时会被某些拥有庞大资金和物资的贵族招揽，有时也会自发形成某些佣兵同盟。在各方混战，意识导向与生死观念都与其他地区大不相同的卡兹戴尔，各地盘踞着的势力都逐渐盛行以雇佣兵形式活动。在近代可考的战争史中，“萨卡兹雇佣兵”始终是一个讨论激烈的课题。其中一部分萨卡兹佣兵则受雇于卡兹戴尔之外的金主，其装备精良，精于局部的战略布置，一度成为各方的安保难题。因此也出现了部分专门对抗萨卡兹的专业人士，不过具体情况尚不可考。\n在由现任摄政王与正统王室发生冲突并挑起内战之后，散落在各个贵族手下以及民间的武装力量开始被逐渐统合，并被迫划分阵营。战争是残酷的，但部分学者认为内战反而让贫瘠且混乱的卡兹戴尔出现了一次全新的再分配、再定序的过程。尽管正统王室继承人被驱逐出了卡兹戴尔，但仍旧有许多古老的贵族和门阀选择支持，并利用他们强大的经济实力统合了大量的雇佣兵，让这些散兵游勇在王的旗帜下团结起来。这被认为是雇佣兵形式正式成为内战的重要部分的开端。随后，摄政王一方也如法炮制。大部分雇佣兵因此被纳入各大门阀贵族的统治下，一定程度上失去了“雇佣兵”一词的原本含义。不过即使如此，仍旧有少数雇佣兵不愿置身这场无人生还的战斗，依旧努力作为独立的团体在两大立场间游走徘徊。他们认为雇佣兵，或者说，萨卡兹应该是自由的。关于他们的事迹，则在艺术加工后作为一些传奇故事，在卡兹戴尔的平民中广为流传。\n——《斗争与自由》第二章《卡兹戴尔与近代雇佣兵史》节选，此书属于W的个人物品，作者名只简写了一个\"H.\"，意料之外。“萨卡兹应该是自由的”这句话被标红了。",
+      "source": "archive",
+      "source_detail": "档案#6",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A006",
+      "text": "W与她的队伍在罗德岛内依旧保持独立，考虑到萨卡兹雇佣兵的特殊性，W极少驻扎在罗德岛本舰。偶尔能在本舰见到她，都会引起不小的骚动。\nW的性格恶劣已经不需要再复述了，除了凯尔希医生和博士，她几乎不把任何人放在眼里。上一次回到本舰述职的时候，甚至差点和两位精英干员打起来......起因？W的挑衅，当然了。她甚至都不是故意的，那个态度就足够引发战争了，她丝毫不尊重那些牺牲者——更何况其中有一些人，本来就和她脱不开干系！这个没血没泪的魔族！\n哦，对了，还有阿米娅。\n阿米娅似乎对W不是很熟悉，W也对阿米娅没什么印象的样子，但是，W会听阿米娅的话。很奇怪？我们都这么觉得。尽管会一边抱怨，一边嫌弃，甚至会无视命令以自己的判断行事，可从汇报结果上而言，W都完成了阿米娅交代的事情。就好像......W在阿米娅身上期待着什么，但我觉得这不是什么好事。\n还有一件事，我不确定这件事是不是我想多了，头儿也让我不要继续监视下去——\n但是W她偶尔会站在一些空着的房间面前......发呆。也偶尔，会看着正在应付各种杂务的阿米娅。对，就那么看着。\n她会想什么呢？如果是危险的事情，我们一定要注意防范，这种可能性很高。\n毕竟W她......那些时候，都没有在笑。",
+      "source": "archive",
+      "source_detail": "档案#7",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A007",
+      "text": "【权限记录】\n博士，想必您也发现了，W与罗德岛之间......甚至与您的过去，都有一些关系。\n当炎客那样的萨卡兹都出现在罗德岛的时候，我就预料到会有这么一天。很神奇，从卡兹戴尔到乌萨斯，再到龙门，再到如今，甚至是往后，我们一路前行，最后却又会遇见最开始的那些人和事，以及他们留下的深远影响。我再一次认识到，有些事是无法避免，也无法逃避的。我找凯尔希女士和阿米娅都聊过，甚至还带了一大堆零食去贿赂过可露希尔，大家的看法都不同。\n我拜托了■■■让我找博士你谈一谈，虽然您已经不认识我了，但我觉得还是有必要找您聊一聊。嗯。您只需要继续把我当做......一个萨卡兹锅炉工就好。\n我想说的是W。我认识W很久了。在殿下还在的时候......W有和你提起过吗？殿下的事。本来这在我们这些“老员工”之间是绝对不能提起的话题，并不是想要刻意瞒着您哦，博士。单纯的，只是我们自己都不愿意面对那个过去。凯尔希女士......她当然知道所有事情。嗯？放心吧，我也是和凯尔希女士打过招呼才来找您的。有些事我做不到像凯尔希女士那样想那么周全，我只是想来找您聊聊。\n说回W，她从过去开始，就是个只知道跟在殿下后面，也只对殿下唯命是从的孩子。就算是当时在一起的萨卡兹，知道W的人也并不多。当时的阿米娅？W应该不会和阿米娅有什么交集，毕竟她是雇佣兵身份加入的，嬉皮笑脸，玩世不恭，不择手段。我呢，当时也只是个锅炉工，从来没上过战场——呃？对，我这一身都只是勤苦工作锻炼出来的......扳手腕赢了那位精英干员也只是偶然......我完全没有上过战场。我不知道那些战士眼里，W是个多么极端而不知所谓的不安定分子，我没见过战场上的她，我只见过任务归来之后，远远跟在殿下后面又不敢擅自僭越去打招呼的她。在我看来，她只是在追寻殿下。追着殿下的理想，追着殿下的光芒，和当初在那里的每一个萨卡兹都一样。\n现在的W变了。罗德岛上认识W的人其实并不少。但W认识的人，却大都不在了。她......她伪装的太深，太久。她本来有几个同伴，嗯，就算她那个性格，也是需要同伴互相辅佐的。之前她们都和我们并肩作战过，虽然时日不长，但如果她的同伴们还能在她身边的话，说不定还能稍微帮她一把。现在能帮她的也许一个人都没有了，对，我们都做不到。凯尔希女士，博士您，都做不到，也许也没人想这么做吧，我理解。但不该是一件理所当然的事情。\n我们都想知道W到底想要什么，想做什么。在她的眼里，罗德岛究竟只是个幻影，还是一个全新的承载了过去的未来，这件事很重要，对每一个心里还有着那些过往的人而言，都很重要。甚至包括阿米娅，和凯尔希女士。这也关系到W日后到底会怎么处理她和罗德岛，和凯尔希女士，和阿米娅，和您的关系。\n嗯？啊。之所以特地来和您聊这些，原因也挺简单的，您记不得过去的事儿了，但是过去的人却一个接一个出现在您面前，有信任，有不信任，我觉得博士您也怪难办的......哈哈，说来惭愧，我一个锅炉工可没面子来担心罗德岛的博士，真不好意思。\n凯尔希女士和阿米娅也许能把博士您照顾的很好，也能让罗德岛继续稳定地运作下去，但W实在是......太与众不同了。无论是她对您，还是您对她，我都希望二位能冷静一点，不要操之过急。\n本来，这些话应该是阿米娅或者凯尔希女士来找您说的吧，至少也该是■■■亲自来，大家默许了我的自作主张，其实我也有些忐忑来着。\n我只是一个普普通通萨卡兹。不能操纵那么疯狂的法术，不会使用巨大的剑和斧，说不定还会砸到自己的脚。我只会负责好自己的工作。我只希望......罗德岛还能安然无恙的在这片大地上前进，仅此而已。\n嗯？您也有问题要问我？特蕾西娅？您......从哪儿听说这个名字的？\n......特蕾西娅吗。\n也许离您真正面对过去的时日，也不远了吧。",
+      "source": "archive",
+      "source_detail": "档案#8",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    }
+  ],
+  "annotated_relations": [],
+  "stats": {
+    "total_lines": 160,
+    "source_distribution": {
+      "voice": 38,
+      "story": 114,
+      "archive": 8
+    },
+    "phase_distribution": {
+      "early": 152
+    },
+    "situation_distribution": {
+      "casual": 153,
+      "comfort": 4,
+      "decide": 2,
+      "reminisce": 1
+    }
+  }
+}

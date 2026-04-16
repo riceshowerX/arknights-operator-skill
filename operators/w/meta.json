@@ -1,0 +1,23 @@
+{
+  "name": "W",
+  "name_en": "W",
+  "slug": "w",
+  "created_at": "2026-04-16T16:32:56.622511",
+  "updated_at": "2026-04-16T16:32:56.622511",
+  "version": "v1.0",
+  "profile": {
+    "game": "明日方舟",
+    "faction": "unknown",
+    "identity": "unknown",
+    "mbti": "unknown",
+    "key_relationships": []
+  },
+  "tags": {
+    "personality": [],
+    "leadership": [],
+    "philosophy": []
+  },
+  "impression": "",
+  "knowledge_sources": [],
+  "corrections_count": 0
+}

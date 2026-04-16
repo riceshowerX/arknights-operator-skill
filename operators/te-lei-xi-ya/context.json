@@ -1,0 +1,1189 @@
+{
+  "character": "魔王",
+  "slug": "mo-wang",
+  "source_url": "https://prts.wiki/w/%E9%AD%94%E7%8E%8B",
+  "page_type": "operator",
+  "timeline": [
+    {
+      "id": "early",
+      "label": "早期",
+      "range": "893-1072",
+      "summary": "成长与加冕"
+    },
+    {
+      "id": "babel",
+      "label": "巴别塔时期",
+      "range": "1072-1094",
+      "summary": "巴别塔创建与内战"
+    },
+    {
+      "id": "resurrected",
+      "label": "复活后",
+      "range": "1094后",
+      "summary": "被赦罪师复活"
+    }
+  ],
+  "annotated_lines": [
+    {
+      "id": "V000",
+      "text": "我还记得这间会议室。这是专门为特蕾西娅空着的位置吗？不......我并不需要。",
+      "source": "voice",
+      "source_detail": "任命助理",
+      "context": {
+        "phase": "resurrected",
+        "scene": "任命助理",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V001",
+      "text": "特蕾西娅已经永远离开了，现在留在这里的我，只是一个存在于“魔王”之中的程序。因为阿米娅的情感，我才会以这副模样显现。不要将我当作特蕾西娅，尽管我记得过去的一切。",
+      "source": "voice",
+      "source_detail": "交谈1",
+      "context": {
+        "phase": "resurrected",
+        "scene": "交谈1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V002",
+      "text": "我会陪在阿米娅身边，也会陪着罗德岛的大家，虽然这也算不上对过去时光的补偿......博士，我不是PRTS那样的程序哦，你看，虽然这个身体没有温度，可我也是会笑的。",
+      "source": "voice",
+      "source_detail": "交谈2",
+      "context": {
+        "phase": "resurrected",
+        "scene": "交谈2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V003",
+      "text": "罗德岛跨过了战争，该沿着她原本的航线出发了。就从改善后勤保障做起如何？有几间会议室是不是可以腾出来改成病房呢......征求我的意见？博士，我说过的，不要将我当作特蕾西娅。",
+      "source": "voice",
+      "source_detail": "交谈3",
+      "context": {
+        "phase": "resurrected",
+        "scene": "交谈3",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V004",
+      "text": "“罗德岛制药公司”，注册地是阿米娅的故乡呢。这些药物都是凯尔希研制的吗......怎么会遗憾？巴别塔的使命已经完成了，罗德岛会继续航行，治愈病痛。特蕾西娅也一定会很欣慰吧。",
+      "source": "voice",
+      "source_detail": "晋升后交谈1",
+      "context": {
+        "phase": "babel",
+        "scene": "晋升后交谈1",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.8
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V005",
+      "text": "我从不后悔曾经的选择。我们做了可以做的一切，然后将希望留给未来。时间会弥合伤口，爱意会抚平疤痕。漫漫长夜后，罗德岛会迎来黎明。许多人在途中离去了，我会留在这里，见证那个结局。",
+      "source": "voice",
+      "source_detail": "晋升后交谈2",
+      "context": {
+        "phase": "resurrected",
+        "scene": "晋升后交谈2",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.85
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V006",
+      "text": "阿米娅看上去还是这么瘦弱，这个年纪的孩子，个子是不是应该更高一点才对？她到底有没有好好吃饭呢......她多想看到阿米娅现在的样子，多想陪她再长大一点。她本该看到的......",
+      "source": "voice",
+      "source_detail": "信赖提升后交谈1",
+      "context": {
+        "phase": "resurrected",
+        "scene": "信赖提升后交谈1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V007",
+      "text": "凯尔希还是不愿与我讲话，向这顶王冠询问的时候，她都在回避我的眼睛。“魔王”记得她的过去，我可以体谅她的孤独，却不能为她解开枷锁。博士，或许有一天，你可以陪她找到存在的意义。",
+      "source": "voice",
+      "source_detail": "信赖提升后交谈2",
+      "context": {
+        "phase": "resurrected",
+        "scene": "信赖提升后交谈2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V008",
+      "text": "博士，你的眼里常怀愧疚。可你说，记忆能够决定一个人是谁吗？失去了记忆的你，和只是拥有她记忆的我，又如何解开那个结呢？多去陪陪阿米娅和凯尔希吧，停留在过去的有她就够了。",
+      "source": "voice",
+      "source_detail": "信赖提升后交谈3",
+      "context": {
+        "phase": "resurrected",
+        "scene": "信赖提升后交谈3",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V009",
+      "text": "博士，累了吗？那就休息吧。每个人都有平静入梦的权利，你也一样。",
+      "source": "voice",
+      "source_detail": "闲置",
+      "context": {
+        "phase": "resurrected",
+        "scene": "闲置",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "soothe",
+          "label": "安抚",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V010",
+      "text": "......我在。",
+      "source": "voice",
+      "source_detail": "干员报到",
+      "context": {
+        "phase": "resurrected",
+        "scene": "干员报到",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        },
+        {
+          "type": "affirm_presence",
+          "label": "存在确认",
+          "confidence": 0.9
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V011",
+      "text": "......我是不是在作战画面里看到了阿米娅？",
+      "source": "voice",
+      "source_detail": "观看作战记录",
+      "context": {
+        "phase": "resurrected",
+        "scene": "观看作战记录",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V012",
+      "text": "我还记得亲手交出去的每一块勋章，这样的仪式也是一种承诺。罗德岛不会放弃理想，不会辜负牺牲，不会遗忘同行的人。我们依然行走在最初所希望的路上。",
+      "source": "voice",
+      "source_detail": "精英化晋升1",
+      "context": {
+        "phase": "resurrected",
+        "scene": "精英化晋升1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V013",
+      "text": "我知道，还有许多人需要我。不用着急，这一次我不会离开了。",
+      "source": "voice",
+      "source_detail": "精英化晋升2",
+      "context": {
+        "phase": "resurrected",
+        "scene": "精英化晋升2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V014",
+      "text": "你会再次带领我们走向胜利吗，博士？",
+      "source": "voice",
+      "source_detail": "编入队伍",
+      "context": {
+        "phase": "resurrected",
+        "scene": "编入队伍",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V015",
+      "text": "我会与罗德岛的战士们站在一起。",
+      "source": "voice",
+      "source_detail": "任命队长",
+      "context": {
+        "phase": "resurrected",
+        "scene": "任命队长",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.85
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V016",
+      "text": "罗德岛的战士们，愿你们凯旋。",
+      "source": "voice",
+      "source_detail": "行动出发",
+      "context": {
+        "phase": "resurrected",
+        "scene": "行动出发",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V017",
+      "text": "我能听到你们所有人的悲伤。",
+      "source": "voice",
+      "source_detail": "行动开始",
+      "context": {
+        "phase": "resurrected",
+        "scene": "行动开始",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V018",
+      "text": "博士，我相信你的指挥。",
+      "source": "voice",
+      "source_detail": "选中干员1",
+      "context": {
+        "phase": "resurrected",
+        "scene": "选中干员1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V019",
+      "text": "别怕，我在。",
+      "source": "voice",
+      "source_detail": "选中干员2",
+      "context": {
+        "phase": "resurrected",
+        "scene": "选中干员2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "affirm_presence",
+          "label": "存在确认",
+          "confidence": 0.9
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V020",
+      "text": "阿米娅，站到我身后来。",
+      "source": "voice",
+      "source_detail": "部署1",
+      "context": {
+        "phase": "resurrected",
+        "scene": "部署1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V021",
+      "text": "我在这儿呢，我会一直陪着你。",
+      "source": "voice",
+      "source_detail": "部署2",
+      "context": {
+        "phase": "resurrected",
+        "scene": "部署2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.85
+        },
+        {
+          "type": "affirm_presence",
+          "label": "存在确认",
+          "confidence": 0.9
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V022",
+      "text": "我会记住你们每一个人。",
+      "source": "voice",
+      "source_detail": "作战中1",
+      "context": {
+        "phase": "resurrected",
+        "scene": "作战中1",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.85
+        },
+        {
+          "type": "promise_remember",
+          "label": "记忆承诺",
+          "confidence": 0.85
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V023",
+      "text": "你们的信念，同样可敬。",
+      "source": "voice",
+      "source_detail": "作战中2",
+      "context": {
+        "phase": "resurrected",
+        "scene": "作战中2",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V024",
+      "text": "继续向前走吧，我会陪在你身边。",
+      "source": "voice",
+      "source_detail": "作战中3",
+      "context": {
+        "phase": "resurrected",
+        "scene": "作战中3",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.85
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V025",
+      "text": "别哭，很快就结束了。",
+      "source": "voice",
+      "source_detail": "作战中4",
+      "context": {
+        "phase": "resurrected",
+        "scene": "作战中4",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V026",
+      "text": "终有一天，我们可以点起火焰，燃尽一切腐朽。",
+      "source": "voice",
+      "source_detail": "完成高难行动",
+      "context": {
+        "phase": "resurrected",
+        "scene": "完成高难行动",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V027",
+      "text": "你总是可以计算得很清楚，让一切都依照你的计划进行，对吗？",
+      "source": "voice",
+      "source_detail": "3星结束行动",
+      "context": {
+        "phase": "resurrected",
+        "scene": "3星结束行动",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V028",
+      "text": "如果没有你，我们的伤亡可能会更加严重......谢谢你，博士。",
+      "source": "voice",
+      "source_detail": "非3星结束行动",
+      "context": {
+        "phase": "resurrected",
+        "scene": "非3星结束行动",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V029",
+      "text": "我们一定可以跨过这些伤痛，罗德岛不会在此停下。",
+      "source": "voice",
+      "source_detail": "行动失败",
+      "context": {
+        "phase": "resurrected",
+        "scene": "行动失败",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.8
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V030",
+      "text": "新的安保系统，还认识我吗？",
+      "source": "voice",
+      "source_detail": "进驻设施",
+      "context": {
+        "phase": "resurrected",
+        "scene": "进驻设施",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V031",
+      "text": "哈！被吓到了吗？",
+      "source": "voice",
+      "source_detail": "戳一下",
+      "context": {
+        "phase": "resurrected",
+        "scene": "戳一下",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V032",
+      "text": "我在注视着你，博士。",
+      "source": "voice",
+      "source_detail": "信赖触摸",
+      "context": {
+        "phase": "resurrected",
+        "scene": "信赖触摸",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "comfort"
+      },
+      "speech_acts": [
+        {
+          "type": "affirm_presence",
+          "label": "存在确认",
+          "confidence": 0.9
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V033",
+      "text": "明日方舟。",
+      "source": "voice",
+      "source_detail": "标题",
+      "context": {
+        "phase": "resurrected",
+        "scene": "标题",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V034",
+      "text": "新年快乐，博士。罗德岛比过去要热闹很多呢。虽然还有那么多未完成的事情，但是这一时半刻的安宁也弥足珍贵。博士，可以替我把这些故事书和玩偶送给孩子们吗？特蕾西娅总是会这么做。",
+      "source": "voice",
+      "source_detail": "新年祝福",
+      "context": {
+        "phase": "resurrected",
+        "scene": "新年祝福",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V035",
+      "text": "程序启动，访问人，{{DrName|前缀=Dr.",
+      "source": "voice",
+      "source_detail": "问候",
+      "context": {
+        "phase": "resurrected",
+        "scene": "问候",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "V036",
+      "text": "生日快乐，博士。你在过去的世界里会怎样庆祝这一天呢？那一定是很温馨幸福的画面吧。我在“文明的存续”里，找到了这样一首歌，你要听听吗？博士，祝你今后的旅途，不再孤独。",
+      "source": "voice",
+      "source_detail": "生日",
+      "context": {
+        "phase": "resurrected",
+        "scene": "生日",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.8
+        },
+        {
+          "type": "affirm_presence",
+          "label": "存在确认",
+          "confidence": 0.9
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "V037",
+      "text": "“罗德岛”，这个名字给人一种很柔软的感觉。念出这个名字的时候，想到的一定是很温柔的回忆。我希望罗德岛可以一直一直，带着许多人的期望行驶下去。在将来，她也会成为更多人的家吧。",
+      "source": "voice",
+      "source_detail": "周年庆典",
+      "context": {
+        "phase": "resurrected",
+        "scene": "周年庆典",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [
+        {
+          "type": "commit",
+          "label": "承诺",
+          "confidence": 0.8
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S000",
+      "text": "......\n她没有犹豫，没有叹息，只是默默继续做着该做的事情。\n特蕾西娅越走越深，靠近了埋藏在更深处的回忆。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "reminisce"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S001",
+      "text": "......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "博士",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S002",
+      "text": "不可能，明明所有的记忆都已经......\n“特蕾西娅。”\n她循着声音，来到了一处虚无之前，声音从虚无之后传来。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S003",
+      "text": "这里是哪里——",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "？？？",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S004",
+      "text": "博士......？",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "？？？",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S005",
+      "text": "......预言家......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "？？？",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S006",
+      "text": "所以，凯尔希信任的，其实是你。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "预言家",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "S007",
+      "text": "......抱歉。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "预言家",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S008",
+      "text": "现在的你只是博士情感燃烧后的残渣，我没办法在这样的情况下，单独保留下你的情感和记忆......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "预言家",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S009",
+      "text": "......也许有些迟了，不过，很高兴见到你。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "预言家",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S010",
+      "text": "到了说再见的时候了......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": "预言家",
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "farewell",
+          "label": "告别",
+          "confidence": 0.8
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S011",
+      "text": "未来，我们还会再见的吧......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        },
+        {
+          "type": "farewell",
+          "label": "告别",
+          "confidence": 0.8
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S012",
+      "text": "凯尔希......阿米娅......",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.75
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "S013",
+      "text": "......{@nickname}。",
+      "source": "story",
+      "source_detail": "未标注场景",
+      "context": {
+        "phase": "babel",
+        "scene": "未标注场景",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "narration": [],
+      "speech_acts": [
+        {
+          "type": "evade",
+          "label": "回避",
+          "confidence": 0.7
+        }
+      ],
+      "emotion": {}
+    },
+    {
+      "id": "A000",
+      "text": "【代号】魔王\n【性别】女\n【战斗经验】未公开\n【出身地】卡兹戴尔\n【生日】7月11日\n【种族】未公开\n【身高】165cm\n【矿石病感染情况】\n未公开",
+      "source": "archive",
+      "source_detail": "档案#1",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A001",
+      "text": "【物理强度】优良\n【战场机动】标准\n【生理耐受】优良\n【战术规划】卓越\n【战斗技巧】优良\n【源石技艺适应性】卓越\n\n“特蕾西娅，你没有来参加这项测试的必要。”\n“我也是巴别塔的一分子，必要的时候，还是要贡献自己的力量呀。\n“而且你看，我的成绩还是挺厉害的，对不对？”",
+      "source": "archive",
+      "source_detail": "档案#2",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A002",
+      "text": "特蕾西娅，卡兹戴尔移动城市的建立者，卡兹戴尔军事委员会创始人之一，巴别塔组织的创立者，曾是卡兹戴尔的最高领袖。执政期间，她致力于推进医疗、教育、城市基础建设等事业，多次带领萨卡兹击退了外敌的入侵，并且在外交工作中颇有建树。后于卡兹戴尔与维多利亚的战争中身亡。\n该人事档案留存在罗德岛人事部封存的资料库中。",
+      "source": "archive",
+      "source_detail": "档案#3",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A003",
+      "text": "造影检测结果显示，该干员体内脏器轮廓模糊，可见异常阴影，循环系统内源石颗粒检测异常，有矿石病感染迹象，现阶段可确认为矿石病感染者。\n\n【体细胞与源石融合率】17%\n\n【血液源石结晶密度】0.29u/L\n“患者血液源石结晶密度近三个月来持续上升，建议减少与源石相关的工作。”\n记录更新时间：1093年11月17日\n记录医生：凯尔希\n\n一份陈旧的医疗报告，永远放在凯尔希的书桌左手边第一个上锁的抽屉里。",
+      "source": "archive",
+      "source_detail": "档案#4",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A004",
+      "text": "【权限记录】\n战争已经结束了。\n我们做了自己能做的，罗德岛完成了预设的目标与使命，感谢各位的付出，罗德岛会铭记所有的牺牲。\n维多利亚的局势变动很快就会在泰拉各地掀起波澜，显而易见且无可挽回。\n罗德岛曾经坚持避免出现在各个国家的视野中，可是时至今日，罗德岛已经不可能再完全置身事外，我们必须要为接下来的变故做好准备。\n......\n这场会议的第一个议题，我们已经得出了结论。\n罗德岛不会恢复巴别塔的名号。\n维什戴尔将“巴别塔”的名字带回了卡兹戴尔，巴别塔最初的目的，时隔多年，以一种意想不到的方式得以继承，我想，特蕾西娅应该也会乐于看到这样的结果。\n我们会与巴别塔，或者说卡兹戴尔有更多的合作。但罗德岛会坚持走原来的路，并且走得更远。\n矿石病......不止是矿石病，还有源石，它们始终是罗德岛致力于解决的问题。过去如此，未来我们只会更加坚定。罗德岛不会忘记我们克服矿石病的初心。也正是为了这个最初的目的，罗德岛必须承担起更宏大的使命。\n我们要为这片大地的未来而战。\n源石在以近乎失控的方式增长，我们可能会面对超出认知的敌人，我们会动用一切力量，也做好了迎接一切牺牲的准备。\n总之，今天达成的决议是，罗德岛会以更积极的态度，介入到各种会危及这片大地的变故中去。\n......\n是的，特蕾西娅已经永远地离开了。\n是她率先提出了巴别塔的理念，但如她所说，支撑罗德岛走到今天的，是她身边的人，也就是在座的诸位，以及为了这艘舰船的未来而奋斗的所有人。\n如果还有人对此项决议怀有疑问，可以在接下来的十分钟内提出自己的异议。\n......\n阿米娅......我明白。\n我知道她在听着。\n——凯尔希在■■■■■会议上的发言",
+      "source": "archive",
+      "source_detail": "档案#5",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A005",
+      "text": "【第一次访问记录】\n访问人：阿米娅\n“特蕾西娅小姐......”\n我在。\n“抱歉......时间很晚了，我不知道会不会打扰到您，可是，我还是有许多疑问......您到底，是怎样的存在？”\n我是特蕾西娅留在“文明的存续”中的一段程序，她为你留下了这段程序的最高使用权限。只要这顶王冠没有遗落，我就会一直陪伴在你身边。\n我的“躯体”依托于“文明的存续”而存在，拥有可以保护你的力量。只有你，和得到你允许的人，才可以看到我。\n阿米娅，你可以试着握住我的手。\n“谢谢......我感觉到了......温暖。\n“其实我还是不太明白，您算是特蕾西娅小姐吗？我也不知道，怎样称呼您......”\n阿米娅，特蕾西娅已经离开了，我只是拥有她的记忆。\n如果愿意的话，你同样可以称呼我为特蕾西娅。\n“抱歉......我明白。我已经与特蕾西娅小姐告别过，不会再有不切实际的幻想了。”\n我记得的，阿米娅。\n那样短暂的重逢不足以弥补这些年陪伴的空缺，在今后的时间里，我会替她履行守护你的承诺。\n阿米娅，特蕾西娅很遗憾，你是她唯一的遗憾。\n“我能感受到特蕾西娅小姐给予我的爱，我真的非常感激，我从来没有想过抱怨什么......只是......\n“在那片空间里，特蕾西娅小姐看到了我的过去，还有罗德岛这些年的经历。可是接下来，罗德岛还有很长的路要走，我应该也会走向更多的地方，我也有很多想要告诉她的话......\n“她还是没有办法听到，对吗？”\n抱歉，阿米娅。关于这一点，我也无能为力。\n......\n还有什么我能为你做的吗？\n“不，没什么了......那，再见。”\n晚安，做个好梦，阿米娅。",
+      "source": "archive",
+      "source_detail": "档案#6",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A006",
+      "text": "【第四次访问记录】\n访问人：凯尔希\n“查询，天堂支点。”\n在“文明的存续”已有记录中，一万个恒星年内，“天堂支点”激活的信号仅从行星表面传出一次，系行星本地人所为，你对此也有所知。\n自从那道帷幕降下后，它与过去的群星一同沉寂，影月升起的大陆没有传来过任何生灵的消息。\n“那些过去的遗产，依然没有音信？”\n“保存者”的石棺群依然沉寂，另外两枚“源石”同样深埋于所属之地，只有南边的海洋偶尔会传来令人不安的潮声。\n凯尔希，这些记录于王冠中的信息，你应该都了然。反复检索同样的资料也无法得到新的可能。\n你看上去非常忧虑。\n“我需要确认，你......特蕾西娅的实验，是否已经引发了......预料之外的影响。”\n很遗憾，即使是“文明的存续”，也无法记录源石内部的变动。\n“......你都能看到的，对吗？”\n是的。\n对于特蕾西娅来说，“文明的存续”存在限制，而现在的我，的确可以阅览其中存储的一切信息。\n而你......在这么漫长的时间里，你始终独自背负着这所有的一切。\n“......\n“那么，知晓了这一切的特蕾西娅，是否还会选择‘希望’？”\n恐怕我无法轻易给出答案，一个人的人格无法轻易与他的认知脱钩。\n但是我愿意相信，如果是特蕾西娅的话，她一定会感叹，泰拉经历的种种危险，以及无数次离崩毁只有一线之隔的危急时刻曾不断重塑她生活的大地。而这个世界如今呈现出的样貌，本身就是概率统计无法解释的奇迹。\n越是了解这个世界的全貌，越会觉得，“希望”这个词本身，即是一种违背理性的痴愚。\n没有人比你更清楚你所负使命的艰难......而你并非因为有希望才选择前行。\n所以，特蕾西娅从来都相信，你是她的同伴。\n“......\n“结束访问。请将这次对话的内容加密，以确保博士和阿米娅不会看到......至少在合适的时刻到来之前。”\n如你所愿。虽然这是对阿米娅的隐瞒，但并不违背特蕾西娅保护阿米娅的初衷。\n“你说得对，特蕾西娅。哪怕做了能做的一切，也没有人敢于宣称自己有把握改变命定的结局。\n“希望你......接下来可以保护好博士和阿米娅。”",
+      "source": "archive",
+      "source_detail": "档案#7",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    },
+    {
+      "id": "A007",
+      "text": "【第十一次访问记录】\n访问人：博士\n“博士，不知不觉，你已经与罗德岛同行很长一段时间了。\n“虽然你说自己只是一名过客，但我依然想欢迎你来到我们的身边。\n“我没有机会见到你所处的时代，听说那里，人人可以不受天灾与矿石病的困扰，话语和思念可以转瞬即达。\n“那的确是美好的过往，不过，既然你仍愿孤身一人踏上跨越万年的旅程，那么，你对这片大地一定有所期待吧。\n“请继续陪伴在阿米娅和凯尔希的身边吧，博士。\n“我相信，你会重新爱上这个世界，再一次选择希望与未来。\n“博士，谢谢你。”\n——来自特蕾西娅的录音，最后更新于■■■■年1月1日0时0分\n\n博士，特蕾西娅预想到了这样的时刻。\n你会向“文明的存续”问起，关于特蕾西娅的一切。出于好奇抑或是愧疚，你会想了解她是一个怎样的人，她为何对你寄予了如此沉重的期待，以及为何，你会做出那样的“背叛”。\n所以她特意为你录下了这些留言。\n你想要询问的问题，答案并不在过去。\n博士，你不该相信表象。哪怕你可以在这里查阅到与她有关的一切信息，你也无法从中认识完整的她，就像你永远无法从别人的话语中认识完整的自己。\n博士，关于你自己，特蕾西娅想要告诉你的仅此而已——你是她的挚友，她最信任的同行者。\n继续你的旅程吧，博士。\n你唯有在自己的道路上，才能找到关于她的答案。\n那也是关于你自己的答案。",
+      "source": "archive",
+      "source_detail": "档案#8",
+      "context": {
+        "phase": "unknown",
+        "scene": "档案",
+        "interlocutor": null,
+        "preceding_event": "",
+        "situation_type": "casual"
+      },
+      "speech_acts": [],
+      "emotion": {}
+    }
+  ],
+  "annotated_relations": [
+    {
+      "from": "凯尔希",
+      "to": "博士",
+      "type": "trust",
+      "confidence": "low",
+      "sources": [
+        "context:global"
+      ],
+      "contexts": [
+        "所以，凯尔希信任的，其实是你"
+      ],
+      "phases": {
+        "babel": {
+          "confidence": "low",
+          "source_count": 1
+        }
+      },
+      "trajectory": "仅在babel时期出现后消失"
+    },
+    {
+      "from": "博士",
+      "to": "阿米娅",
+      "type": "trust",
+      "confidence": "low",
+      "sources": [
+        "context:global"
+      ],
+      "contexts": [
+        "博士，我相信你的指挥"
+      ],
+      "phases": {
+        "resurrected": {
+          "confidence": "low",
+          "source_count": 1
+        }
+      },
+      "trajectory": "在resurrected时期新出现"
+    }
+  ],
+  "stats": {
+    "total_lines": 60,
+    "source_distribution": {
+      "voice": 38,
+      "story": 14,
+      "archive": 8
+    },
+    "phase_distribution": {
+      "resurrected": 37,
+      "babel": 15
+    },
+    "situation_distribution": {
+      "casual": 55,
+      "comfort": 4,
+      "reminisce": 1
+    }
+  }
+}

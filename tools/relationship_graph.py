@@ -247,7 +247,7 @@ def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> l
     sentences = re.split(r"[。！？\n]+", text)
     sentences = [s.strip() for s in sentences if s.strip()]
 
-    negation_markers = ["≠", "不是", "并非", "不等于", "误解", "错误"]
+    negation_markers = ["≠", "不是", "并非", "不等于", "误解", "错误", "没有", "不曾", "未尝", "并不"]
 
     def _is_negation_context(s: str) -> bool:
         return any(marker in s for marker in negation_markers)
