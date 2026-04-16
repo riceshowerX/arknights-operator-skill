@@ -200,8 +200,9 @@ def _extract_charinfo(wikitext: str) -> dict:
     info = {}
 
     # 匹配 {{CharinfoV2 ... }} 或 {{Charinfo ... }}
+    # 使用 \}\} 而非 \n\}\} 以支持模板结束标记前无换行的情况
     template_match = re.search(
-        r"\{\{CharinfoV?2?\s*\n(.*?)\n\}\}",
+        r"\{\{CharinfoV?2?\s*\n(.*?)\n?\}\}",
         wikitext,
         re.DOTALL,
     )
@@ -256,7 +257,7 @@ def _extract_enemy_info(wikitext: str) -> dict:
     info = {}
 
     template_match = re.search(
-        r"\{\{敌人信息/[a-z0-9]+\s*\n(.*?)\n\}\}",
+        r"\{\{敌人信息/[a-z0-9]+\s*\n(.*?)\n?\}\}",
         wikitext,
         re.DOTALL,
     )
@@ -289,7 +290,7 @@ def _extract_enemy_info(wikitext: str) -> dict:
             info[field_map[key]] = value.strip()
 
     # 从能力字段提取行为描述
-    ability_match = re.search(r"\|能力\s*=\s*(.*?)(?=\n\||\n\}\})", fields, re.DOTALL)
+    ability_match = re.search(r"\|能力\s*=\s*(.*?)(?=\n\||\n?\}\})", fields, re.DOTALL)
     if ability_match:
         ability_text = ability_match.group(1).strip()
         ability_text = re.sub(r"\{\{color\|[^|]*\|([^}]*)\}\}", r"\1", ability_text)
@@ -310,7 +311,7 @@ def _extract_archives(wikitext: str) -> list[dict]:
 
     # 匹配 {{人员档案 ... }}
     archive_match = re.search(
-        r"\{\{人员档案\s*\n(.*?)\n\}\}",
+        r"\{\{人员档案\s*\n(.*?)\n?\}\}",
         wikitext,
         re.DOTALL,
     )
@@ -369,7 +370,7 @@ def _extract_profile_fields(wikitext: str) -> dict:
     info = {}
 
     template_match = re.search(
-        r"\{\{人员档案set\s*\n(.*?)\n\}\}",
+        r"\{\{人员档案set\s*\n(.*?)\n?\}\}",
         wikitext,
         re.DOTALL,
     )
@@ -409,7 +410,7 @@ def _extract_attribute_fields(wikitext: str) -> dict:
     info = {}
 
     template_match = re.search(
-        r"\{\{属性\s*\n(.*?)\n\}\}",
+        r"\{\{属性\s*\n(.*?)\n?\}\}",
         wikitext,
         re.DOTALL,
     )

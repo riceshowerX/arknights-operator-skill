@@ -22,7 +22,6 @@ import argparse
 import json
 import re
 import sys
-from typing import Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -37,6 +36,7 @@ PRTS_USER_AGENT = "arknights-operator-skill/2.0 (https://github.com/riceshowerX/
 REQUEST_TIMEOUT = 20
 
 # 章节名 → 时间阶段映射
+# 注意：此映射以特蕾西娅的视角为主，其他角色可能需要调整
 CHAPTER_PHASE_MAP = {
     "第0章": "early",
     "第1章": "early",
@@ -45,14 +45,14 @@ CHAPTER_PHASE_MAP = {
     "第4章": "early",
     "第5章": "early",
     "第6章": "early",
-    "第7章": "babel",
-    "第8章": "babel",
-    "第9章": "babel",
-    "第10章": "resurrected",
+    "第7章": "early",       # 苦难摇篮：切尔诺伯格/整合运动
+    "第8章": "babel",       # 怒号光明：巴别塔回忆
+    "第9章": "babel",       # 风暴瞭望：巴别塔末期
+    "第10章": "resurrected", # 碎鳞：复活后
     "第11章": "resurrected",
     "第12章": "resurrected",
     "第13章": "resurrected",
-    "第14章": "resurrected",
+    "第14章": "resurrected", # 慈悲灯塔
 }
 
 # 场景类型关键词
@@ -96,7 +96,7 @@ def fetch_chapter_wikitext(chapter: str) -> str:
         print(json.dumps({
             "error": f"无法获取剧情页面 '{chapter}': {e}",
             "chapter": chapter
-        }, ensure_ascii=False))
+        }, ensure_ascii=False), file=sys.stderr)
         return ""
 
     wikitext = data.get('parse', {}).get('wikitext', {}).get('*', '')
@@ -205,14 +205,15 @@ def infer_phase(scene: str, chapter: str) -> str:
         if ch_key in chapter:
             return phase
 
-    # 退而用场景关键词
+    # 退而用场景关键词（使用更精确的词组减少误判）
     scene_lower = scene.lower()
-    if any(kw in scene_lower for kw in ["巴别塔", "内战", "卡兹戴尔", "魔王"]):
+    if any(kw in scene_lower for kw in ["巴别塔", "内战", "卡兹戴尔"]):
         return "babel"
     if any(kw in scene_lower for kw in ["复活", "黑冠", "赦罪师"]):
         return "resurrected"
-    if any(kw in scene_lower for kw in ["罗德岛", "博士", "阿米娅"]):
-        return "babel"  # 罗德岛时期主要在巴别塔/内战阶段
+    # "魔王" 需结合卡兹戴尔语境才判定为 babel
+    if "魔王" in scene_lower and "卡兹戴尔" in scene_lower:
+        return "babel"
 
     return "unknown"
 

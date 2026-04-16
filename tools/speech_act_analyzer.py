@@ -23,6 +23,15 @@ import sys
 from pathlib import Path
 
 
+# 话语行为类型 → 中文标签（单一来源，供所有下游工具引用）
+ACT_TYPE_LABELS = {
+    "invite": "邀请", "evade": "回避", "question": "质问",
+    "commit": "承诺", "console": "宽慰", "restrain": "克制",
+    "affirm_presence": "存在确认", "promise_remember": "记忆承诺",
+    "farewell": "告别", "soothe": "安抚",
+}
+
+
 # ──────────────────────────────────────────────
 # 话语行为规则库
 # ──────────────────────────────────────────────
@@ -36,7 +45,9 @@ SPEECH_ACT_RULES = [
     (r"来吧", "invite", 0.7, "邀请"),
 
     # 回避：不正面回答
-    (r".{0,8}(?:…|\.\.\.){2,}$", "evade", 0.75, "回避"),
+    # 匹配行末的省略号停顿（……、...、…），至少2个省略号字符或6个点
+    (r".{0,8}(?:…{2,}|\.{6,})$", "evade", 0.75, "回避"),
+    (r"^(?:…{2,}|\.{6,})", "evade", 0.7, "回避"),
     (r"你呢[？?]", "evade", 0.8, "回避"),
     (r"(也许|或许|大概|可能).{0,10}$", "evade", 0.7, "回避"),
     (r"我不知道.{0,5}$", "evade", 0.65, "回避"),
@@ -204,12 +215,6 @@ def detect_behavioral_patterns(profile: dict) -> list[dict]:
         })
 
     # 模式4：对象差异化
-    act_labels = {
-        "invite": "邀请", "evade": "回避", "question": "质问",
-        "commit": "承诺", "console": "宽慰", "restrain": "克制",
-        "affirm_presence": "存在确认", "promise_remember": "记忆承诺",
-        "farewell": "告别", "soothe": "安抚",
-    }
     for person, person_acts in by_interlocutor.items():
         if person == "unknown" or not person_acts:
             continue
@@ -217,7 +222,7 @@ def detect_behavioral_patterns(profile: dict) -> list[dict]:
         dominant_act = max(person_acts, key=person_acts.get)
         dominant_pct = person_acts[dominant_act] / total_person
         if dominant_pct > 0.3 and person_acts[dominant_act] >= 2:
-            act_label = act_labels.get(dominant_act, dominant_act)
+            act_label = ACT_TYPE_LABELS.get(dominant_act, dominant_act)
             patterns.append({
                 "pattern": f"interlocutor_{dominant_act}",
                 "rule": f"对{person}的对话中，{act_label}行为占比最高（{dominant_pct:.0%}）——用{act_label}的方式回应{person}",
@@ -236,7 +241,7 @@ def detect_behavioral_patterns(profile: dict) -> list[dict]:
                 global_pct = global_dist.get(act_type, 0)
                 delta = phase_pct - global_pct
                 if abs(delta) > 0.15 and count >= 2:
-                    act_label = act_labels.get(act_type, act_type)
+                    act_label = ACT_TYPE_LABELS.get(act_type, act_type)
                     direction = "显著增多" if delta > 0 else "显著减少"
                     patterns.append({
                         "pattern": f"phase_shift_{phase_id}_{act_type}",

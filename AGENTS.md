@@ -65,6 +65,18 @@ speech_act_analyzer  dialogue_fingerprint  relationship_graph  temporal_slicer
 - 当某切片对话数 < 2 时跳过该切片
 - 置信度: high(>=20) / medium(>=10) / low(>=3) / very_low(<3)
 
+### 时期推断误标注
+- 原因: `context_annotator.py` 的 PHASE_KEYWORDS 包含过于宽泛的关键词（如"和平"、"魔王"），导致语音行被错误归入 babel 时期
+- 修复: v3.2 将"和平"替换为更精确的"和平协议"/"卡兹戴尔的和平"；"魔王"需要结合卡兹戴尔语境（通过 PHASE_PATTERNS 正则匹配）；新增 PHASE_PATTERNS 优先级高于 PHASE_KEYWORDS
+
+### 关系轨迹时期排序错误
+- 原因: `relationship_graph.py` 的 `compute_relation_trajectories` 使用字母序排列时期（"babel" < "early" < "resurrected"），导致"从 early 到 babel"的描述被错误写成"从 babel 到 resurrected"
+- 修复: v3.2 使用预定义时序 PHASE_ORDER = ["early", "babel", "resurrected"]
+
+### 话语行为标签重复定义
+- 原因: act_labels 字典在 `speech_act_analyzer.py` 和 `temporal_slicer.py` 中各自定义，容易不同步
+- 修复: v3.2 提取为 `speech_act_analyzer.ACT_TYPE_LABELS`，`temporal_slicer.py` 通过 import 引用
+
 ## 环境变量
 
 | 变量 | 说明 |

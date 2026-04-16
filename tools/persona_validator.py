@@ -18,7 +18,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 
 # ──────────────────────────────────────────────
@@ -941,12 +940,19 @@ def _build_slice_quality_overview(
         for r in results.values() if r.get("_confidence") == "high"
     )
 
+    # 覆盖率：有数据切片的维度数 / 总维度数
+    # 有数据的维度（至少1个切片）计为已覆盖
+    covered_dims = sum(
+        1 for d in [phase_results, interlocutor_results, situation_results, source_results]
+        if len(d) >= 1
+    )
+
     overview["meta"] = {
         "total_slices": total_slices,
         "high_confidence_slices": high_conf,
-        "coverage_pct": round(
-            sum(1 for d in [phase_results, interlocutor_results, situation_results, source_results] if d) / 4 * 100
-        ),
+        "covered_dimensions": covered_dims,
+        "total_dimensions": 4,
+        "coverage_pct": round(covered_dims / 4 * 100),
     }
 
     return overview

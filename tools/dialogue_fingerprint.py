@@ -30,7 +30,6 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Optional
 
 
 # ──────────────────────────────────────────────
@@ -52,7 +51,6 @@ EMOTION_LEXICON = {
 FIRST_PERSON = ["我", "吾", "本王", "吾辈", "在下", "朕", "本人", "咱"]
 
 # 中文语气标记
-PAUSE_MARKERS = ["……", "…", "——", "—", "···"]
 EXCLAMATION = ["！", "!", "？！", "!?"]
 QUESTION = ["？", "?"]
 
@@ -430,7 +428,8 @@ def analyze_address_pattern(dialogues: list[dict]) -> dict:
     量化角色如何称呼他人（尊称/昵称/省略称呼）
     """
     honorific = ["大人", "阁下", "殿下", "陛下", "先生", "小姐", "长官", "指挥官"]
-    intimate = ["亲爱的", "小", "老", "阿", "姐", "哥", "妹", "弟"]
+    # 使用 2 字词组避免单字误报（"小"→"小心", "老"→"老师", "姐"→"姐姐"）
+    intimate = ["亲爱的", "小家伙", "小可爱", "老朋友", "阿米娅", "姐姐", "哥哥", "妹妹", "弟弟", "姐", "哥"]
 
     honorific_count = 0
     intimate_count = 0
@@ -710,6 +709,15 @@ def compute_shifts(global_fp: dict, slices: dict) -> dict:
                 "shift": direction,
                 "magnitude": round(abs(s_ell - g_ell) / g_ell, 2),
             })
+        elif g_ell == 0 and s_ell > 20:
+            # 全局无省略号但切片有明显省略号使用
+            diff_items.append({
+                "dimension": "ellipsis",
+                "global_pct": g_ell,
+                "slice_pct": s_ell,
+                "shift": "出现沉默标记（全局无）",
+                "magnitude": round(s_ell / 100, 2),
+            })
 
         # 情感主导偏移
         g_dom = global_dims.get("4_emotion_vocabulary", {}).get("dominant", "")
@@ -733,6 +741,15 @@ def compute_shifts(global_fp: dict, slices: dict) -> dict:
                 "slice_pct": s_neg,
                 "shift": direction,
                 "magnitude": round(abs(s_neg - g_neg) / g_neg, 2),
+            })
+        elif g_neg == 0 and s_neg > 20:
+            # 全局无否定句但切片有显著否定句使用
+            diff_items.append({
+                "dimension": "negation",
+                "global_pct": g_neg,
+                "slice_pct": s_neg,
+                "shift": "出现否定表达（全局无）",
+                "magnitude": round(s_neg / 100, 2),
             })
 
         if diff_items:

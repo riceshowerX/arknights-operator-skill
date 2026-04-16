@@ -30,7 +30,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 
 # ──────────────────────────────────────────────
@@ -48,23 +47,35 @@ VOICE_INTERLOCUTOR_MAP = {
 }
 
 # 语音标题 → 场景类型
-VOICE_SITUATION_MAP = {
-    "信赖": "comfort",
-    "晋升": "casual",
-    "助理": "casual",
-    "交谈": "casual",
-    "战斗开始": "confront",
-    "战斗失败": "confront",
-    "进驻": "casual",
-    "编入": "casual",
-    "精英化": "casual",
-}
+# 注意：按特异性从高到低排列，首次匹配即停止
+# 例如 "晋升后交谈1" 应匹配 "晋升"→casual 而非 "交谈"→casual
+VOICE_SITUATION_MAP = [
+    ("信赖触摸", "comfort"),
+    ("信赖", "comfort"),
+    ("战斗开始", "confront"),
+    ("战斗失败", "confront"),
+    ("晋升后交谈", "casual"),
+    ("精二晋升后交谈", "casual"),
+    ("晋升", "casual"),
+    ("助理", "casual"),
+    ("交谈", "casual"),
+    ("进驻", "casual"),
+    ("编入", "casual"),
+    ("精英化", "casual"),
+]
 
 # 语音内容 → 时期推断关键词
+# 注意：使用更精确的词组避免误匹配（"和平"→"和平协议"，"魔王"→需同时含卡兹戴尔语境）
 PHASE_KEYWORDS = {
-    "babel": ["巴别塔", "内战", "卡兹戴尔重建", "和平", "魔王"],
-    "resurrected": ["黑冠", "复活", "赦罪师", "巫术"],
+    "babel": ["巴别塔", "内战", "卡兹戴尔重建", "和平协议", "卡兹戴尔的和平"],
+    "resurrected": ["黑冠", "赦罪师", "巫术"],
 }
+
+# 语音内容 → 时期推断（精确匹配模式，优先级高于关键词包含）
+PHASE_PATTERNS = [
+    (re.compile(r"魔王.{0,10}(?:卡兹戴尔|回归|归来)"), "babel"),
+    (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
+]
 
 # 时间线正则（从 knowledge.md 提取）
 TIMELINE_RE = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
@@ -131,19 +142,26 @@ def annotate_voice_line(line: dict, index: int) -> dict:
             interlocutor = val
             break
 
-    # 推断场景类型
+    # 推断场景类型（按特异性从高到低匹配）
     situation = "casual"
-    for key, val in VOICE_SITUATION_MAP.items():
+    for key, sit_type in VOICE_SITUATION_MAP:
         if key in title:
-            situation = val
+            situation = sit_type
             break
 
     # 推断时期
     phase = "unknown"
-    for phase_id, keywords in PHASE_KEYWORDS.items():
-        if any(kw in text for kw in keywords):
+    # 优先使用精确模式匹配
+    for pattern, phase_id in PHASE_PATTERNS:
+        if pattern.search(text):
             phase = phase_id
             break
+    # 退而使用关键词包含
+    if phase == "unknown":
+        for phase_id, keywords in PHASE_KEYWORDS.items():
+            if any(kw in text for kw in keywords):
+                phase = phase_id
+                break
 
     return {
         "id": f"V{index:03d}",

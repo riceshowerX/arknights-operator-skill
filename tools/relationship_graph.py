@@ -559,7 +559,18 @@ def compute_relation_trajectories(
         return []
 
     trajectories = []
-    phases_sorted = sorted(phase_graphs.keys())
+
+    # 按时序排列时期（而非字母序）
+    # 使用预定义的时间顺序，未知时期排在最后
+    PHASE_ORDER = ["early", "babel", "resurrected"]
+    phases_sorted = []
+    for p in PHASE_ORDER:
+        if p in phase_graphs:
+            phases_sorted.append(p)
+    # 添加未在预定义顺序中的时期
+    for p in sorted(phase_graphs.keys()):
+        if p not in phases_sorted:
+            phases_sorted.append(p)
 
     # 收集所有边的全局信息
     global_edges = {}

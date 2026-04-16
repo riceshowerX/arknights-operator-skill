@@ -21,6 +21,18 @@ import re
 import sys
 from pathlib import Path
 
+# 从 speech_act_analyzer 引入共享的话语行为标签映射
+try:
+    from speech_act_analyzer import ACT_TYPE_LABELS
+except ImportError:
+    # 降级：直接定义（保持与 speech_act_analyzer 同步）
+    ACT_TYPE_LABELS = {
+        "invite": "邀请", "evade": "回避", "question": "质问",
+        "commit": "承诺", "console": "宽慰", "restrain": "克制",
+        "affirm_presence": "存在确认", "promise_remember": "记忆承诺",
+        "farewell": "告别", "soothe": "安抚",
+    }
+
 
 # ──────────────────────────────────────────────
 # 切片构建
@@ -167,12 +179,7 @@ def compare_metrics(baseline: dict, comparison: dict) -> list[dict]:
     b_total = sum(b_acts.values()) or 1
     c_total = sum(c_acts.values()) or 1
 
-    act_labels = {
-        "invite": "邀请", "evade": "回避", "question": "质问",
-        "commit": "承诺", "console": "宽慰", "restrain": "克制",
-        "affirm_presence": "存在确认", "promise_remember": "记忆承诺",
-        "farewell": "告别", "soothe": "安抚",
-    }
+    act_labels = ACT_TYPE_LABELS
 
     for act_type in set(list(b_acts.keys()) + list(c_acts.keys())):
         b_pct = b_acts.get(act_type, 0) / b_total
