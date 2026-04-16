@@ -120,7 +120,8 @@ def load_timeline(knowledge_path: str) -> list[dict]:
 
 def annotate_voice_line(line: dict, index: int) -> dict:
     """标注单条语音行"""
-    title = line.get("title", "")
+    # game_data_parser 输出字段名为 "label"，兼容旧格式 "title"
+    title = line.get("label") or line.get("title", "")
     text = line.get("text", "")
 
     # 推断对话对象

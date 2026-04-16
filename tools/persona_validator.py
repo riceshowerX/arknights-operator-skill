@@ -547,9 +547,13 @@ def validate_with_context(persona_path: str, context_path: str) -> dict:
         if phase != "unknown":
             by_phase.setdefault(phase, []).append(line["text"])
 
+    MIN_SLICE_SIZE = 2
     for phase, phase_dialogues in by_phase.items():
-        if len(phase_dialogues) >= 2:
-            phase_results[phase] = _validate_against_dialogues(persona, phase_dialogues)
+        if len(phase_dialogues) >= MIN_SLICE_SIZE:
+            result = _validate_against_dialogues(persona, phase_dialogues)
+            result["_sample_size"] = len(phase_dialogues)
+            result["_confidence"] = _confidence_level(len(phase_dialogues))
+            phase_results[phase] = result
 
     # 按 interlocutor 分片验证
     interlocutor_results = {}
@@ -562,12 +566,60 @@ def validate_with_context(persona_path: str, context_path: str) -> dict:
             by_interlocutor.setdefault(person, []).append(line["text"])
 
     for person, person_dialogues in by_interlocutor.items():
-        if len(person_dialogues) >= 2:
-            interlocutor_results[person] = _validate_against_dialogues(persona, person_dialogues)
+        if len(person_dialogues) >= MIN_SLICE_SIZE:
+            result = _validate_against_dialogues(persona, person_dialogues)
+            result["_sample_size"] = len(person_dialogues)
+            result["_confidence"] = _confidence_level(len(person_dialogues))
+            interlocutor_results[person] = result
 
-    # 检测切片间不一致（同一规则在 A 场景通过但在 B 场景违反）
+    # 按 situation_type 分片验证
+    situation_results = {}
+    by_situation: dict[str, list[str]] = {}
+    for line in lines:
+        if line.get("source") == "archive" or not line.get("text"):
+            continue
+        situation = line.get("context", {}).get("situation_type", "unknown")
+        if situation != "unknown":
+            by_situation.setdefault(situation, []).append(line["text"])
+
+    for situation, situation_dialogues in by_situation.items():
+        if len(situation_dialogues) >= MIN_SLICE_SIZE:
+            result = _validate_against_dialogues(persona, situation_dialogues)
+            result["_sample_size"] = len(situation_dialogues)
+            result["_confidence"] = _confidence_level(len(situation_dialogues))
+            situation_results[situation] = result
+
+    # 按 source 分片验证（voice vs story）
+    source_results = {}
+    by_source: dict[str, list[str]] = {}
+    for line in lines:
+        if not line.get("text"):
+            continue
+        src = line.get("source", "unknown")
+        if src != "archive":
+            by_source.setdefault(src, []).append(line["text"])
+
+    for src, src_dialogues in by_source.items():
+        if len(src_dialogues) >= MIN_SLICE_SIZE:
+            result = _validate_against_dialogues(persona, src_dialogues)
+            result["_sample_size"] = len(src_dialogues)
+            result["_confidence"] = _confidence_level(len(src_dialogues))
+            source_results[src] = result
+
+    # 检测切片间不一致
     slice_inconsistencies = _detect_slice_inconsistencies(
-        global_result, phase_results, interlocutor_results
+        global_result, phase_results, interlocutor_results, situation_results
+    )
+
+    # 生成 Persona 修改建议
+    recommendations = _generate_recommendations(
+        global_result, phase_results, interlocutor_results,
+        situation_results, source_results, slice_inconsistencies
+    )
+
+    # 构建切片质量概览
+    slice_quality = _build_slice_quality_overview(
+        phase_results, interlocutor_results, situation_results, source_results
     )
 
     return {
@@ -578,9 +630,15 @@ def validate_with_context(persona_path: str, context_path: str) -> dict:
         "global": global_result,
         "by_phase": phase_results,
         "by_interlocutor": interlocutor_results,
+        "by_situation": situation_results,
+        "by_source": source_results,
         "slice_inconsistencies": slice_inconsistencies,
+        "recommendations": recommendations,
+        "slice_quality": slice_quality,
         "phases_tested": list(phase_results.keys()),
         "interlocutors_tested": list(interlocutor_results.keys()),
+        "situations_tested": list(situation_results.keys()),
+        "sources_tested": list(source_results.keys()),
     }
 
 
@@ -610,15 +668,19 @@ def _detect_slice_inconsistencies(
     global_result: dict,
     phase_results: dict[str, dict],
     interlocutor_results: dict[str, dict],
+    situation_results: dict[str, dict] | None = None,
 ) -> list[dict]:
     """
     检测切片间不一致：某规则在某切片违反但其他切片通过
 
     这类不一致通常意味着 Persona 规则过于绝对，
     需要添加场景条件或时期条件。
+
+    支持四种切片维度：phase、interlocutor、situation、source
     """
     inconsistencies = []
 
+    # ── Phase 维度 ──
     # 收集每条规则在各切片中的违反情况
     # key = rule_text[:80], value = {phase: violation_count}
     rule_violation_map: dict[str, dict[str, int]] = {}
@@ -637,13 +699,14 @@ def _detect_slice_inconsistencies(
         if phases_without and len(phases_with_violation) < len(all_phases):
             inconsistencies.append({
                 "type": "phase_specific_violation",
+                "dimension": "phase",
                 "rule": rule_key,
                 "description": f"规则在{', '.join(phases_with_violation)}时期被违反，但在{', '.join(phases_without)}时期未违反——可能是时期特有的行为，Persona 需要添加条件",
                 "violated_phases": phases_with_violation,
                 "clean_phases": phases_without,
             })
 
-    # 检查对象维度的分数差异
+    # ── Interlocutor 维度 ──
     if len(interlocutor_results) >= 2:
         scores = {
             person: result.get("overall_score", 0)
@@ -655,11 +718,238 @@ def _detect_slice_inconsistencies(
             if max_score - min_score > 20:
                 inconsistencies.append({
                     "type": "interlocutor_score_gap",
+                    "dimension": "interlocutor",
                     "description": f"不同对话对象的验证分数差距较大（{min_score} vs {max_score}），Persona 可能需要为不同对象添加差异化规则",
                     "scores": scores,
                 })
 
+    # ── Situation 维度 ──
+    if situation_results and len(situation_results) >= 2:
+        sit_scores = {
+            sit: result.get("overall_score", 0)
+            for sit, result in situation_results.items()
+        }
+        if sit_scores:
+            max_sit = max(sit_scores.values())
+            min_sit = min(sit_scores.values())
+            if max_sit - min_sit > 25:
+                inconsistencies.append({
+                    "type": "situation_score_gap",
+                    "dimension": "situation",
+                    "description": f"不同场景类型的验证分数差距较大（{min_sit} vs {max_sit}），Persona 可能需要为不同场景添加条件规则",
+                    "scores": sit_scores,
+                })
+
+        # 检测 confront 场景中的特定违规
+        confront_result = situation_results.get("confront")
+        casual_result = situation_results.get("casual")
+        if confront_result and casual_result:
+            confront_violations = {
+                v.get("rule", "")[:80]
+                for v in confront_result.get("layer0_core_personality", {}).get("violations", [])
+            }
+            casual_violations = {
+                v.get("rule", "")[:80]
+                for v in casual_result.get("layer0_core_personality", {}).get("violations", [])
+            }
+            confront_only = confront_violations - casual_violations
+            if confront_only:
+                inconsistencies.append({
+                    "type": "situation_specific_violation",
+                    "dimension": "situation",
+                    "description": f"规则仅在 confront 场景下被违反，可能是战斗状态下的合理行为偏差，Persona 应允许条件例外",
+                    "confront_only_violations": list(confront_only)[:5],
+                })
+
     return inconsistencies
+
+
+def _confidence_level(sample_size: int) -> str:
+    """根据样本量给出置信度评级"""
+    if sample_size >= 20:
+        return "high"
+    elif sample_size >= 10:
+        return "medium"
+    elif sample_size >= 3:
+        return "low"
+    else:
+        return "very_low"
+
+
+def _generate_recommendations(
+    global_result: dict,
+    phase_results: dict[str, dict],
+    interlocutor_results: dict[str, dict],
+    situation_results: dict[str, dict],
+    source_results: dict[str, dict],
+    inconsistencies: list[dict],
+) -> list[dict]:
+    """
+    基于验证结果和不一致性，生成具体的 Persona 修改建议
+    """
+    recommendations = []
+
+    # ── 基于全局评分的建议 ──
+    overall = global_result.get("overall_score", 0)
+    if overall < 60:
+        recommendations.append({
+            "priority": "high",
+            "target": "global",
+            "issue": f"全局一致性评分仅为 {overall}，Persona 严重偏离角色实际表现",
+            "suggestion": "建议重新审视 Layer 0 核心规则，确保规则与角色对话数据一致",
+        })
+    elif overall < 75:
+        recommendations.append({
+            "priority": "medium",
+            "target": "global",
+            "issue": f"全局一致性评分 {overall}，存在部分违反",
+            "suggestion": "检查 layer0_violations 中标记的规则，考虑添加条件或放宽绝对性表述",
+        })
+
+    # ── 基于不一致性的建议 ──
+    for inc in inconsistencies:
+        inc_type = inc.get("type", "")
+
+        if inc_type == "phase_specific_violation":
+            rule = inc.get("rule", "未知规则")
+            violated = inc.get("violated_phases", [])
+            recommendations.append({
+                "priority": "medium",
+                "target": "Layer 0",
+                "issue": inc.get("description", ""),
+                "suggestion": f"为规则「{rule}」添加时期条件：在 {', '.join(violated)} 时期，此规则可以有例外或不同表现",
+            })
+
+        elif inc_type == "interlocutor_score_gap":
+            scores = inc.get("scores", {})
+            recommendations.append({
+                "priority": "medium",
+                "target": "Layer 2-3",
+                "issue": inc.get("description", ""),
+                "suggestion": f"考虑在 Layer 2 或 Layer 3 中添加针对不同对话对象的表达差异规则，当前分数差异：{scores}",
+            })
+
+        elif inc_type == "situation_score_gap":
+            scores = inc.get("scores", {})
+            recommendations.append({
+                "priority": "medium",
+                "target": "Layer 0-2",
+                "issue": inc.get("description", ""),
+                "suggestion": f"考虑为不同场景类型（confront/casual/comfort）添加条件规则，当前分数差异：{scores}",
+            })
+
+        elif inc_type == "situation_specific_violation":
+            violations = inc.get("confront_only_violations", [])
+            recommendations.append({
+                "priority": "low",
+                "target": "Layer 0",
+                "issue": inc.get("description", ""),
+                "suggestion": f"为 confront 场景添加例外条款，允许在战斗/对抗情境下的合理偏差。涉及规则：{violations[:3]}",
+            })
+
+    # ── 数据源差异建议 ──
+    if len(source_results) >= 2:
+        source_scores = {
+            src: result.get("overall_score", 0)
+            for src, result in source_results.items()
+        }
+        if source_scores:
+            max_src = max(source_scores.values())
+            min_src = min(source_scores.values())
+            if max_src - min_src > 15:
+                lower_src = min(source_scores, key=source_scores.get)
+                recommendations.append({
+                    "priority": "low",
+                    "target": "data_quality",
+                    "issue": f"数据源一致性差异：{source_scores}",
+                    "suggestion": f"{lower_src} 数据源的一致性较低，可能是因为该来源对话场景较单一。建议补充更多样化的{lower_src}数据",
+                })
+
+    # ── 低置信度切片警告 ──
+    low_confidence_slices = []
+    for phase, result in phase_results.items():
+        if result.get("_confidence") in ("low", "very_low"):
+            low_confidence_slices.append(f"phase:{phase}(n={result.get('_sample_size', 0)})")
+    for person, result in interlocutor_results.items():
+        if result.get("_confidence") in ("low", "very_low"):
+            low_confidence_slices.append(f"interlocutor:{person}(n={result.get('_sample_size', 0)})")
+
+    if low_confidence_slices:
+        recommendations.append({
+            "priority": "info",
+            "target": "data_coverage",
+            "issue": f"以下切片样本量不足，验证结果可靠性有限：{', '.join(low_confidence_slices)}",
+            "suggestion": "补充更多对话数据以提高切片验证的置信度",
+        })
+
+    return recommendations
+
+
+def _build_slice_quality_overview(
+    phase_results: dict[str, dict],
+    interlocutor_results: dict[str, dict],
+    situation_results: dict[str, dict],
+    source_results: dict[str, dict],
+) -> dict:
+    """构建切片质量概览，展示各维度的覆盖情况和评分"""
+    overview = {
+        "phase": {
+            name: {
+                "score": result.get("overall_score", 0),
+                "grade": result.get("grade", ""),
+                "sample_size": result.get("_sample_size", 0),
+                "confidence": result.get("_confidence", "unknown"),
+            }
+            for name, result in phase_results.items()
+        },
+        "interlocutor": {
+            name: {
+                "score": result.get("overall_score", 0),
+                "grade": result.get("grade", ""),
+                "sample_size": result.get("_sample_size", 0),
+                "confidence": result.get("_confidence", "unknown"),
+            }
+            for name, result in interlocutor_results.items()
+        },
+        "situation": {
+            name: {
+                "score": result.get("overall_score", 0),
+                "grade": result.get("grade", ""),
+                "sample_size": result.get("_sample_size", 0),
+                "confidence": result.get("_confidence", "unknown"),
+            }
+            for name, result in situation_results.items()
+        },
+        "source": {
+            name: {
+                "score": result.get("overall_score", 0),
+                "grade": result.get("grade", ""),
+                "sample_size": result.get("_sample_size", 0),
+                "confidence": result.get("_confidence", "unknown"),
+            }
+            for name, result in source_results.items()
+        },
+    }
+
+    # 维度覆盖统计
+    total_slices = (
+        len(phase_results) + len(interlocutor_results)
+        + len(situation_results) + len(source_results)
+    )
+    high_conf = sum(
+        1 for results in [phase_results, interlocutor_results, situation_results, source_results]
+        for r in results.values() if r.get("_confidence") == "high"
+    )
+
+    overview["meta"] = {
+        "total_slices": total_slices,
+        "high_confidence_slices": high_conf,
+        "coverage_pct": round(
+            sum(1 for d in [phase_results, interlocutor_results, situation_results, source_results] if d) / 4 * 100
+        ),
+    }
+
+    return overview
 
 
 # ──────────────────────────────────────────────
