@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Logo -->
-<img src="docs/icon.svg" alt="arknights-operator-skill" width="360"/>
+<img src="docs/logo.jpeg" alt="arknights-operator-skill" width="400"/>
 
 **将明日方舟角色蒸馏成 AI Skill**
 
