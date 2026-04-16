@@ -5,18 +5,22 @@
 这是 arknights-operator-skill 的核心差异化工具之一：
 不依赖手动填写关系，而是从角色资料/剧情文本中自动识别关系模式。
 
+升级版：支持语境化模式，从 context.json 提取时序关系。
+  - 传统模式：--input/--format（分析原始文本文件）
+  - 语境化模式：--context-json（消费 context.json，按时期分片提取关系）
+
+语境化模式会输出 per-phase 的关系切片，以及跨时期的关系演变轨迹，
+直接写入 context.json 的 annotated_relations 字段。
+
 用法:
-    # 从知识库文件中提取关系
+    # 传统模式
     python relationship_graph.py --input ./knowledge.md --format markdown
 
-    # 从 PRTS Wiki 文本中提取
-    python relationship_graph.py --input ./prts_raw.txt --format plain
+    # 语境化模式
+    python relationship_graph.py --context-json operators/te-lei-xi-ya/context.json
 
-    # 从多个文件合并提取
-    python relationship_graph.py --input ./f1.md ./f2.txt --format markdown
-
-输出:
-    JSON 格式的关系图谱，包含节点、边、关系类型和可信度
+    # 语境化 + 自定义角色名库
+    python relationship_graph.py --context-json context.json --operator-db custom_db.json
 """
 
 import argparse
@@ -87,18 +91,6 @@ def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
 
     支持从外部 JSON 文件加载自定义角色名库，
     与内置名库合并（外部覆盖内置同名项）
-
-    外部文件格式:
-    {
-        "operators": {
-            "角色名": {"en": "English", "race": "种族", "faction": "阵营"},
-            ...
-        },
-        "aliases": {
-            "英文名": "中文名",
-            ...
-        }
-    }
     """
     db = dict(OPERATOR_DB)
     aliases = dict(ALIAS_MAP)
@@ -121,12 +113,10 @@ def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
         print(f"警告：角色名库文件应为 JSON 对象，使用内置名库", file=sys.stderr)
         return db, aliases
 
-    # 合并自定义角色
     custom_ops = custom.get("operators", {})
     if isinstance(custom_ops, dict):
         db.update(custom_ops)
 
-    # 合并自定义别名
     custom_aliases = custom.get("aliases", {})
     if isinstance(custom_aliases, dict):
         aliases.update(custom_aliases)
@@ -138,7 +128,6 @@ def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
 # 关系模式识别
 # ──────────────────────────────────────────────
 
-# 关系关键词模式：{(主语模式, 宾语模式): 关系类型}
 RELATIONSHIP_PATTERNS = [
     # 亲属关系
     (r"胞兄|哥哥|兄长|亲兄", "sibling"),
@@ -179,7 +168,6 @@ def normalize_name(name: str, operator_db: Optional[dict] = None, alias_map: Opt
         return name
     if name in aliases:
         return aliases[name]
-    # 尝试从英文名匹配
     for cn, info in db.items():
         if info.get("en", "").lower() == name.lower():
             return cn
@@ -215,22 +203,19 @@ def extract_relationships_from_text(
     2. 对每对共现的角色，检查关系关键词
     3. 对每个识别出的关系，标注来源和可信度
     """
-    entities = extract_entities(text)
+    entities = extract_entities(text, operator_db, alias_map)
     if len(entities) < 2:
         return []
 
     relationships = []
 
-    # 对每对共现实体检查关系模式
     for i in range(len(entities)):
         for j in range(i + 1, len(entities)):
             e1, e2 = entities[i], entities[j]
 
-            # 提取包含这两个角色名的句子/段落
             relevant_segments = _find_relevant_segments(text, e1, e2)
 
             for rel_pattern, rel_type in RELATIONSHIP_PATTERNS:
-                # 仅在两个角色名共现的句子/段落中搜索关系关键词
                 matched_in_segment = False
                 best_segment = ""
                 for seg in relevant_segments:
@@ -242,7 +227,6 @@ def extract_relationships_from_text(
                 if not matched_in_segment:
                     continue
 
-                # 尝试确定方向
                 direction = _detect_direction(best_segment, e1, e2, rel_pattern)
 
                 rel = {
@@ -259,24 +243,15 @@ def extract_relationships_from_text(
 
 
 def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> list[str]:
-    """
-    从文本中提取同时包含两个角色名的句子/段落
-
-    策略：按标点分句，找出同时包含 e1 和 e2 的句子。
-    如果没有单句同时包含两者，尝试合并相邻句子。
-    跳过明显是否定/纠正语境的句子（如"≠""不是""并非"开头的澄清句）。
-    """
-    # 按中文句号、换行等分句
+    """从文本中提取同时包含两个角色名的句子/段落"""
     sentences = re.split(r"[。！？\n]+", text)
     sentences = [s.strip() for s in sentences if s.strip()]
 
-    # 否定/纠正语境标记——这些句子是在澄清误解，不是在陈述关系
     negation_markers = ["≠", "不是", "并非", "不等于", "误解", "错误"]
 
     def _is_negation_context(s: str) -> bool:
         return any(marker in s for marker in negation_markers)
 
-    # 找出同时包含两个角色名的句子
     joint_sentences = []
     for s in sentences:
         if e1 in s and e2 in s and not _is_negation_context(s):
@@ -285,8 +260,6 @@ def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> l
     if joint_sentences:
         return joint_sentences
 
-    # 如果没有单句同时包含，尝试合并相邻句子
-    # 找包含 e1 的句子索引和包含 e2 的句子索引
     e1_indices = set()
     e2_indices = set()
     for i, s in enumerate(sentences):
@@ -298,71 +271,42 @@ def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> l
     merged = []
     for i1 in e1_indices:
         for i2 in e2_indices:
-            if abs(i1 - i2) <= 2:  # 允许相隔最多2句
+            if abs(i1 - i2) <= 2:
                 start = min(i1, i2)
                 end = max(i1, i2)
                 segment = "。".join(sentences[start:end + 1])
-                # 跳过否定语境
                 if _is_negation_context(segment):
                     continue
-                # 只取距离在 max_gap 字符内的片段
                 if len(segment) <= max_gap * 3:
                     merged.append(segment)
 
-    return merged if merged else []  # 找不到相关片段时不 fallback 到全文
+    return merged if merged else []
 
 
 def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
-    """
-    尝试判断关系方向
-
-    策略：
-    1. 检查 "A 是 B 的 X" 或 "B 的 X A" 等语法模式
-       - "A 是 B 的 X" → A 对 B 是 X，关系方向 A→B
-       - "A 的 X B" → B 是 A 的 X，关系方向 B→A
-    2. 关系关键词离谁更近 → 谁是主体
-    3. 默认：先出现的为主体
-
-    注意：对于对称关系（sibling 等），方向不影响语义，但保持一致性。
-    """
+    """尝试判断关系方向"""
     pos1 = text.find(e1)
     pos2 = text.find(e2)
 
     if pos1 < 0 or pos2 < 0:
         return "forward"
 
-    # 策略 1：检查语法模式（需要看实体之外的上下文）
-    # "A 是 B 的 X" → A 对 B 是 X，方向 A→B
-    #   如 "特雷西斯是特蕾西娅的胞兄" → 特雷西斯→特蕾西娅
-    # "A 的 X B" → B 是 A 的 X，方向 B→A
-    #   如 "特蕾西娅的胞兄特雷西斯" → 特雷西斯→特蕾西娅
-
-    # 检查 "A 是" 后跟 "B 的 X" 模式
     after_e1 = text[pos1 + len(e1):]
     after_e2 = text[pos2 + len(e2):]
 
     if pos1 < pos2:
         between = text[pos1 + len(e1):pos2]
-        # "A 的 X B" → "的" 在 A 和 B 之间，X 描述 B 对 A 的关系
-        # 如 "特蕾西娅的胞兄特雷西斯" → 特雷西斯 是 胞兄，对特蕾西娅
-        # → 方向 e2→e1
         if "的" in between and len(between) < 15:
             return "reverse"
-        # "A 是 B 的 X" → "是" 在 A 和 B 之间，"的" 在 B 之后
-        # 如 "特雷西斯是特蕾西娅的胞兄" → 特雷西斯 是 胞兄 对特蕾西娅
-        # → 方向 e1→e2
         if "是" in between and re.search(r"的", after_e2[:10]):
             return "forward"
     else:
         between = text[pos2 + len(e2):pos1]
-        # "B 的 X A" → A 是 B 的 X → 方向 e1→e2
         if "的" in between and len(between) < 15:
             return "forward"
-        # "B 是 A 的 X" → B 对 A 是 X → 方向 e2→e1
         if "是" in between and re.search(r"的", after_e1[:10]):
             return "reverse"
 
-    # 策略 2：关系关键词离谁更近
     keyword_pos = -1
     for match in re.finditer(rel_pattern, text):
         keyword_pos = match.start()
@@ -372,11 +316,10 @@ def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
         dist1 = abs(keyword_pos - pos1)
         dist2 = abs(keyword_pos - pos2)
         if dist1 < dist2:
-            return "forward"  # e1 → e2
+            return "forward"
         else:
-            return "reverse"  # e2 → e1
+            return "reverse"
 
-    # 策略 3：默认先出现的为主体
     if pos1 < pos2:
         return "forward"
     return "reverse"
@@ -394,8 +337,7 @@ def _calc_confidence(text: str, rel_pattern: str) -> str:
 
 
 def _extract_context(text: str, e1: str, e2: str, rel_pattern: str) -> str:
-    """提取关系出现的上下文（截取包含两者的句子）"""
-    # 找到包含至少一个角色名和关系关键词的句子
+    """提取关系出现的上下文"""
     sentences = re.split(r"[。！？\n]", text)
     for s in sentences:
         if (e1 in s or e2 in s) and re.search(rel_pattern, s):
@@ -413,11 +355,10 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
 
     返回图谱结构：
     {
-        "nodes": [{"name": "xxx", "race": "xxx", "faction": "xxx"}],
-        "edges": [{"from": "xxx", "to": "xxx", "type": "xxx", "confidence": "xxx", "sources": [...], "contexts": [...]}]
+        "nodes": [...],
+        "edges": [...]
     }
     """
-    # 用 (from, to, type) 作为唯一键合并
     edge_map = defaultdict(lambda: {"sources": [], "contexts": [], "confidences": []})
 
     for rel in all_rels:
@@ -429,7 +370,6 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
             entry["contexts"].append(rel["context"])
         entry["confidences"].append(rel["confidence"])
 
-    # 构建节点集
     node_names = set()
     for key in edge_map:
         node_names.add(key[0])
@@ -446,10 +386,8 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
             "faction": info.get("faction", "unknown"),
         })
 
-    # 构建边
     edges = []
     for (from_name, to_name, rel_type), data in sorted(edge_map.items()):
-        # 综合可信度
         confidences = data["confidences"]
         if "high" in confidences:
             combined_confidence = "high"
@@ -458,7 +396,6 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
         else:
             combined_confidence = "low"
 
-        # 多来源提升可信度
         if len(data["sources"]) >= 3:
             combined_confidence = "high"
         elif len(data["sources"]) >= 2 and combined_confidence != "high":
@@ -471,7 +408,7 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
             "confidence": combined_confidence,
             "source_count": len(data["sources"]),
             "sources": data["sources"],
-            "contexts": data["contexts"][:3],  # 最多保留3条上下文
+            "contexts": data["contexts"][:3],
         })
 
     return {"nodes": nodes, "edges": edges}
@@ -482,11 +419,7 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
 # ──────────────────────────────────────────────
 
 def load_text(filepath: str, fmt: str = "markdown") -> list[tuple[str, str]]:
-    """
-    加载文本并按段落拆分
-
-    返回: [(段落文本, 来源标签), ...]
-    """
+    """加载文本并按段落拆分"""
     path = Path(filepath)
     if not path.exists():
         raise FileNotFoundError(f"文件不存在: {filepath}")
@@ -495,19 +428,215 @@ def load_text(filepath: str, fmt: str = "markdown") -> list[tuple[str, str]]:
     source_label = path.name
 
     if fmt == "markdown":
-        # 按 Markdown 标题分段
         sections = re.split(r"^#+\s+", content, flags=re.MULTILINE)
         parts = []
         for s in sections:
             s = s.strip()
-            if s and len(s) > 20:  # 忽略太短的段落
+            if s and len(s) > 20:
                 parts.append((s, source_label))
         return parts if parts else [(content, source_label)]
 
     else:  # plain
-        # 按空行分段
         paragraphs = [p.strip() for p in content.split("\n\n") if p.strip() and len(p.strip()) > 20]
         return [(p, source_label) for p in paragraphs] if paragraphs else [(content, source_label)]
+
+
+# ──────────────────────────────────────────────
+# 语境化分析（升级新增）
+# ──────────────────────────────────────────────
+
+def generate_contextual_relationships(
+    context: dict,
+    operator_db: Optional[dict] = None,
+    alias_map: Optional[dict] = None,
+) -> dict:
+    """
+    从 context.json 提取时序关系图谱
+
+    按 period 分片提取关系，计算跨时期关系演变，
+    结果回写 context.json 的 annotated_relations。
+    """
+    db = operator_db or OPERATOR_DB
+    aliases = alias_map or ALIAS_MAP
+
+    lines = context.get("annotated_lines", [])
+    character = context.get("character", "unknown")
+
+    # 按时期分组文本
+    phase_texts: dict[str, list[str]] = defaultdict(list)
+    for line in lines:
+        phase = line.get("context", {}).get("phase", "unknown")
+        text = line.get("text", "")
+        if text and line.get("source") != "archive":
+            phase_texts[phase].append(text)
+
+    # 全局文本（所有非档案行）
+    all_texts = []
+    for line in lines:
+        if line.get("source") != "archive":
+            all_texts.append(line.get("text", ""))
+
+    # 提取全局关系
+    global_text = "\n".join(all_texts)
+    global_rels = extract_relationships_from_text(
+        global_text, "context:global", db, aliases
+    )
+    global_graph = merge_relationships(global_rels, db)
+
+    # 按 period 提取关系
+    phase_graphs = {}
+    for phase, texts in phase_texts.items():
+        if phase == "unknown" or len(texts) < 3:
+            continue
+        phase_text = "\n".join(texts)
+        phase_rels = extract_relationships_from_text(
+            phase_text, f"context:phase:{phase}", db, aliases
+        )
+        if phase_rels:
+            phase_graphs[phase] = merge_relationships(phase_rels, db)
+
+    # 计算关系演变轨迹
+    trajectories = compute_relation_trajectories(global_graph, phase_graphs)
+
+    # 构建 annotated_relations
+    annotated_relations = []
+    for edge in global_graph.get("edges", []):
+        entry = {
+            "from": edge["from"],
+            "to": edge["to"],
+            "type": edge["type"],
+            "confidence": edge["confidence"],
+            "sources": edge.get("sources", []),
+            "contexts": edge.get("contexts", [])[:2],
+        }
+
+        # 添加时序信息
+        phase_info = {}
+        for phase, graph in phase_graphs.items():
+            for p_edge in graph.get("edges", []):
+                if (p_edge["from"] == edge["from"] and
+                    p_edge["to"] == edge["to"] and
+                    p_edge["type"] == edge["type"]):
+                    phase_info[phase] = {
+                        "confidence": p_edge["confidence"],
+                        "source_count": p_edge.get("source_count", 1),
+                    }
+        if phase_info:
+            entry["phases"] = phase_info
+
+        # 检查是否有演变
+        for traj in trajectories:
+            if (traj["from"] == edge["from"] and
+                traj["to"] == edge["to"] and
+                traj["type"] == edge["type"]):
+                entry["trajectory"] = traj["evolution"]
+                break
+
+        annotated_relations.append(entry)
+
+    return {
+        "global_graph": global_graph,
+        "phase_graphs": phase_graphs,
+        "trajectories": trajectories,
+        "annotated_relations": annotated_relations,
+    }
+
+
+def compute_relation_trajectories(
+    global_graph: dict,
+    phase_graphs: dict[str, dict],
+) -> list[dict]:
+    """
+    计算关系的时序演变轨迹
+
+    识别同一对角色在不同时期的关系变化：
+    - 新增：在后期出现但前期不存在
+    - 消失：在前期出现但后期不存在
+    - 强化：后期置信度提升
+    - 转变：关系类型发生变化
+    """
+    if len(phase_graphs) < 2:
+        return []
+
+    trajectories = []
+    phases_sorted = sorted(phase_graphs.keys())
+
+    # 收集所有边的全局信息
+    global_edges = {}
+    for edge in global_graph.get("edges", []):
+        key = (edge["from"], edge["to"], edge["type"])
+        global_edges[key] = edge
+
+    # 对每条全局边，检查在各时期的表现
+    for key, global_edge in global_edges.items():
+        from_name, to_name, rel_type = key
+
+        # 收集该关系在各时期的出现情况
+        phase_presence = {}
+        for phase in phases_sorted:
+            graph = phase_graphs[phase]
+            found = False
+            confidence = None
+            for p_edge in graph.get("edges", []):
+                if (p_edge["from"] == from_name and
+                    p_edge["to"] == to_name and
+                    p_edge["type"] == rel_type):
+                    found = True
+                    confidence = p_edge["confidence"]
+                    break
+            phase_presence[phase] = {"found": found, "confidence": confidence}
+
+        # 检查演变模式
+        present_phases = [p for p, info in phase_presence.items() if info["found"]]
+        absent_phases = [p for p, info in phase_presence.items() if not info["found"]]
+
+        evolution = None
+
+        if len(present_phases) == 1 and len(absent_phases) >= 1:
+            only_phase = present_phases[0]
+            if phases_sorted.index(only_phase) > 0:
+                evolution = f"在{only_phase}时期新出现"
+            else:
+                evolution = f"仅在{only_phase}时期出现后消失"
+
+        elif len(present_phases) >= 2:
+            # 检查置信度变化
+            first_conf = phase_presence[present_phases[0]]["confidence"]
+            last_conf = phase_presence[present_phases[-1]]["confidence"]
+            conf_order = {"low": 1, "medium": 2, "high": 3}
+            if conf_order.get(last_conf, 0) > conf_order.get(first_conf, 0):
+                evolution = f"从{present_phases[0]}到{present_phases[-1]}逐步强化"
+            elif conf_order.get(last_conf, 0) < conf_order.get(first_conf, 0):
+                evolution = f"从{present_phases[0]}到{present_phases[-1]}逐步淡化"
+
+        # 检查关系类型转变（同一对角色，不同关系类型）
+        type_changes = []
+        for phase in phases_sorted:
+            graph = phase_graphs[phase]
+            for p_edge in graph.get("edges", []):
+                if (p_edge["from"] == from_name and
+                    p_edge["to"] == to_name and
+                    p_edge["type"] != rel_type):
+                    type_changes.append((phase, p_edge["type"]))
+
+        if type_changes:
+            change_desc = "、".join(
+                f"{phase}时期为{t}" for phase, t in type_changes
+            )
+            if evolution:
+                evolution += f"；同时{change_desc}"
+            else:
+                evolution = f"关系类型存在变化：{change_desc}"
+
+        if evolution:
+            trajectories.append({
+                "from": from_name,
+                "to": to_name,
+                "type": rel_type,
+                "evolution": evolution,
+            })
+
+    return trajectories
 
 
 # ──────────────────────────────────────────────
@@ -516,56 +645,103 @@ def load_text(filepath: str, fmt: str = "markdown") -> list[tuple[str, str]]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="关系图谱构建器 — 从文本中自动提取角色关系网络",
+        description="关系图谱构建器 — 从文本中自动提取角色关系网络（支持语境化模式）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  # 从知识库提取关系
+  # 传统模式
   python relationship_graph.py --input ./knowledge.md --format markdown
 
-  # 从多个文件合并提取
-  python relationship_graph.py --input ./f1.md ./f2.txt --format markdown
-
-  # 输出到文件
-  python relationship_graph.py --input ./knowledge.md --output graph.json
+  # 语境化模式
+  python relationship_graph.py --context-json operators/te-lei-xi-ya/context.json
         """,
     )
 
-    parser.add_argument("--input", nargs="+", required=True, help="输入文件路径（支持多个）")
+    # 传统模式参数
+    parser.add_argument("--input", nargs="+", help="输入文件路径（传统模式）")
     parser.add_argument("--format", choices=["markdown", "plain"], default="markdown", help="文本格式")
+
+    # 语境化模式参数
+    parser.add_argument("--context-json", help="context.json 路径（语境化模式）")
+
+    # 通用参数
     parser.add_argument("--operator-db", help="自定义角色名库 JSON 文件路径")
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
 
     args = parser.parse_args()
 
+    # 互斥校验
+    if args.context_json and args.input:
+        print("错误：--context-json 和 --input 互斥，请选择一种模式", file=sys.stderr)
+        sys.exit(1)
+
+    if not args.context_json and not args.input:
+        print("错误：请指定 --context-json（语境化模式）或 --input（传统模式）", file=sys.stderr)
+        sys.exit(1)
+
     # 加载角色名库
     operator_db, alias_map = load_operator_db(args.operator_db)
 
-    all_relationships = []
+    if args.context_json:
+        # 语境化模式
+        with open(args.context_json, encoding='utf-8') as f:
+            context = json.load(f)
 
-    for filepath in args.input:
-        parts = load_text(filepath, args.format)
-        for text, source in parts:
-            rels = extract_relationships_from_text(text, source, operator_db, alias_map)
-            all_relationships.extend(rels)
+        result = generate_contextual_relationships(context, operator_db, alias_map)
 
-    if not all_relationships:
-        print("警告：未识别到任何关系", file=sys.stderr)
-        graph = {"nodes": [], "edges": []}
+        # 回写 annotated_relations 到 context.json
+        context["annotated_relations"] = result["annotated_relations"]
+        with open(args.context_json, 'w', encoding='utf-8') as f:
+            json.dump(context, f, ensure_ascii=False, indent=2)
+
+        report = {
+            "mode": "contextual",
+            "character": context.get("character", "unknown"),
+            "global_edges": len(result["global_graph"].get("edges", [])),
+            "global_nodes": len(result["global_graph"].get("nodes", [])),
+            "phase_graphs": {
+                phase: len(graph.get("edges", []))
+                for phase, graph in result["phase_graphs"].items()
+            },
+            "trajectories": result["trajectories"],
+            "annotated_relations_count": len(result["annotated_relations"]),
+        }
+
+        text = json.dumps(report, ensure_ascii=False, indent=2)
+        if args.output:
+            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.output).write_text(text, encoding="utf-8")
+            print(f"语境化关系图谱已写入 {args.output}", file=sys.stderr)
+            print(f"annotated_relations 已回写 {args.context_json}", file=sys.stderr)
+        else:
+            print(text)
     else:
-        graph = merge_relationships(all_relationships, operator_db)
+        # 传统模式
+        all_relationships = []
 
-    # 统计摘要
-    node_count = len(graph["nodes"])
-    edge_count = len(graph["edges"])
-    print(f"识别到 {node_count} 个角色、{edge_count} 条关系", file=sys.stderr)
+        for filepath in args.input:
+            parts = load_text(filepath, args.format)
+            for text, source in parts:
+                rels = extract_relationships_from_text(text, source, operator_db, alias_map)
+                all_relationships.extend(rels)
 
-    text = json.dumps(graph, ensure_ascii=False, indent=2)
-    if args.output:
-        Path(args.output).write_text(text, encoding="utf-8")
-        print(f"关系图谱已写入 {args.output}", file=sys.stderr)
-    else:
-        print(text)
+        if not all_relationships:
+            print("警告：未识别到任何关系", file=sys.stderr)
+            graph = {"nodes": [], "edges": []}
+        else:
+            graph = merge_relationships(all_relationships, operator_db)
+
+        node_count = len(graph["nodes"])
+        edge_count = len(graph["edges"])
+        print(f"识别到 {node_count} 个角色、{edge_count} 条关系", file=sys.stderr)
+
+        text = json.dumps(graph, ensure_ascii=False, indent=2)
+        if args.output:
+            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.output).write_text(text, encoding="utf-8")
+            print(f"关系图谱已写入 {args.output}", file=sys.stderr)
+        else:
+            print(text)
 
 
 if __name__ == "__main__":

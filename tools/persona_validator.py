@@ -508,32 +508,203 @@ def _score_to_grade(score: float) -> str:
 
 
 # ──────────────────────────────────────────────
+# 语境化验证（升级新增）
+# ──────────────────────────────────────────────
+
+def validate_with_context(persona_path: str, context_path: str) -> dict:
+    """
+    基于 context.json 的多切片验证
+
+    按 period 和 interlocutor 分片验证 Persona，
+    检查各层规则在不同场景下的一致性。
+    """
+    persona = parse_persona(persona_path)
+
+    with open(context_path, encoding='utf-8') as f:
+        context = json.load(f)
+
+    lines = context.get("annotated_lines", [])
+
+    # 全局对话
+    all_dialogues = [
+        l.get("text", "") for l in lines
+        if l.get("source") != "archive" and l.get("text")
+    ]
+
+    if not all_dialogues:
+        return {"error": "context.json 中无可用对话数据", "score": 0}
+
+    # 全局验证
+    global_result = _validate_against_dialogues(persona, all_dialogues)
+
+    # 按 period 分片验证
+    phase_results = {}
+    by_phase: dict[str, list[str]] = {}
+    for line in lines:
+        if line.get("source") == "archive" or not line.get("text"):
+            continue
+        phase = line.get("context", {}).get("phase", "unknown")
+        if phase != "unknown":
+            by_phase.setdefault(phase, []).append(line["text"])
+
+    for phase, phase_dialogues in by_phase.items():
+        if len(phase_dialogues) >= 2:
+            phase_results[phase] = _validate_against_dialogues(persona, phase_dialogues)
+
+    # 按 interlocutor 分片验证
+    interlocutor_results = {}
+    by_interlocutor: dict[str, list[str]] = {}
+    for line in lines:
+        if line.get("source") == "archive" or not line.get("text"):
+            continue
+        person = line.get("context", {}).get("interlocutor") or "unknown"
+        if person != "unknown":
+            by_interlocutor.setdefault(person, []).append(line["text"])
+
+    for person, person_dialogues in by_interlocutor.items():
+        if len(person_dialogues) >= 2:
+            interlocutor_results[person] = _validate_against_dialogues(persona, person_dialogues)
+
+    # 检测切片间不一致（同一规则在 A 场景通过但在 B 场景违反）
+    slice_inconsistencies = _detect_slice_inconsistencies(
+        global_result, phase_results, interlocutor_results
+    )
+
+    return {
+        "mode": "contextual",
+        "overall_score": global_result["overall_score"],
+        "grade": global_result["grade"],
+        "dialogue_count": len(all_dialogues),
+        "global": global_result,
+        "by_phase": phase_results,
+        "by_interlocutor": interlocutor_results,
+        "slice_inconsistencies": slice_inconsistencies,
+        "phases_tested": list(phase_results.keys()),
+        "interlocutors_tested": list(interlocutor_results.keys()),
+    }
+
+
+def _validate_against_dialogues(persona: dict, dialogues: list[str]) -> dict:
+    """对一组对话执行完整验证"""
+    layer0_result = validate_layer0(dialogues, persona["layer0_rules"])
+    layer2_result = validate_layer2_style(dialogues, persona["layer2_style"])
+    layer5_result = validate_layer5_taboos(dialogues, persona["layer5_taboos"])
+
+    overall_score = (
+        layer0_result["score"] * 0.5
+        + layer2_result["score"] * 0.3
+        + layer5_result["score"] * 0.2
+    )
+
+    return {
+        "overall_score": round(overall_score, 1),
+        "layer0_core_personality": layer0_result,
+        "layer2_expression_style": layer2_result,
+        "layer5_boundaries": layer5_result,
+        "dialogue_count": len(dialogues),
+        "grade": _score_to_grade(overall_score),
+    }
+
+
+def _detect_slice_inconsistencies(
+    global_result: dict,
+    phase_results: dict[str, dict],
+    interlocutor_results: dict[str, dict],
+) -> list[dict]:
+    """
+    检测切片间不一致：某规则在全局通过但在某切片违反
+
+    这类不一致通常意味着 Persona 规则过于绝对，
+    需要添加场景条件或时期条件。
+    """
+    inconsistencies = []
+
+    global_violations = set()
+    for v in global_result.get("layer0_core_personality", {}).get("violations", []):
+        global_violations.add(v.get("rule", "")[:60])
+
+    for phase, result in phase_results.items():
+        phase_violations = []
+        for v in result.get("layer0_core_personality", {}).get("violations", []):
+            rule_key = v.get("rule", "")[:60]
+            if rule_key not in global_violations:
+                phase_violations.append({
+                    "rule": v.get("rule", ""),
+                    "phase": phase,
+                    "violation_count": v.get("violation_count", 0),
+                    "examples": v.get("examples", [])[:2],
+                })
+
+        if phase_violations:
+            inconsistencies.append({
+                "type": "phase_specific_violation",
+                "phase": phase,
+                "description": f"以下规则在{phase}时期被违反，但在全局数据中未检测到违反——可能是时期特有的行为",
+                "violations": phase_violations,
+            })
+
+    # 检查对象维度的分数差异
+    if len(interlocutor_results) >= 2:
+        scores = {
+            person: result.get("overall_score", 0)
+            for person, result in interlocutor_results.items()
+        }
+        if scores:
+            max_score = max(scores.values())
+            min_score = min(scores.values())
+            if max_score - min_score > 20:
+                inconsistencies.append({
+                    "type": "interlocutor_score_gap",
+                    "description": f"不同对话对象的验证分数差距较大（{min_score} vs {max_score}），Persona 可能需要为不同对象添加差异化规则",
+                    "scores": scores,
+                })
+
+    return inconsistencies
+
+
+# ──────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Persona 一致性验证器 — 用角色实际对话验证 Persona 的准确度",
+        description="Persona 一致性验证器 — 用角色实际对话验证 Persona 的准确度（支持多切片验证）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
+  # 传统模式
   python persona_validator.py --persona ./persona.md --dialogues ./lines.txt
   python persona_validator.py --persona ./persona.md --dialogues ./voices.json --format prts-json
-  python persona_validator.py --persona ./persona.md --dialogues ./data.csv --format csv
+
+  # 语境化模式（多切片验证）
+  python persona_validator.py --persona ./persona.md --context-json operators/te-lei-xi-ya/context.json
         """,
     )
 
+    # 传统模式参数
     parser.add_argument("--persona", required=True, help="persona.md 文件路径")
-    parser.add_argument("--dialogues", required=True, help="对话数据文件路径")
+    parser.add_argument("--dialogues", help="对话数据文件路径（传统模式）")
     parser.add_argument("--format", choices=["plain", "prts-json", "csv"], default="plain", help="对话格式")
+
+    # 语境化模式参数
+    parser.add_argument("--context-json", help="context.json 路径（语境化模式，替代 --dialogues）")
+
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
 
     args = parser.parse_args()
 
-    result = validate(args.persona, args.dialogues, args.format)
+    if not args.dialogues and not args.context_json:
+        print("错误：请指定 --dialogues（传统模式）或 --context-json（语境化模式）", file=sys.stderr)
+        sys.exit(1)
+
+    if args.context_json:
+        result = validate_with_context(args.persona, args.context_json)
+    else:
+        result = validate(args.persona, args.dialogues, args.format)
 
     text = json.dumps(result, ensure_ascii=False, indent=2)
     if args.output:
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
         Path(args.output).write_text(text, encoding="utf-8")
         print(f"验证报告已写入 {args.output}", file=sys.stderr)
     else:

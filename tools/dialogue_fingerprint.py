@@ -5,18 +5,23 @@
 这是 arknights-operator-skill 相比 ex-skill / colleague-skill 的核心差异：
 不做主观描述，而是从角色的实际对话中提取可量化的语言特征。
 
-用法:
-    # 分析单条对话文件
-    python dialogue_fingerprint.py --input ./theresa_lines.txt --format plain
+升级版：支持语境化分析模式。
+  - 传统模式：--input/--format（分析原始对话文件）
+  - 语境化模式：--context-json（消费 context.json，按场景/对象/时期分片分析）
 
-    # 分析 PRTS Wiki 导出的语音数据 JSON
+语境化模式会输出 per-situation / per-interlocutor / per-phase 的分片指纹，
+以及各分片之间的差异（shifts），可直接写入 Persona Layer 2-4。
+
+用法:
+    # 传统模式
+    python dialogue_fingerprint.py --input ./theresa_lines.txt --format plain
     python dialogue_fingerprint.py --input ./theresa_voices.json --format prts-json
 
-    # 分析后输出到文件
-    python dialogue_fingerprint.py --input ./theresa_lines.txt --output ./fingerprint.json
+    # 语境化模式
+    python dialogue_fingerprint.py --context-json operators/te-lei-xi-ya/context.json
 
-输出:
-    JSON 格式的语言指纹报告，包含 7 个维度的量化指标
+    # 语境化 + 输出到文件
+    python dialogue_fingerprint.py --context-json context.json --output fingerprint.json
 """
 
 import argparse
@@ -53,7 +58,7 @@ QUESTION = ["？", "?"]
 
 
 # ──────────────────────────────────────────────
-# 核心分析函数
+# 核心分析函数（7 维度）
 # ──────────────────────────────────────────────
 
 def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
@@ -374,16 +379,15 @@ def analyze_rhetoric_patterns(dialogues: list[dict]) -> dict:
                     parallelism += 1
 
         # 否定句检测：匹配否定词 + 动词/形容词的典型否定句式
-        # 避免误匹配含"不"但非否定句的文本（如"不同""不断"等）
         negation_patterns = [
-            r"(不|未|莫|别)\s*[是能为会有在到想需该]",   # 不是/不能/不会/未有...
-            r"(不|未|莫|别)\s*[让叫使把给向对]",       # 不让/别叫...
-            r"没有",                                    # 没有
-            r"无法",                                    # 无法
-            r"并非",                                    # 并非
-            r"从不",                                    # 从不
-            r"绝不|决不",                               # 绝不
-            r"无人|无物|无端|无从",                     # 无+名词性成分
+            r"(不|未|莫|别)\s*[是能为会有在到想需该]",
+            r"(不|未|莫|别)\s*[让叫使把给向对]",
+            r"没有",
+            r"无法",
+            r"并非",
+            r"从不",
+            r"绝不|决不",
+            r"无人|无物|无端|无从",
         ]
         if any(re.search(pat, text) for pat in negation_patterns):
             negation += 1
@@ -425,7 +429,6 @@ def analyze_address_pattern(dialogues: list[dict]) -> dict:
 
     量化角色如何称呼他人（尊称/昵称/省略称呼）
     """
-    # 中文尊称/亲昵称呼标记
     honorific = ["大人", "阁下", "殿下", "陛下", "先生", "小姐", "长官", "指挥官"]
     intimate = ["亲爱的", "小", "老", "阿", "姐", "哥", "妹", "弟"]
 
@@ -476,7 +479,6 @@ def analyze_natural_imagery(dialogues: list[dict]) -> dict:
     量化角色是否偏好使用自然意象（花、风、光、影等）
     使用 2 字词组匹配以减少误报（如"花费"不含"花"意象）
     """
-    # 使用 2 字词组匹配，减少"花费""风格""光明"等误报
     nature_words = {
         "植物": ["花朵", "花瓣", "花开", "花落", "草木", "树叶", "枝头", "藤蔓", "森林", "丛林", "花草"],
         "天文": ["星空", "星辰", "月光", "阳光", "光影", "天空", "云霞", "彩虹", "星光", "夜空", "日光"],
@@ -587,42 +589,214 @@ def _generate_summary(dimensions: dict) -> str:
 
 
 # ──────────────────────────────────────────────
+# 语境化分析（升级新增）
+# ──────────────────────────────────────────────
+
+def _lines_to_dialogues(annotated_lines: list[dict], source_filter: str = None) -> list[dict]:
+    """将 context.json 的 annotated_lines 转为 fingerprint 兼容的 dialogues 格式"""
+    result = []
+    for line in annotated_lines:
+        if source_filter and line.get("source") != source_filter:
+            continue
+        if line.get("source") == "archive":
+            continue
+        result.append({"label": line.get("source_detail", ""), "text": line.get("text", "")})
+    return result
+
+
+def generate_contextual_fingerprint(context: dict) -> dict:
+    """
+    语境化指纹分析：在全局指纹基础上，按场景/对象/时期分片分析
+    """
+    lines = context.get("annotated_lines", [])
+    operator_name = context.get("character", "unknown")
+
+    # 全局指纹
+    all_dialogues = _lines_to_dialogues(lines)
+    global_fp = generate_fingerprint(all_dialogues, operator_name)
+
+    result = {
+        "operator": operator_name,
+        "mode": "contextual",
+        "global": global_fp,
+        "slices": {},
+        "shifts": {},
+    }
+
+    # ── 按场景分片 ──
+    by_situation = {}
+    for line in lines:
+        if line.get("source") == "archive":
+            continue
+        sit = line.get("context", {}).get("situation_type", "unknown")
+        by_situation.setdefault(sit, []).append(line)
+
+    for sit, sit_lines in by_situation.items():
+        if len(sit_lines) < 2:
+            continue
+        dialogues = _lines_to_dialogues(sit_lines)
+        result["slices"][f"situation:{sit}"] = generate_fingerprint(dialogues, operator_name)
+
+    # ── 按对话对象分片 ──
+    by_interlocutor = {}
+    for line in lines:
+        if line.get("source") == "archive":
+            continue
+        person = line.get("context", {}).get("interlocutor") or "unknown"
+        by_interlocutor.setdefault(person, []).append(line)
+
+    for person, person_lines in by_interlocutor.items():
+        if len(person_lines) < 2:
+            continue
+        dialogues = _lines_to_dialogues(person_lines)
+        result["slices"][f"interlocutor:{person}"] = generate_fingerprint(dialogues, operator_name)
+
+    # ── 按时期分片 ──
+    by_phase = {}
+    for line in lines:
+        if line.get("source") == "archive":
+            continue
+        phase = line.get("context", {}).get("phase", "unknown")
+        if phase == "unknown":
+            continue
+        by_phase.setdefault(phase, []).append(line)
+
+    for phase, phase_lines in by_phase.items():
+        if len(phase_lines) < 2:
+            continue
+        dialogues = _lines_to_dialogues(phase_lines)
+        result["slices"][f"phase:{phase}"] = generate_fingerprint(dialogues, operator_name)
+
+    # ── 计算分片偏移（shifts） ──
+    result["shifts"] = compute_shifts(global_fp, result["slices"])
+
+    return result
+
+
+def compute_shifts(global_fp: dict, slices: dict) -> dict:
+    """
+    计算各分片与全局指纹的差异（shifts）
+    输出可直接写入 Persona Layer 的行为偏移规则
+    """
+    shifts = {}
+    global_dims = global_fp.get("dimensions", {})
+
+    for slice_key, slice_fp in slices.items():
+        slice_dims = slice_fp.get("dimensions", {})
+        diff_items = []
+
+        # 句式长度偏移
+        g_avg = global_dims.get("1_sentence_length", {}).get("avg_length", 0)
+        s_avg = slice_dims.get("1_sentence_length", {}).get("avg_length", 0)
+        if g_avg > 0 and abs(s_avg - g_avg) / g_avg > 0.3:
+            direction = "偏短" if s_avg < g_avg else "偏长"
+            diff_items.append({
+                "dimension": "sentence_length",
+                "global_avg": g_avg,
+                "slice_avg": s_avg,
+                "shift": direction,
+                "magnitude": round(abs(s_avg - g_avg) / g_avg, 2),
+            })
+
+        # 省略号频率偏移
+        g_ell = global_dims.get("2_pause_markers", {}).get("ellipsis_pct", 0)
+        s_ell = slice_dims.get("2_pause_markers", {}).get("ellipsis_pct", 0)
+        if g_ell > 0 and abs(s_ell - g_ell) / g_ell > 0.4:
+            direction = "更多沉默" if s_ell > g_ell else "更少沉默"
+            diff_items.append({
+                "dimension": "ellipsis",
+                "global_pct": g_ell,
+                "slice_pct": s_ell,
+                "shift": direction,
+                "magnitude": round(abs(s_ell - g_ell) / g_ell, 2),
+            })
+
+        # 情感主导偏移
+        g_dom = global_dims.get("4_emotion_vocabulary", {}).get("dominant", "")
+        s_dom = slice_dims.get("4_emotion_vocabulary", {}).get("dominant", "")
+        if g_dom and s_dom and g_dom != s_dom:
+            diff_items.append({
+                "dimension": "emotion_dominant",
+                "global_dominant": g_dom,
+                "slice_dominant": s_dom,
+                "shift": f"从'{g_dom}'偏移到'{s_dom}'",
+            })
+
+        # 否定句频率偏移
+        g_neg = global_dims.get("5_rhetoric_patterns", {}).get("negation_pct", 0)
+        s_neg = slice_dims.get("5_rhetoric_patterns", {}).get("negation_pct", 0)
+        if g_neg > 0 and abs(s_neg - g_neg) / g_neg > 0.4:
+            direction = "更多否定" if s_neg > g_neg else "更少否定"
+            diff_items.append({
+                "dimension": "negation",
+                "global_pct": g_neg,
+                "slice_pct": s_neg,
+                "shift": direction,
+                "magnitude": round(abs(s_neg - g_neg) / g_neg, 2),
+            })
+
+        if diff_items:
+            shifts[slice_key] = diff_items
+
+    return shifts
+
+
+# ──────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
-        description="对话指纹分析器 — 从角色对话中提取量化语言特征",
+        description="对话指纹分析器 — 从角色对话中提取量化语言特征（支持语境化分析）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  # 分析纯文本对话
+  # 传统模式
   python dialogue_fingerprint.py --input ./theresa_lines.txt --format plain
-
-  # 分析 PRTS 导出的语音 JSON
   python dialogue_fingerprint.py --input ./theresa_voices.json --format prts-json
 
-  # 指定角色名并输出到文件
-  python dialogue_fingerprint.py --input lines.txt --name 特蕾西娅 --output fingerprint.json
+  # 语境化模式
+  python dialogue_fingerprint.py --context-json operators/te-lei-xi-ya/context.json
         """,
     )
 
-    parser.add_argument("--input", required=True, help="对话数据文件路径")
+    # 传统模式参数
+    parser.add_argument("--input", help="对话数据文件路径（传统模式）")
     parser.add_argument("--format", choices=["plain", "prts-json", "csv"], default="plain", help="数据格式")
     parser.add_argument("--name", default="unknown", help="角色名称")
+
+    # 语境化模式参数
+    parser.add_argument("--context-json", help="context.json 路径（语境化模式）")
+
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
 
     args = parser.parse_args()
 
-    dialogues = load_dialogues(args.input, args.format)
-    if not dialogues:
-        print("错误：未找到任何对话数据", file=sys.stderr)
+    # 互斥校验
+    if args.context_json and args.input:
+        print("错误：--context-json 和 --input 互斥，请选择一种模式", file=sys.stderr)
         sys.exit(1)
 
-    report = generate_fingerprint(dialogues, args.name)
+    if not args.context_json and not args.input:
+        print("错误：请指定 --context-json（语境化模式）或 --input（传统模式）", file=sys.stderr)
+        sys.exit(1)
+
+    if args.context_json:
+        # 语境化模式
+        with open(args.context_json, encoding='utf-8') as f:
+            context = json.load(f)
+        report = generate_contextual_fingerprint(context)
+    else:
+        # 传统模式
+        dialogues = load_dialogues(args.input, args.format)
+        if not dialogues:
+            print("错误：未找到任何对话数据", file=sys.stderr)
+            sys.exit(1)
+        report = generate_fingerprint(dialogues, args.name)
 
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.output:
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
         Path(args.output).write_text(text, encoding="utf-8")
         print(f"指纹报告已写入 {args.output}", file=sys.stderr)
     else:

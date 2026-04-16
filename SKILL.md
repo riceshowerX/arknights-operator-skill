@@ -2,7 +2,7 @@
 name: create-operator
 description: "Distill an Arknights operator into an AI Skill. Generate Knowledge + Persona with 5-layer structure, evolution support. | 将明日方舟角色蒸馏成AI Skill，生成知识库+5层人格，支持持续进化。"
 argument-hint: "[operator-name-or-slug]"
-version: "2.1.0"
+version: "3.0.0"
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
 ---
@@ -37,8 +37,12 @@ allowed-tools: Read, Write, Edit, Bash
 | 读取图片/立绘 | `Read` 工具（原生支持图片） |
 | 读取 MD/TXT/JSON 文件 | `Read` 工具 |
 | 解析游戏数据 / PRTS Wiki | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py --source prts --name {角色名}` 或 `--source local --file {文件路径}` |
-| 分析角色对话指纹 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/dialogue_fingerprint.py --input {对话文件} --format {plain\|prts-json}` |
-| 构建角色关系图谱 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py --input {知识库文件} --format {markdown\|plain} [--operator-db {自定义角色名库}]` |
+| 提取剧情对话 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/story_extractor.py --source prts --name {剧情名} --operator {角色名} --output /tmp/story.json` |
+| 语境标注（构建 context.json） | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/context_annotator.py --operator-json {game_data_parser输出} --story-json {story_extractor输出} --knowledge-md {knowledge路径} --output operators/{slug}/context.json` |
+| 分析角色对话指纹 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/dialogue_fingerprint.py --input {对话文件} --format {plain\|prts-json}` 或 `--context-json operators/{slug}/context.json`（语境化模式） |
+| 构建角色关系图谱 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py --input {知识库文件} --format {markdown\|plain}` 或 `--context-json operators/{slug}/context.json`（语境化模式） |
+| 话语行为分析 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/speech_act_analyzer.py --context-json operators/{slug}/context.json [--output-profile profile.json]` |
+| 时序切片分析 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/temporal_slicer.py --context-json operators/{slug}/context.json [--output slices.json]` |
 | 验证 Persona 一致性 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/persona_validator.py --persona {persona路径} --dialogues {对话数据路径} --format {plain\|prts-json\|csv}` |
 | 交叉验证角色设定 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/canon_checker.py --sources {来源1} {来源2} ... [--misconceptions {自定义误解库}]` |
 | 写入/更新 Skill 文件 | `Write` / `Edit` 工具 |
@@ -59,7 +63,7 @@ allowed-tools: Read, Write, Edit, Bash
 6. **称呼模式** — 对不同人的差异化称呼
 7. **自然意象偏好** — 花朵/星空/大地等意象的出现频率
 
-输出 JSON 报告，可直接用于 Persona Layer 2 的数据支撑。
+支持**语境化模式**（`--context-json`）：按场景/对象/时期分片分析，输出各分片指纹及与全局的差异（shifts），直接写入 Persona Layer 2-4。
 
 #### relationship_graph.py — 关系图谱构建器
 从角色资料/剧情文本中自动提取角色关系网络：
@@ -67,7 +71,34 @@ allowed-tools: Read, Write, Edit, Bash
 - 检测 12 种关系类型（亲属/战友/对抗/信任/背叛/师徒/情感等）
 - 改进的方向判断（语法模式 + 关键词距离 + 语序综合判断）
 - 计算关系可信度（基于出现频率和多来源交叉）
-- 输出 JSON 格式的关系图谱（节点+边），可直接写入 Knowledge
+- 支持**语境化模式**（`--context-json`）：按时期分片提取关系，计算跨时期关系演变轨迹（trajectories），结果回写 context.json 的 annotated_relations
+
+#### speech_act_analyzer.py — 话语行为分析器
+从角色对话中分类话语行为（邀请/回避/质问/承诺/宽慰/克制/存在确认等）：
+- 基于规则的话语行为分类（10+ 种类型）
+- 按场景/对象/时期的行为分布统计
+- 自动检测行为模式并生成可执行规则（如"高回避倾向""选择性邀请""克制型情感表达"）
+- 输出 speech_act_profile.json，回写 context.json 的 speech_acts 字段
+
+#### temporal_slicer.py — 时序切片器
+按 timeline 的 period 切片分析角色语言，检测跨期演变：
+- 按 period 分组计算切片级指标（句式长度/省略号/否定句/话语行为/自称等）
+- 相邻时期比较，检测显著偏移
+- 对象维度：同一时期内对不同人的表达差异
+- 生成可写入 Persona Layer 2/4 的时序演变规则
+
+#### context_annotator.py — 语境标注器
+将所有原始数据统一标注为语境化数据模型：
+- 合并 game_data_parser、story_extractor、语音数据
+- 自动推断场景类型、对话对象、时期
+- 输出 context.json（统一数据中间层，下游所有工具的消费源）
+
+#### story_extractor.py — 剧情对话提取器
+从 PRTS Wiki 剧情页面提取角色对话：
+- 自动识别目标角色的台词
+- 推断场景和时期
+- 提取旁白/舞台指示
+- 输出结构化 JSON
 
 #### persona_validator.py — Persona 一致性验证器
 用角色已知对话验证生成的 Persona 是否准确：
@@ -168,6 +199,50 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 - 运行 `dialogue_fingerprint.py` 提取语言指纹（如有语音/对话数据）
 - 语言指纹结果直接用于支撑 Layer 2 表达风格的量化描述
 
+**语境化管线（推荐，当有 PRTS 数据时执行）**：
+
+当 game_data_parser 成功获取数据后，自动执行以下管线：
+
+1. **构建 context.json**（数据中间层）：
+   ```bash
+   python3 ${OPERATOR_SKILL_DIR}/tools/context_annotator.py \
+     --operator-json /tmp/operator_data.json \
+     --story-json /tmp/story_*.json \
+     --knowledge-md operators/{slug}/knowledge.md \
+     --output operators/{slug}/context.json
+   ```
+
+2. **话语行为分析**：
+   ```bash
+   python3 ${OPERATOR_SKILL_DIR}/tools/speech_act_analyzer.py \
+     --context-json operators/{slug}/context.json \
+     --output-profile operators/{slug}/speech_act_profile.json
+   ```
+
+3. **语境化指纹分析**：
+   ```bash
+   python3 ${OPERATOR_SKILL_DIR}/tools/dialogue_fingerprint.py \
+     --context-json operators/{slug}/context.json \
+     --output operators/{slug}/fingerprint.json
+   ```
+
+4. **语境化关系图谱**：
+   ```bash
+   python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py \
+     --context-json operators/{slug}/context.json
+   ```
+
+5. **时序切片分析**：
+   ```bash
+   python3 ${OPERATOR_SKILL_DIR}/tools/temporal_slicer.py \
+     --context-json operators/{slug}/context.json \
+     --output operators/{slug}/temporal_slices.json
+   ```
+
+6. **注入 Persona/Knowledge**：
+   - 按照 `persona_builder.md` 的"语境化数据注入"规则，将分析结果注入 Persona 各层
+   - 按照 `knowledge_builder.md` 的"语境化数据注入"规则，将时间线/关系注入 Knowledge
+
 ### Step 4：生成并预览
 
 参考 `${OPERATOR_SKILL_DIR}/prompts/knowledge_builder.md` 生成 Knowledge Skill 内容。
@@ -187,6 +262,10 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 - `operators/{slug}/persona.md`
 - `operators/{slug}/meta.json`
 - `operators/{slug}/SKILL.md`
+- `operators/{slug}/context.json`（语境化数据中间层）
+- `operators/{slug}/speech_act_profile.json`（话语行为画像）
+- `operators/{slug}/fingerprint.json`（对话指纹）
+- `operators/{slug}/temporal_slices.json`（时序切片）
 
 ---
 
