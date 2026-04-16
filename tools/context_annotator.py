@@ -249,7 +249,7 @@ def build_context_json(
         situation_dist[sit] = situation_dist.get(sit, 0) + 1
 
     return {
-        "character": operator_data.get("name", ""),
+        "character": operator_data.get("name_zh") or operator_data.get("name", ""),
         "slug": operator_data.get("slug", ""),
         "source_url": operator_data.get("source_url", ""),
         "page_type": operator_data.get("page_type", ""),

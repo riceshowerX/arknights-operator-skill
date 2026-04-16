@@ -36,7 +36,7 @@ SPEECH_ACT_RULES = [
     (r"来吧", "invite", 0.7, "邀请"),
 
     # 回避：不正面回答
-    (r".{0,8}[………]{2,}$", "evade", 0.75, "回避"),
+    (r".{0,8}(?:…|\.\.\.){2,}$", "evade", 0.75, "回避"),
     (r"你呢[？?]", "evade", 0.8, "回避"),
     (r"(也许|或许|大概|可能).{0,10}$", "evade", 0.7, "回避"),
     (r"我不知道.{0,5}$", "evade", 0.65, "回避"),
@@ -54,13 +54,14 @@ SPEECH_ACT_RULES = [
     # 宽慰：减轻对方负担
     (r"不是你的错", "console", 0.9, "宽慰"),
     (r"你不必.{1,15}", "console", 0.85, "宽慰"),
-    (r"(已经足够|没关系|不要紧)", "console", 0.85, "宽慰"),
+    (r"(已经足够|不要紧)", "console", 0.85, "宽慰"),
+    (r"没关系(?!.{0,5}[。…])", "console", 0.8, "宽慰"),
     (r"我(理解|明白|知道你的).{0,10}", "console", 0.75, "宽慰"),
 
     # 克制：压抑情感
     (r"[悲伤痛苦遗憾].{0,5}[………]", "restrain", 0.8, "克制"),
     (r"我(知道|明白).{0,8}$", "restrain", 0.7, "克制"),
-    (r"没关系.{0,5}[。…]", "restrain", 0.65, "克制"),
+    (r"没关系.{0,5}[。…]", "restrain", 0.7, "克制"),
 
     # 存在确认（明日方舟特色）
     (r"我在", "affirm_presence", 0.9, "存在确认"),
@@ -178,9 +179,12 @@ def detect_behavioral_patterns(profile: dict) -> list[dict]:
         })
 
     # 模式2：选择性邀请
-    comfort_invite = by_situation.get("comfort", {}).get("invite", 0)
-    confront_invite = by_situation.get("confront", {}).get("invite", 0)
-    if comfort_invite > 0 and confront_invite == 0:
+    # by_situation 使用原始计数，需要归一化后比较
+    comfort_total = sum(by_situation.get("comfort", {}).values()) or 1
+    confront_total = sum(by_situation.get("confront", {}).values()) or 1
+    comfort_invite_ratio = by_situation.get("comfort", {}).get("invite", 0) / comfort_total
+    confront_invite_ratio = by_situation.get("confront", {}).get("invite", 0) / confront_total
+    if comfort_invite_ratio > 0 and confront_invite_ratio == 0:
         patterns.append({
             "pattern": "selective_invite",
             "rule": "只在安慰他人时发出邀请，在面对对抗时从不邀请——即使在冲突中也保持邀请姿态是罕见的",

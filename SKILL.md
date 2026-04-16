@@ -37,7 +37,7 @@ allowed-tools: Read, Write, Edit, Bash
 | 读取图片/立绘 | `Read` 工具（原生支持图片） |
 | 读取 MD/TXT/JSON 文件 | `Read` 工具 |
 | 解析游戏数据 / PRTS Wiki | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py --source prts --name {角色名}` 或 `--source local --file {文件路径}` |
-| 提取剧情对话 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/story_extractor.py --source prts --name {剧情名} --operator {角色名} --output /tmp/story.json` |
+| 提取剧情对话 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/story_extractor.py --chapter {剧情章节名} --character {角色名} --output /tmp/story.json` |
 | 语境标注（构建 context.json） | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/context_annotator.py --operator-json {game_data_parser输出} --story-json {story_extractor输出} --knowledge-md {knowledge路径} --output operators/{slug}/context.json` |
 | 分析角色对话指纹 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/dialogue_fingerprint.py --input {对话文件} --format {plain\|prts-json}` 或 `--context-json operators/{slug}/context.json`（语境化模式） |
 | 构建角色关系图谱 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/relationship_graph.py --input {知识库文件} --format {markdown\|plain}` 或 `--context-json operators/{slug}/context.json`（语境化模式） |

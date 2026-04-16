@@ -612,35 +612,35 @@ def _detect_slice_inconsistencies(
     interlocutor_results: dict[str, dict],
 ) -> list[dict]:
     """
-    检测切片间不一致：某规则在全局通过但在某切片违反
+    检测切片间不一致：某规则在某切片违反但其他切片通过
 
     这类不一致通常意味着 Persona 规则过于绝对，
     需要添加场景条件或时期条件。
     """
     inconsistencies = []
 
-    global_violations = set()
-    for v in global_result.get("layer0_core_personality", {}).get("violations", []):
-        global_violations.add(v.get("rule", "")[:60])
+    # 收集每条规则在各切片中的违反情况
+    # key = rule_text[:80], value = {phase: violation_count}
+    rule_violation_map: dict[str, dict[str, int]] = {}
 
     for phase, result in phase_results.items():
-        phase_violations = []
         for v in result.get("layer0_core_personality", {}).get("violations", []):
-            rule_key = v.get("rule", "")[:60]
-            if rule_key not in global_violations:
-                phase_violations.append({
-                    "rule": v.get("rule", ""),
-                    "phase": phase,
-                    "violation_count": v.get("violation_count", 0),
-                    "examples": v.get("examples", [])[:2],
-                })
+            rule_key = v.get("rule", "")[:80]
+            rule_violation_map.setdefault(rule_key, {})[phase] = v.get("violation_count", 0)
 
-        if phase_violations:
+    # 找出只在部分时期违反的规则
+    for rule_key, phase_violations in rule_violation_map.items():
+        phases_with_violation = list(phase_violations.keys())
+        all_phases = list(phase_results.keys())
+        phases_without = [p for p in all_phases if p not in phases_with_violation]
+
+        if phases_without and len(phases_with_violation) < len(all_phases):
             inconsistencies.append({
                 "type": "phase_specific_violation",
-                "phase": phase,
-                "description": f"以下规则在{phase}时期被违反，但在全局数据中未检测到违反——可能是时期特有的行为",
-                "violations": phase_violations,
+                "rule": rule_key,
+                "description": f"规则在{', '.join(phases_with_violation)}时期被违反，但在{', '.join(phases_without)}时期未违反——可能是时期特有的行为，Persona 需要添加条件",
+                "violated_phases": phases_with_violation,
+                "clean_phases": phases_without,
             })
 
     # 检查对象维度的分数差异
