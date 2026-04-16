@@ -80,8 +80,9 @@ BUILTIN_MISCONCEPTIONS = [
             },
         ],
         "exclude_patterns": [
-            r"不是.*理念",
-            r"错误.*归因",
+            r"不是.{0,5}(特蕾西娅|她)的理念",
+            r"错误归因.{0,5}(特蕾西娅|她)",
+            r"(特蕾西娅|她).{0,10}(不是|并非).{0,10}(理念|原话)",
         ],
     },
     {
@@ -272,35 +273,42 @@ def check_misconceptions(
     warnings = []
 
     for m in misconceptions:
-        # 先检查排除模式
         excluded = False
-        for exc_pat in m.get("exclude_patterns", []):
-            if re.search(exc_pat, text):
-                excluded = True
-                break
-
-        if excluded:
-            continue
 
         for cp in m["check_patterns"]:
             pattern = cp["pattern"] if isinstance(cp, dict) else cp
             warning_text = cp.get("warning", "") if isinstance(cp, dict) else f"匹配到误解模式: {pattern}"
 
             match = re.search(pattern, text)
-            if match:
-                # 二次验证：检查匹配位置前后是否有否定词
-                start = max(0, match.start() - 40)
-                end = min(len(text), match.end() + 40)
-                surrounding = text[start:end]
+            if not match:
+                continue
 
-                negation_cues = ["不是", "并非", "并不", "没有", "错误", "误解", "不等于", "不同于"]
-                is_negation_context = any(cue in surrounding for cue in negation_cues)
+            # 在匹配点附近检查排除模式（±200 字符上下文）
+            ctx_start = max(0, match.start() - 200)
+            ctx_end = min(len(text), match.end() + 200)
+            surrounding_text = text[ctx_start:ctx_end]
 
-                if is_negation_context:
-                    # 文本正在纠正误解，不报警
-                    continue
+            for exc_pat in m.get("exclude_patterns", []):
+                if re.search(exc_pat, surrounding_text):
+                    excluded = True
+                    break
 
-                warnings.append({
+            if excluded:
+                continue
+
+            # 二次验证：检查匹配位置前后是否有否定词
+            start = max(0, match.start() - 40)
+            end = min(len(text), match.end() + 40)
+            surrounding = text[start:end]
+
+            negation_cues = ["不是", "并非", "并不", "没有", "错误", "误解", "不等于", "不同于"]
+            is_negation_context = any(cue in surrounding for cue in negation_cues)
+
+            if is_negation_context:
+                # 文本正在纠正误解，不报警
+                continue
+
+            warnings.append({
                     "misconception_id": m["id"],
                     "wrong": m["wrong"],
                     "correct": m["correct"],

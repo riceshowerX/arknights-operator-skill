@@ -72,11 +72,16 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
         # PRTS JSON 格式: {"voice_lines": [...]} 或直接 [...]
         if isinstance(data, list):
             return data
-        if isinstance(data, dict) and "voice_lines" in data:
-            return data["voice_lines"]
-        # 尝试从 game_data_parser 输出格式提取
-        if "voice_lines" in data:
-            return data["voice_lines"]
+        if isinstance(data, dict):
+            if "voice_lines" in data:
+                return data["voice_lines"]
+            # 尝试从 game_data_parser 输出格式提取
+            if "archives" in data:
+                return [
+                    {"label": a.get("index", ""), "text": a.get("text", "")}
+                    for a in data["archives"]
+                    if a.get("text")
+                ]
         return []
 
     elif fmt == "plain":
@@ -368,8 +373,19 @@ def analyze_rhetoric_patterns(dialogues: list[dict]) -> dict:
                 if start_counter.most_common(1)[0][1] >= 3:
                     parallelism += 1
 
-        # 否定句检测
-        if any(w in text for w in ["不", "没", "无", "非", "未", "莫", "别"]):
+        # 否定句检测：匹配否定词 + 动词/形容词的典型否定句式
+        # 避免误匹配含"不"但非否定句的文本（如"不同""不断"等）
+        negation_patterns = [
+            r"(不|未|莫|别)\s*[是能为会有在到想需该]",   # 不是/不能/不会/未有...
+            r"(不|未|莫|别)\s*[让叫使把给向对]",       # 不让/别叫...
+            r"没有",                                    # 没有
+            r"无法",                                    # 无法
+            r"并非",                                    # 并非
+            r"从不|从不",                               # 从不
+            r"绝不|决不",                               # 绝不
+            r"无人|无物|无端|无从",                     # 无+名词性成分
+        ]
+        if any(re.search(pat, text) for pat in negation_patterns):
             negation += 1
 
     if total_lines == 0:

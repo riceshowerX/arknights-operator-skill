@@ -317,9 +317,13 @@ def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
     尝试判断关系方向
 
     策略：
-    1. 检查 "A 是 B 的 X" 或 "B 的 X 是 A" 等语法模式
+    1. 检查 "A 是 B 的 X" 或 "B 的 X A" 等语法模式
+       - "A 是 B 的 X" → A 对 B 是 X，关系方向 A→B
+       - "A 的 X B" → B 是 A 的 X，关系方向 B→A
     2. 关系关键词离谁更近 → 谁是主体
     3. 默认：先出现的为主体
+
+    注意：对于对称关系（sibling 等），方向不影响语义，但保持一致性。
     """
     pos1 = text.find(e1)
     pos2 = text.find(e2)
@@ -327,16 +331,35 @@ def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
     if pos1 < 0 or pos2 < 0:
         return "forward"
 
-    # 策略 1：检查语法模式 "e1 是 e2 的 X" → e2 是 X，方向 e2→e1
-    # 例："特雷西斯是特蕾西娅的胞兄" → sibling 方向 特雷西斯→特蕾西娅
+    # 策略 1：检查语法模式（需要看实体之外的上下文）
+    # "A 是 B 的 X" → A 对 B 是 X，方向 A→B
+    #   如 "特雷西斯是特蕾西娅的胞兄" → 特雷西斯→特蕾西娅
+    # "A 的 X B" → B 是 A 的 X，方向 B→A
+    #   如 "特蕾西娅的胞兄特雷西斯" → 特雷西斯→特蕾西娅
+
+    # 检查 "A 是" 后跟 "B 的 X" 模式
+    after_e1 = text[pos1 + len(e1):]
+    after_e2 = text[pos2 + len(e2):]
+
     if pos1 < pos2:
         between = text[pos1 + len(e1):pos2]
+        # "A 的 X B" → "的" 在 A 和 B 之间，X 描述 B 对 A 的关系
+        # 如 "特蕾西娅的胞兄特雷西斯" → 特雷西斯 是 胞兄，对特蕾西娅
+        # → 方向 e2→e1
         if "的" in between and len(between) < 15:
-            # "e1 的 X e2" → e1 拥有 X，关系从 e1 出发
+            return "reverse"
+        # "A 是 B 的 X" → "是" 在 A 和 B 之间，"的" 在 B 之后
+        # 如 "特雷西斯是特蕾西娅的胞兄" → 特雷西斯 是 胞兄 对特蕾西娅
+        # → 方向 e1→e2
+        if "是" in between and re.search(r"的", after_e2[:10]):
             return "forward"
     else:
         between = text[pos2 + len(e2):pos1]
+        # "B 的 X A" → A 是 B 的 X → 方向 e1→e2
         if "的" in between and len(between) < 15:
+            return "forward"
+        # "B 是 A 的 X" → B 对 A 是 X → 方向 e2→e1
+        if "是" in between and re.search(r"的", after_e1[:10]):
             return "reverse"
 
     # 策略 2：关系关键词离谁更近

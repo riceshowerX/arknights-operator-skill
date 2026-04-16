@@ -249,9 +249,12 @@ def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
             passes.append(rule[:100])
 
     total = len(rules)
-    testable = total - sum(1 for p in passes if "不可自动检测" in p)
-    pass_count = len(passes)
-    score = round(pass_count / total * 100, 1) if total > 0 else 100
+    untestable_count = sum(1 for p in passes if "不可自动检测" in p)
+    testable = total - untestable_count
+    # pass_count 仅统计可测试规则中通过的数量
+    testable_passes = [p for p in passes if "不可自动检测" not in p]
+    pass_count = len(testable_passes)
+    score = round(pass_count / testable * 100, 1) if testable > 0 else 100
 
     return {
         "score": score,
@@ -297,13 +300,12 @@ def _extract_negation_patterns(rule: str) -> list[tuple[str, str]]:
     if re.search(r"不.*(?:咆哮|吼|大喊)", rule):
         patterns.append((r"咆哮|怒吼|大吼|吼道|大喊", "出现了咆哮描写"))
 
-    # "从不...用..." — 通用否定结构
-    never_use = re.findall(r"从不用?([^\s，。]{2,10})", rule)
-    for phrase in never_use:
-        if phrase not in ["感叹号", "命令", "口吻"]:  # 已处理
-            escaped = re.escape(phrase)
-            if len(phrase) >= 2:  # 只匹配 2 字以上，避免误报
-                patterns.append((escaped, f"使用了'{phrase}'"))
+    # "从不/不会/不用 + 引号内容" — 通用否定结构，仅提取引号内的具体反例
+    # 避免匹配过宽：只从引号内容中提取，不匹配自由文本
+    never_say = re.findall(r'从不(?:会|用|说|能)?[「\u201c\u2018]([^」\u201d\u2019]{2,20})[」\u201d\u2019]', rule)
+    for phrase in never_say:
+        if phrase not in ["感叹号", "命令", "口吻"]:
+            patterns.append((re.escape(phrase), f"使用了'{phrase}'"))
 
     # === 从引号内容提取反例 ===
     # 规则中常见格式："不应该'xxx'，应该'yyy'"

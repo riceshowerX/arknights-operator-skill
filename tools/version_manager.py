@@ -11,6 +11,31 @@ from datetime import datetime
 from pathlib import Path
 
 
+def _normalize_version(version: str) -> str:
+    """
+    规范化版本号为 v{major}.{minor} 格式
+
+    - "v1" → "v1.0"
+    - "v1.0" → "v1.0"
+    - "1.0" → "v1.0"
+    - "1" → "v1.0"
+    """
+    version = version.strip()
+    # 去掉前缀 v
+    if version.startswith("v"):
+        version = version[1:]
+    # 已经是 major.minor 格式
+    m = re.match(r"(\d+)\.(\d+)$", version)
+    if m:
+        return f"v{m.group(1)}.{m.group(2)}"
+    # 只有 major
+    m2 = re.match(r"(\d+)$", version)
+    if m2:
+        return f"v{m2.group(1)}.0"
+    # 无法解析，原样返回（带 v 前缀）
+    return f"v{version}" if not version.startswith("v") else version
+
+
 def _get_next_version(versions_dir: Path) -> str:
     """
     确定下一个版本号
@@ -91,43 +116,63 @@ def backup_version(slug: str, base_dir: str = "./operators") -> dict:
     }
 
 
-def rollback_version(slug: str, version: str, base_dir: str = "./operators") -> dict:
+def rollback_version(slug: str, version: str, base_dir: str = "./operators", backup_before: bool = False) -> dict:
     """
     回滚到指定版本
+
+    Args:
+        backup_before: 回滚前是否备份当前版本（默认 False，避免版本号跳跃）。
+            如需保留回滚前状态，请显式设为 True。
     """
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
+    # 规范化版本号格式
+    version = _normalize_version(version)
     version_dir = versions_dir / version
-    
+
     if not version_dir.exists():
         return {"success": False, "error": f"版本 {version} 不存在"}
-    
-    # 备份当前版本
-    current_backup = backup_version(slug, base_dir)
-    if not current_backup["success"]:
-        return current_backup
-    
+
+    # 记录回滚前的版本号
+    current_version = "unknown"
+    meta_path = skill_dir / "meta.json"
+    if meta_path.exists():
+        with open(meta_path, "r", encoding="utf-8") as f:
+            current_meta = json.load(f)
+        current_version = current_meta.get("version", "unknown")
+
+    # 可选：回滚前备份当前版本
+    backup_info = None
+    if backup_before:
+        backup_info = backup_version(slug, base_dir)
+        if not backup_info["success"]:
+            return backup_info
+
     # 复制版本文件
     for file in ["knowledge.md", "persona.md", "meta.json", "SKILL.md"]:
         src = version_dir / file
         if src.exists():
             shutil.copy2(src, skill_dir / file)
-    
+
     # 更新 meta.json
-    meta_path = skill_dir / "meta.json"
     if meta_path.exists():
         with open(meta_path, "r", encoding="utf-8") as f:
             meta = json.load(f)
-        meta["rolled_back_from"] = meta.get("version", "unknown")
+        meta["rolled_back_from"] = current_version
         meta["rolled_back_to"] = version
         meta["updated_at"] = datetime.now().isoformat()
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
-    
+
+    note = f"已从 {current_version} 回滚到 {version}"
+    if backup_info:
+        note += f"（已备份当前版本为 {backup_info['version']}）"
+
     return {
         "success": True,
         "rolled_to": version,
-        "note": f"已从 {current_backup['version']} 回滚到 {version}"
+        "backup_created": backup_before,
+        "note": note,
     }
 
 
@@ -168,6 +213,7 @@ def main():
     parser.add_argument("--slug", help="Skill slug")
     parser.add_argument("--version", help="版本号 (如 v1.0, v1.1)")
     parser.add_argument("--base-dir", default="./operators", help="基础目录")
+    parser.add_argument("--backup", action="store_true", help="回滚前备份当前版本（默认不备份）")
     
     args = parser.parse_args()
     
@@ -180,7 +226,7 @@ def main():
         if not args.slug or not args.version:
             print("错误：需要指定 --slug 和 --version")
             sys.exit(1)
-        result = rollback_version(args.slug, args.version, args.base_dir)
+        result = rollback_version(args.slug, args.version, args.base_dir, backup_before=args.backup)
     elif args.action == "list":
         if not args.slug:
             print("错误：需要指定 --slug")

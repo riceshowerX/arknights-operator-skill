@@ -21,33 +21,63 @@ def list_skills(base_dir: str = "./operators") -> dict:
     skills = []
     
     for skill_dir in sorted(base_path.iterdir()):
-        if skill_dir.is_dir() and skill_dir.name != "versions":
-            meta_path = skill_dir / "meta.json"
-            
-            if meta_path.exists():
+        if not skill_dir.is_dir():
+            continue
+        # 跳过非 Skill 目录（如 versions、隐藏目录）
+        if skill_dir.name.startswith(".") or skill_dir.name == "versions":
+            continue
+        # 确认是有效的 Skill 目录（包含 SKILL.md 或 meta.json）
+        has_skill_md = (skill_dir / "SKILL.md").exists()
+        has_meta = (skill_dir / "meta.json").exists()
+        if not has_skill_md and not has_meta:
+            continue
+
+        meta_path = skill_dir / "meta.json"
+        
+        if meta_path.exists():
+            try:
                 with open(meta_path, "r", encoding="utf-8") as f:
                     meta = json.load(f)
-                
-                skills.append({
-                    "name": meta.get("name", skill_dir.name),
-                    "slug": meta.get("slug", skill_dir.name),
-                    "version": meta.get("version", "unknown"),
-                    "game": meta.get("profile", {}).get("game", "明日方舟"),
-                    "faction": meta.get("profile", {}).get("faction", "unknown"),
-                    "identity": meta.get("profile", {}).get("identity", "unknown"),
-                    "created_at": meta.get("created_at", "unknown"),
-                    "updated_at": meta.get("updated_at", "unknown"),
-                    "path": str(skill_dir)
-                })
-            else:
-                skills.append({
-                    "name": skill_dir.name,
-                    "slug": skill_dir.name,
-                    "version": "unknown",
-                    "path": str(skill_dir)
-                })
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"警告：无法读取 {meta_path}: {e}", file=sys.stderr)
+                meta = {}
+            
+            skills.append({
+                "name": meta.get("name", skill_dir.name),
+                "slug": meta.get("slug", skill_dir.name),
+                "version": meta.get("version", "unknown"),
+                "game": meta.get("profile", {}).get("game", "明日方舟"),
+                "faction": meta.get("profile", {}).get("faction", "unknown"),
+                "identity": meta.get("profile", {}).get("identity", "unknown"),
+                "created_at": meta.get("created_at", "unknown"),
+                "updated_at": meta.get("updated_at", "unknown"),
+                "path": str(skill_dir)
+            })
+        else:
+            skills.append({
+                "name": skill_dir.name,
+                "slug": skill_dir.name,
+                "version": "unknown",
+                "path": str(skill_dir)
+            })
     
     return {"success": True, "skills": skills}
+
+
+def _validate_skill_dir(skill_dir: Path) -> list[str]:
+    """
+    校验 Skill 目录结构是否完整，返回缺失项列表
+    """
+    required_files = ["SKILL.md", "meta.json"]
+    required_dirs = ["versions"]
+    missing = []
+    for f in required_files:
+        if not (skill_dir / f).exists():
+            missing.append(f)
+    for d in required_dirs:
+        if not (skill_dir / d).is_dir():
+            missing.append(d + "/")
+    return missing
 
 
 def delete_skill(slug: str, base_dir: str = "./operators", force: bool = False) -> dict:
@@ -61,6 +91,9 @@ def delete_skill(slug: str, base_dir: str = "./operators", force: bool = False) 
     if not skill_dir.exists():
         return {"success": False, "error": f"Skill {slug} 不存在"}
     
+    # 校验目录结构，记录完整性状态
+    missing = _validate_skill_dir(skill_dir)
+    
     if not force:
         return {
             "success": False,
@@ -71,10 +104,14 @@ def delete_skill(slug: str, base_dir: str = "./operators", force: bool = False) 
     # 删除目录
     shutil.rmtree(skill_dir)
     
-    return {
+    result = {
         "success": True,
         "deleted": slug
     }
+    if missing:
+        result["note"] = f"删除前目录不完整，缺少: {', '.join(missing)}"
+    
+    return result
 
 
 def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str = "./operators") -> dict:
@@ -119,11 +156,17 @@ def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str 
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
     
-    return {
+    # 创建后校验目录结构
+    missing = _validate_skill_dir(skill_dir)
+    result = {
         "success": True,
         "slug": slug,
         "path": str(skill_dir)
     }
+    if missing:
+        result["warnings"] = [f"缺少必要文件/目录: {m}" for m in missing]
+    
+    return result
 
 
 def main():

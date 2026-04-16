@@ -297,7 +297,7 @@ openclaw skills check
 openclaw skills info create-operator
 ```
 
-状态应为 **Ready to use**。若显示 **Missing requirements**，请确认 Python 3 已安装且 `requirements.txt` 依赖已满足。
+状态应为 **Ready to use**。若显示 **Missing requirements**，请确认 Python 3 已安装，核心工具仅依赖标准库无需额外安装。如需增强功能（如中文拼音 slug 生成），可安装可选依赖：`pip install -r requirements-optional.txt`。
 
 **使用**
 
@@ -306,6 +306,26 @@ openclaw skills info create-operator
 ### 其他兼容 AgentSkills 的客户端
 
 将本项目克隆到客户端的 skills 目录下，确保 `SKILL.md` 位于根目录即可被识别。
+
+---
+
+## 环境变量
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `OPERATOR_SKILL_DIR` | Skill 工具链的根目录路径，所有 `python3 ${OPERATOR_SKILL_DIR}/tools/...` 调用均依赖此变量 | 本项目克隆的绝对路径 |
+
+**设置方式**（以克隆到 `~/.claude/skills/create-operator` 为例）：
+
+```bash
+# 在 shell 配置中添加
+export OPERATOR_SKILL_DIR="$HOME/.claude/skills/create-operator"
+
+# 或在项目 .env 中配置
+echo "OPERATOR_SKILL_DIR=/path/to/arknights-operator-skill" >> .env
+```
+
+如果未设置，SKILL.md 中的工具调用路径将无法解析。Claude Code 和 OpenClaw 等客户端通常会自动设置此变量为 Skill 的安装路径。
 
 ---
 
@@ -429,11 +449,11 @@ arknights-operator-skill/
 │       ├── persona.md             #     Part B — 人格（5层 + Correction）
 │       ├── meta.json              #     元数据 + 常见误解
 │       ├── SKILL.md               #     Skill 入口 + 核心规则
-│       └── versions/              #     版本快照
-│           └── changelog.md
+│       └── versions/              #     版本快照（v1.0/, v1.1/, ...）
 ├── .gitignore
 ├── LICENSE
-└── requirements.txt
+├── requirements.txt               # 核心依赖（空——仅使用标准库）
+└── requirements-optional.txt      # 可选依赖（pypinyin 等）
 ```
 
 ### 生成产物的内部结构

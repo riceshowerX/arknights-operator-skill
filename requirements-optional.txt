@@ -1,0 +1,5 @@
+# 可选依赖（用于增强功能）
+# 安装方式：pip install -r requirements-optional.txt
+# 单独安装：pip install pypinyin
+
+pypinyin>=0.49.0  # 中文转拼音（用于生成 slug，替代内置映射表）

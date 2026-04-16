@@ -1,6 +1,3 @@
 # arknights-operator-skill Python 依赖
-# 基础工具仅使用 Python 标准库，无需额外安装
-
-# 可选依赖（用于增强功能）：
-# pypinyin    — 中文转拼音（用于生成 slug，替代内置映射表）
-# 安装方式：pip install pypinyin
+# 核心工具仅使用 Python 标准库，无需额外安装
+# 此文件为空——所有第三方依赖均为可选，见 requirements-optional.txt

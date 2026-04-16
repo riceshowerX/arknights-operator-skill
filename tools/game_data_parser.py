@@ -269,8 +269,27 @@ def to_slug(name: str) -> str:
     if re.match(r"^[a-zA-Z\s]+$", name):
         return re.sub(r"\s+", "-", name.lower())
 
-    # 无法转换，保留原文
-    return re.sub(r"\s+", "-", name.lower())
+    # 无法转换，使用 Unicode 转义作为 fallback
+    slug = re.sub(r"\s+", "-", name.lower())
+    if not re.match(r"^[a-z0-9-]+$", slug):
+        # 将非 ASCII 字符转为 Unicode 编码形式（如 te-lei-xi-ya 的 fallback）
+        safe_slug = ""
+        for ch in name:
+            if re.match(r"[a-zA-Z0-9\s-]", ch):
+                safe_slug += ch.lower()
+            elif ch in PINYIN_MAP:
+                safe_slug += PINYIN_MAP[ch]
+            else:
+                safe_slug += f"u{ord(ch):04x}"
+        safe_slug = re.sub(r"\s+", "-", safe_slug).strip("-")
+        print(
+            f"警告：角色名 '{name}' 无法自动转为 URL-safe slug，"
+            f"已使用 Unicode 编码 fallback '{safe_slug}'，"
+            "建议手动指定英文 slug 或 pip install -r requirements-optional.txt",
+            file=sys.stderr,
+        )
+        return safe_slug
+    return slug
 
 
 # ──────────────────────────────────────────────

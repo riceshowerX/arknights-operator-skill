@@ -133,9 +133,11 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 然后 `Read /tmp/operator_data_out.txt`
 
 支持格式：
-- PRTS Wiki 导出的角色数据 JSON
+- PRTS Wiki 导出的角色数据 JSON（需先通过浏览器或 fetch-url 工具获取页面内容，再使用 `--source local` 解析）
 - 游戏解包数据 JSON
 - 自定义格式的角色资料 JSON
+
+> ⚠️ **注意**：`--source prts` 模式仅生成元数据（slug 和 URL），不会自动爬取 PRTS Wiki 页面。请先用浏览器或 fetch-url 工具获取 PRTS 页面内容保存为本地文件，再使用 `--source local --file {本地文件}` 解析。
 
 ---
 
@@ -174,6 +176,17 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 - `operators/{slug}/persona.md`
 - `operators/{slug}/meta.json`
 - `operators/{slug}/SKILL.md`
+
+---
+
+## Correction 优先级规则
+
+当用户纠正与现有规则冲突时：
+
+1. **Correction 修正 Layer 1-5**：直接生效，无需额外确认
+2. **Correction 涉及 Layer 0**：必须经用户显式确认后才修改 Layer 0 本身，而非在 Correction 中覆盖
+3. **优先级**：`Layer 0 > Correction > Layer 1-5`
+4. **Correction 内部**：序号越大越新，越新越优先
 
 ---
 
