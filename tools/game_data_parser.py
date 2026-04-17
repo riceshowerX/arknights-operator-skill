@@ -75,16 +75,7 @@ OPERATOR_SCHEMA = {
 # ──────────────────────────────────────────────
 
 def _prts_api_request(params: dict) -> dict:
-    """向 PRTS Wiki API 发送请求（含速率限制）"""
-    import time
-    global _last_request_time
-
-    # 速率限制：确保两次请求间隔 >= _REQUEST_INTERVAL
-    elapsed = time.time() - _last_request_time
-    if elapsed < _REQUEST_INTERVAL:
-        time.sleep(_REQUEST_INTERVAL - elapsed)
-    """
-    向 PRTS Wiki MediaWiki API 发送 GET 请求
+    """向 PRTS Wiki MediaWiki API 发送 GET 请求（含速率限制）
 
     Args:
         params: API 查询参数
@@ -95,6 +86,13 @@ def _prts_api_request(params: dict) -> dict:
     Raises:
         RuntimeError: 请求失败或 API 返回错误
     """
+    global _last_request_time
+
+    # 速率限制：确保两次请求间隔 >= _REQUEST_INTERVAL
+    elapsed = time.time() - _last_request_time
+    if elapsed < _REQUEST_INTERVAL:
+        time.sleep(_REQUEST_INTERVAL - elapsed)
+
     params["format"] = "json"
     # 使用 urlencode 正确编码中文参数
     query_string = urlencode(params)
