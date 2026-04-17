@@ -31,6 +31,7 @@ import argparse
 import json
 import re
 import sys
+import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -170,7 +171,6 @@ SCRIPT_NOISE_RE = re.compile(
 
 def _rate_limited_urlopen(req, timeout=None):
     """带速率限制的 urlopen 调用"""
-    import time
     global _last_request_time
     elapsed = time.time() - _last_request_time
     if elapsed < _REQUEST_INTERVAL:

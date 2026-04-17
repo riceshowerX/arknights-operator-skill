@@ -19,6 +19,7 @@ phase_inferrer.py — 多层级时期自动推断引擎
 import json
 import re
 import sys
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -124,7 +125,6 @@ _REQUEST_INTERVAL = 0.5  # 最小请求间隔（秒）
 
 def _prts_api_get(params: dict) -> dict:
     """调用 PRTS MediaWiki API（含速率限制）"""
-    import time
     global _last_request_time
 
     # 速率限制：确保两次请求间隔 >= _REQUEST_INTERVAL

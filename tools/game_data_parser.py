@@ -148,6 +148,55 @@ def _get_page_wikitext(title: str) -> Optional[str]:
 # 文本清洗
 # ──────────────────────────────────────────────
 
+def _extract_template_body(wikitext: str, template_name: str) -> Optional[str]:
+    """从 wikitext 中提取指定模板的主体内容，正确处理嵌套 {{}}
+
+    与简单的正则不同，此函数通过计数大括号深度来匹配模板边界，
+    因此模板内部包含 {{color|...}} 等嵌套模板时不会提前截断。
+
+    Args:
+        wikitext: 完整的 wikitext 文本
+        template_name: 模板名（如 "CharinfoV2"、"人员档案" 等）
+
+    Returns:
+        模板主体文本（含 | 字段行），未找到时返回 None
+    """
+    # 构建模板开始标记的转义正则
+    escaped_name = re.escape(template_name)
+    start_pattern = re.compile(r"\{\{" + escaped_name + r"\s*\n")
+    start_match = start_pattern.search(wikitext)
+    if not start_match:
+        return None
+
+    # 从模板开始位置计数大括号深度
+    pos = start_match.end()  # 跳过 {{TemplateName\n
+    depth = 1  # 已经进入了第一层 {{
+    body_start = pos
+
+    while pos < len(wikitext) and depth > 0:
+        # 查找下一个 {{ 或 }}
+        next_open = wikitext.find("{{", pos)
+        next_close = wikitext.find("}}", pos)
+
+        if next_close == -1:
+            # 没有找到闭合，返回已匹配的内容
+            break
+
+        if next_open != -1 and next_open < next_close:
+            # 先遇到 {{
+            depth += 1
+            pos = next_open + 2
+        else:
+            # 先遇到 }}
+            depth -= 1
+            pos = next_close + 2
+            if depth == 0:
+                # 模板闭合，返回内部内容
+                return wikitext[body_start:next_close]
+
+    # 未找到完整闭合，返回可能不完整的匹配
+    return wikitext[body_start:pos] if depth <= 0 else None
+
 def clean_wikitext(raw: str) -> str:
     """移除 MediaWiki 标记，保留纯文本"""
     text = raw
@@ -213,23 +262,13 @@ def _extract_charinfo(wikitext: str) -> dict:
     """
     info = {}
 
-    # 匹配 {{CharinfoV2 ... }} 或 {{Charinfo ... }}
+    # 使用深度计数匹配，正确处理嵌套 {{}}
     # 拆分为精确匹配，避免 Charinfo 误匹配 CharinfoV2 的内容
-    template_match = re.search(
-        r"\{\{CharinfoV2\s*\n(.*?)\n?\}\}",
-        wikitext,
-        re.DOTALL,
-    )
-    if not template_match:
-        template_match = re.search(
-            r"\{\{Charinfo\s*\n(.*?)\n?\}\}",
-            wikitext,
-            re.DOTALL,
-        )
-    if not template_match:
+    fields = _extract_template_body(wikitext, "CharinfoV2")
+    if not fields:
+        fields = _extract_template_body(wikitext, "Charinfo")
+    if not fields:
         return info
-
-    fields = template_match.group(1)
 
     # 字段映射：wikitext key → output key
     field_map = {
@@ -276,15 +315,16 @@ def _extract_enemy_info(wikitext: str) -> dict:
     """
     info = {}
 
-    template_match = re.search(
-        r"\{\{敌人信息/[a-z0-9]+\s*\n(.*?)\n?\}\}",
-        wikitext,
-        re.DOTALL,
-    )
-    if not template_match:
+    # 匹配 {{敌人信息/xxx ... }}，使用深度计数处理嵌套
+    # 先找出所有敌人信息模板的名称
+    template_name_match = re.search(r"\{\{敌人信息/([a-z0-9]+)\s*\n", wikitext)
+    if not template_name_match:
         return info
 
-    fields = template_match.group(1)
+    full_template_name = f"敌人信息/{template_name_match.group(1)}"
+    fields = _extract_template_body(wikitext, full_template_name)
+    if not fields:
+        return info
 
     field_map = {
         "名称": "name_zh",
@@ -329,13 +369,9 @@ def _extract_archives(wikitext: str) -> list[dict]:
     """
     archives = []
 
-    # 匹配 {{人员档案 ... }}
-    archive_match = re.search(
-        r"\{\{人员档案\s*\n(.*?)\n?\}\}",
-        wikitext,
-        re.DOTALL,
-    )
-    if not archive_match:
+    # 匹配 {{人员档案 ... }}，使用深度计数处理嵌套
+    fields = _extract_template_body(wikitext, "人员档案")
+    if not fields:
         # fallback：尝试旧格式 ==干员档案== 区域
         archive_section = re.search(
             r"==\s*干员档案\s*==\n(.*?)(?=\n==[^=])",
@@ -350,10 +386,9 @@ def _extract_archives(wikitext: str) -> list[dict]:
             })
         return archives
 
-    fields = archive_match.group(1)
-
     # 提取所有档案条目
-    for m in re.finditer(r"\|档案(\d+)=([^\n|]+)\s*\n\s*\|档案\1条件=[^\n]*\n\s*\|档案\1文本=(.*?)(?=\n\s*\|档案\d+=|\n\}\})", fields, re.DOTALL):
+    # 终止条件：下一个 |档案N= 或字符串末尾（_extract_template_body 已移除尾部 }}）
+    for m in re.finditer(r"\|档案(\d+)=([^\n|]+)\s*\n\s*\|档案\1条件=[^\n]*\n\s*\|档案\1文本=(.*?)(?=\n\s*\|档案\d+=|$)", fields, re.DOTALL):
         idx = int(m.group(1))
         title = m.group(2).strip()
         text = m.group(3).strip()
@@ -373,7 +408,7 @@ def _extract_voice_lines(wikitext: str) -> list[dict]:
     """
     lines = []
 
-    for m in re.finditer(r"\|标题(\d+)\s*=\s*([^\n|]+)\s*\n\s*\|台词\1\s*=\s*(.*?)(?=\n\s*\|标题\d+=|\n\s*\|语音\d+=|\n\}\})", wikitext, re.DOTALL):
+    for m in re.finditer(r"\|标题(\d+)\s*=\s*([^\n|]+)\s*\n\s*\|台词\1\s*=\s*(.*?)(?=\n\s*\|标题\d+=|\n\s*\|语音\d+=|$)", wikitext, re.DOTALL):
         label = m.group(2).strip()
         raw_text = m.group(3).strip()
         text = _clean_voice_line(raw_text)
@@ -389,15 +424,10 @@ def _extract_profile_fields(wikitext: str) -> dict:
     """
     info = {}
 
-    template_match = re.search(
-        r"\{\{人员档案set\s*\n(.*?)\n?\}\}",
-        wikitext,
-        re.DOTALL,
-    )
-    if not template_match:
+    fields = _extract_template_body(wikitext, "人员档案set")
+    if not fields:
         return info
 
-    fields = template_match.group(1)
     field_map = {
         "性别": "gender",
         "战斗经验": "combat_experience",
@@ -429,15 +459,10 @@ def _extract_attribute_fields(wikitext: str) -> dict:
     """
     info = {}
 
-    template_match = re.search(
-        r"\{\{属性\s*\n(.*?)\n?\}\}",
-        wikitext,
-        re.DOTALL,
-    )
-    if not template_match:
+    fields = _extract_template_body(wikitext, "属性")
+    if not fields:
         return info
 
-    fields = template_match.group(1)
     field_map = {
         "所属势力": "faction",
         "隐藏势力": "hidden_faction",

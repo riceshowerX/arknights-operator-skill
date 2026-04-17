@@ -220,6 +220,55 @@ def normalize_name(name: str, operator_db: Optional[dict] = None, alias_map: Opt
     return None
 
 
+def _is_name_in_text(name: str, text: str) -> bool:
+    """检查角色名是否出现在文本中，对单字中文名和英文名做词边界检查
+
+    规则：
+    - 多字中文名（如"特蕾西娅"）：直接用 in 检测（子串匹配足够精确）
+    - 单字中文名（如"陈"、"煌"）：要求两侧都没有CJK字符（或到达边界），
+      即该字必须作为独立词出现，不能嵌在另一个中文词内部。
+    - 英文名（如"W"）：要求前后不是其他英文字母或数字（防止"WT"误匹配"W"）。
+
+    边界判断细节：
+    - "陈旧的房间" → 陈后面是旧(CJK)，陈前面是边界 → 有一侧是CJK → 不匹配 ✓
+    - "和陈一起去" → 陈前面是和(CJK)，陈后面是一(CJK) → 两侧都是CJK → 不匹配 ✗
+      但"陈"确实是独立引用！纯CJK边界检查在中文中过于严格，
+      因为中文不像英文有空格分词。
+    - 务实方案：对单字中文名使用 **正向断言**：该字后面不能紧跟
+      会构成常见非名字词汇的字符。这需要词典，不实际。
+    - 最终方案：对单字中文名，要求 **至少一侧是非CJK字符或边界**，
+      但同时排除"两侧都是CJK且该字是两字词的一部分"的情况。
+      由于缺乏词典，采用启发式：如果前后都是CJK，且该字+后字
+      或 前字+该字 构成常见非人名词汇，则排除。
+      简化实现：当两侧都是CJK时，检查前后是否构成常见词 →
+      硬编码排除列表太小，不通用。
+    - **最终务实方案**：单字中文名要求 **两侧都不是CJK字符或边界**，
+      即该字必须被非CJK字符（标点、空格、数字等）或文本边界包围。
+      这对"陈旧"→排除 ✓，对"陈，"→保留 ✓，对"陈冲"→排除 ✗（漏报）。
+      权衡：漏报少量语境中紧邻动词的单字名，好过大量误报。
+    """
+    if len(name) >= 2:
+        # 多字名：子串匹配足够精确
+        return name in text
+
+    # 单字名
+    ch = name
+    if re.match(r'[a-zA-Z]', ch):
+        # 英文单字：要求词边界（前后不是英文字母或数字）
+        return bool(re.search(r'(?<![a-zA-Z0-9])' + re.escape(ch) + r'(?![a-zA-Z0-9])', text))
+    else:
+        # 中文单字：要求两侧都不是CJK字符（或到达边界）
+        # 即该字被非CJK（标点、空格等）或边界包围
+        for m in re.finditer(re.escape(ch), text):
+            start, end = m.start(), m.end()
+            has_cjk_before = start > 0 and bool(re.match(r'[\u4e00-\u9fff]', text[start - 1]))
+            has_cjk_after = end < len(text) and bool(re.match(r'[\u4e00-\u9fff]', text[end]))
+            # 两侧都不能有CJK字符
+            if not has_cjk_before and not has_cjk_after:
+                return True
+        return False
+
+
 def extract_entities(text: str, operator_db: Optional[dict] = None, alias_map: Optional[dict] = None) -> list[str]:
     """从文本中提取出现的角色名"""
     db = operator_db or OPERATOR_DB
@@ -227,10 +276,10 @@ def extract_entities(text: str, operator_db: Optional[dict] = None, alias_map: O
 
     found = []
     for name in db:
-        if name in text:
+        if _is_name_in_text(name, text):
             found.append(name)
     for alias, cn_name in aliases.items():
-        if alias in text and cn_name not in found:
+        if cn_name not in found and _is_name_in_text(alias, text):
             found.append(cn_name)
     return found
 

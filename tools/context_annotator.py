@@ -102,7 +102,7 @@ OPERATOR_DEFAULT_PHASE = {
 }
 
 # 自动推断缓存（运行时填充，避免重复查询 PRTS）
-_auto_inferred_phases: dict[str, PhaseInferenceResult] = {}
+_auto_inferred_phases: dict = {}
 
 # 时间线正则（从 knowledge.md 提取）
 TIMELINE_RE = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')

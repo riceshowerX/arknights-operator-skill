@@ -99,10 +99,20 @@ COMPILED_RULES = [
 # ──────────────────────────────────────────────
 
 def classify_speech_acts(text: str) -> list[dict]:
-    """对单条台词分类话语行为"""
+    """对单条台词分类话语行为
+
+    同一行为类型只保留置信度最高的一次匹配，避免多条规则命中同一类型时产生重复。
+    """
     acts = []
+    seen_types: dict[str, float] = {}  # type → best confidence
     for pattern, act_type, confidence, label in COMPILED_RULES:
         if pattern.search(text):
+            # 同类型只保留置信度最高的匹配
+            if act_type in seen_types and seen_types[act_type] >= confidence:
+                continue
+            seen_types[act_type] = confidence
+            # 如果之前已添加过同类型低置信度结果，移除旧的
+            acts = [a for a in acts if a["type"] != act_type]
             acts.append({
                 "type": act_type,
                 "label": label,
