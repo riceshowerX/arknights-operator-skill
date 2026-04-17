@@ -1,0 +1,117 @@
+{
+  "global": {
+    "commit": 0.273,
+    "evade": 0.455,
+    "soothe": 0.03,
+    "affirm_presence": 0.152,
+    "promise_remember": 0.03,
+    "farewell": 0.061
+  },
+  "global_raw": {
+    "commit": 9,
+    "evade": 15,
+    "soothe": 1,
+    "affirm_presence": 5,
+    "promise_remember": 1,
+    "farewell": 2
+  },
+  "by_situation": {
+    "casual": {
+      "commit": 9,
+      "soothe": 1,
+      "evade": 13,
+      "affirm_presence": 4,
+      "promise_remember": 1,
+      "farewell": 2
+    },
+    "comfort": {
+      "evade": 1,
+      "affirm_presence": 1
+    },
+    "reminisce": {
+      "evade": 1
+    }
+  },
+  "by_interlocutor": {
+    "博士": {
+      "commit": 2,
+      "affirm_presence": 1,
+      "evade": 3
+    },
+    "unknown": {
+      "evade": 6,
+      "soothe": 1,
+      "affirm_presence": 4,
+      "commit": 7,
+      "promise_remember": 1,
+      "farewell": 1
+    },
+    "？？？": {
+      "evade": 2
+    },
+    "预言家": {
+      "evade": 4,
+      "farewell": 1
+    }
+  },
+  "by_phase": {
+    "babel": {
+      "commit": 1,
+      "evade": 12,
+      "farewell": 2
+    },
+    "resurrected": {
+      "commit": 8,
+      "evade": 3,
+      "soothe": 1,
+      "affirm_presence": 5,
+      "promise_remember": 1
+    }
+  },
+  "total_acts": 33,
+  "lines_with_acts": 25,
+  "behavioral_patterns": [
+    {
+      "pattern": "high_evade",
+      "rule": "在被追问时倾向回避直接回答（回避行为占比46%），常用省略号结尾或反问代替回答",
+      "layer": 0,
+      "confidence": 1.0
+    },
+    {
+      "pattern": "interlocutor_evade",
+      "rule": "对？？？的对话中，回避行为占比最高（100%）——用回避的方式回应？？？",
+      "layer": 4,
+      "confidence": 0.9
+    },
+    {
+      "pattern": "interlocutor_evade",
+      "rule": "对预言家的对话中，回避行为占比最高（80%）——用回避的方式回应预言家",
+      "layer": 4,
+      "confidence": 0.8
+    },
+    {
+      "pattern": "phase_shift_babel_evade",
+      "rule": "babel时期，回避行为显著增多（偏移34%）",
+      "layer": 2,
+      "confidence": 0.6900000000000001
+    },
+    {
+      "pattern": "phase_shift_resurrected_evade",
+      "rule": "resurrected时期，回避行为显著减少（偏移29%）",
+      "layer": 2,
+      "confidence": 0.5766666666666667
+    },
+    {
+      "pattern": "interlocutor_evade",
+      "rule": "对博士的对话中，回避行为占比最高（50%）——用回避的方式回应博士",
+      "layer": 4,
+      "confidence": 0.5
+    },
+    {
+      "pattern": "phase_shift_resurrected_commit",
+      "rule": "resurrected时期，承诺行为显著增多（偏移17%）",
+      "layer": 2,
+      "confidence": 0.3428888888888888
+    }
+  ]
+}

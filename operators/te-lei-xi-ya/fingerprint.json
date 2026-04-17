@@ -1,0 +1,950 @@
+{
+  "operator": "魔王",
+  "mode": "contextual",
+  "global": {
+    "operator": "魔王",
+    "dialogue_count": 52,
+    "dimensions": {
+      "1_sentence_length": {
+        "type": "长句型",
+        "avg_length": 18.1,
+        "min": 1,
+        "max": 80,
+        "distribution_pct": {
+          "short_le5": 6.5,
+          "medium_6_15": 43.5,
+          "long_gt15": 50.0
+        },
+        "sample_count": 92
+      },
+      "2_pause_markers": {
+        "ellipsis_pct": 38.5,
+        "ellipsis_start_pct": 15.4,
+        "dash_pct": 1.9,
+        "exclamation_pct": 1.9,
+        "question_pct": 26.9,
+        "interpretation": "频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制"
+      },
+      "3_self_reference": {
+        "primary": "我",
+        "frequency_per_line": 0.88,
+        "distribution_pct": {
+          "我": 100.0
+        },
+        "interpretation": "常用'我'，表达直接"
+      },
+      "4_emotion_vocabulary": {
+        "dominant": "希望",
+        "breadth": "宽谱",
+        "active_emotion_count": 5,
+        "spectrum_pct": {
+          "希望": 26.9,
+          "悲伤": 23.1,
+          "坚定": 15.4,
+          "孤独": 15.4,
+          "信任": 15.4,
+          "温柔": 3.8
+        },
+        "examples": {
+          "悲伤": [
+            "遗憾",
+            "痛",
+            "失去"
+          ],
+          "坚定": [
+            "一定",
+            "一定",
+            "一定"
+          ],
+          "希望": [
+            "一定会",
+            "希望",
+            "未来"
+          ],
+          "孤独": [
+            "孤独",
+            "一个人",
+            "一个人"
+          ],
+          "信任": [
+            "同行",
+            "在一起",
+            "相信"
+          ],
+          "温柔": [
+            "温柔"
+          ]
+        },
+        "interpretation": "主导情感为'希望'，情感谱系宽谱（活跃情感5种）"
+      },
+      "5_rhetoric_patterns": {
+        "rhetorical_question_pct": 1.9,
+        "metaphor_pct": 0.0,
+        "parallelism_pct": 0.0,
+        "negation_pct": 23.1,
+        "interpretation": "修辞风格平实直白"
+      },
+      "6_address_pattern": {
+        "pattern": "亲昵型",
+        "honorific_pct": 0.0,
+        "intimate_pct": 15.4,
+        "examples": {
+          "honorific": [],
+          "intimate": [
+            "特蕾西娅已经永远离开了，现在留在这里的我，只是一个存在于“魔王”之中的程序。因为阿米娅的情感，我才会",
+            "我会陪在阿米娅身边，也会陪着罗德岛的大家，虽然这也算不上对过去时光的补偿......博士，我不是PR",
+            "“罗德岛制药公司”，注册地是阿米娅的故乡呢。这些药物都是凯尔希研制的吗......怎么会遗憾？巴别塔",
+            "阿米娅看上去还是这么瘦弱，这个年纪的孩子，个子是不是应该更高一点才对？她到底有没有好好吃饭呢....",
+            "博士，你的眼里常怀愧疚。可你说，记忆能够决定一个人是谁吗？失去了记忆的你，和只是拥有她记忆的我，又如"
+          ]
+        }
+      },
+      "7_natural_imagery": {
+        "density_per_line": 0.02,
+        "density_level": "低频",
+        "category_distribution": {
+          "时间": 100.0
+        },
+        "top_5_words": {
+          "黎明": 1
+        },
+        "interpretation": "自然意象密度低频（0.02个/句），偏好时间意象"
+      }
+    },
+    "summary": "句式长句型，平均18.1字；频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系宽谱（活跃情感5种）；修辞风格平实直白；自然意象密度低频（0.02个/句），偏好时间意象"
+  },
+  "slices": {
+    "situation:casual": {
+      "operator": "魔王",
+      "dialogue_count": 47,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "长句型",
+          "avg_length": 17.2,
+          "min": 1,
+          "max": 80,
+          "distribution_pct": {
+            "short_le5": 7.6,
+            "medium_6_15": 46.8,
+            "long_gt15": 45.6
+          },
+          "sample_count": 79
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 38.3,
+          "ellipsis_start_pct": 14.9,
+          "dash_pct": 2.1,
+          "exclamation_pct": 2.1,
+          "question_pct": 25.5,
+          "interpretation": "频繁停顿，善于沉默；几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "我",
+          "frequency_per_line": 0.87,
+          "distribution_pct": {
+            "我": 100.0
+          },
+          "interpretation": "常用'我'，表达直接"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "希望",
+          "breadth": "宽谱",
+          "active_emotion_count": 5,
+          "spectrum_pct": {
+            "希望": 31.8,
+            "悲伤": 18.2,
+            "坚定": 18.2,
+            "信任": 18.2,
+            "孤独": 9.1,
+            "温柔": 4.5
+          },
+          "examples": {
+            "悲伤": [
+              "遗憾",
+              "痛",
+              "悲伤"
+            ],
+            "坚定": [
+              "一定",
+              "一定",
+              "一定"
+            ],
+            "希望": [
+              "一定会",
+              "希望",
+              "未来"
+            ],
+            "信任": [
+              "同行",
+              "在一起",
+              "相信"
+            ],
+            "孤独": [
+              "一个人",
+              "孤独"
+            ],
+            "温柔": [
+              "温柔"
+            ]
+          },
+          "interpretation": "主导情感为'希望'，情感谱系宽谱（活跃情感5种）"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 0.0,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 19.1,
+          "interpretation": "修辞风格平实直白"
+        },
+        "6_address_pattern": {
+          "pattern": "亲昵型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 12.8,
+          "examples": {
+            "honorific": [],
+            "intimate": [
+              "特蕾西娅已经永远离开了，现在留在这里的我，只是一个存在于“魔王”之中的程序。因为阿米娅的情感，我才会",
+              "我会陪在阿米娅身边，也会陪着罗德岛的大家，虽然这也算不上对过去时光的补偿......博士，我不是PR",
+              "“罗德岛制药公司”，注册地是阿米娅的故乡呢。这些药物都是凯尔希研制的吗......怎么会遗憾？巴别塔",
+              "......我是不是在作战画面里看到了阿米娅？",
+              "阿米娅，站到我身后来。"
+            ]
+          }
+        },
+        "7_natural_imagery": {
+          "density_per_line": 0.02,
+          "density_level": "低频",
+          "category_distribution": {
+            "时间": 100.0
+          },
+          "top_5_words": {
+            "黎明": 1
+          },
+          "interpretation": "自然意象密度低频（0.02个/句），偏好时间意象"
+        }
+      },
+      "summary": "句式长句型，平均17.2字；频繁停顿，善于沉默；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系宽谱（活跃情感5种）；修辞风格平实直白；自然意象密度低频（0.02个/句），偏好时间意象"
+    },
+    "situation:comfort": {
+      "operator": "魔王",
+      "dialogue_count": 4,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "长句型",
+          "avg_length": 23.4,
+          "min": 9,
+          "max": 40,
+          "distribution_pct": {
+            "short_le5": 0.0,
+            "medium_6_15": 27.3,
+            "long_gt15": 72.7
+          },
+          "sample_count": 11
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 25.0,
+          "ellipsis_start_pct": 0.0,
+          "dash_pct": 0.0,
+          "exclamation_pct": 0.0,
+          "question_pct": 50.0,
+          "interpretation": "几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "我",
+          "frequency_per_line": 1.25,
+          "distribution_pct": {
+            "我": 100.0
+          },
+          "interpretation": "常用'我'，表达直接"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "孤独",
+          "breadth": "窄谱",
+          "active_emotion_count": 1,
+          "spectrum_pct": {
+            "孤独": 66.7,
+            "悲伤": 33.3
+          },
+          "examples": {
+            "孤独": [
+              "孤独",
+              "一个人"
+            ],
+            "悲伤": [
+              "失去"
+            ]
+          },
+          "interpretation": "主导情感为'孤独'，情感谱系窄谱（活跃情感1种）"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 25.0,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 50.0,
+          "interpretation": "善用反问引导思考；频繁使用否定句式，倾向从反面界定"
+        },
+        "6_address_pattern": {
+          "pattern": "亲昵型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 50.0,
+          "examples": {
+            "honorific": [],
+            "intimate": [
+              "阿米娅看上去还是这么瘦弱，这个年纪的孩子，个子是不是应该更高一点才对？她到底有没有好好吃饭呢....",
+              "博士，你的眼里常怀愧疚。可你说，记忆能够决定一个人是谁吗？失去了记忆的你，和只是拥有她记忆的我，又如"
+            ]
+          }
+        },
+        "7_natural_imagery": {
+          "density": 0,
+          "interpretation": "极少使用自然意象"
+        }
+      },
+      "summary": "句式长句型，平均23.4字；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'孤独'，情感谱系窄谱（活跃情感1种）；善用反问引导思考；频繁使用否定句式，倾向从反面界定；极少使用自然意象"
+    },
+    "interlocutor:博士": {
+      "operator": "魔王",
+      "dialogue_count": 6,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "长句型",
+          "avg_length": 16.7,
+          "min": 6,
+          "max": 31,
+          "distribution_pct": {
+            "short_le5": 0.0,
+            "medium_6_15": 56.2,
+            "long_gt15": 43.8
+          },
+          "sample_count": 16
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 66.7,
+          "ellipsis_start_pct": 33.3,
+          "dash_pct": 0.0,
+          "exclamation_pct": 0.0,
+          "question_pct": 33.3,
+          "interpretation": "频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "我",
+          "frequency_per_line": 1.0,
+          "distribution_pct": {
+            "我": 100.0
+          },
+          "interpretation": "常用'我'，表达直接"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "希望",
+          "breadth": "窄谱",
+          "active_emotion_count": 2,
+          "spectrum_pct": {
+            "希望": 50.0,
+            "悲伤": 37.5,
+            "坚定": 12.5
+          },
+          "examples": {
+            "悲伤": [
+              "遗憾",
+              "痛",
+              "叹息"
+            ],
+            "坚定": [
+              "一定"
+            ],
+            "希望": [
+              "一定会",
+              "希望",
+              "未来"
+            ]
+          },
+          "interpretation": "主导情感为'希望'，情感谱系窄谱（活跃情感2种）"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 0.0,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 50.0,
+          "interpretation": "频繁使用否定句式，倾向从反面界定"
+        },
+        "6_address_pattern": {
+          "pattern": "亲昵型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 16.7,
+          "examples": {
+            "honorific": [],
+            "intimate": [
+              "“罗德岛制药公司”，注册地是阿米娅的故乡呢。这些药物都是凯尔希研制的吗......怎么会遗憾？巴别塔"
+            ]
+          }
+        },
+        "7_natural_imagery": {
+          "density_per_line": 0.17,
+          "density_level": "低频",
+          "category_distribution": {
+            "时间": 100.0
+          },
+          "top_5_words": {
+            "黎明": 1
+          },
+          "interpretation": "自然意象密度低频（0.17个/句），偏好时间意象"
+        }
+      },
+      "summary": "句式长句型，平均16.7字；频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系窄谱（活跃情感2种）；频繁使用否定句式，倾向从反面界定；自然意象密度低频（0.17个/句），偏好时间意象"
+    },
+    "interlocutor:unknown": {
+      "operator": "魔王",
+      "dialogue_count": 38,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "长句型",
+          "avg_length": 18.6,
+          "min": 1,
+          "max": 80,
+          "distribution_pct": {
+            "short_le5": 7.4,
+            "medium_6_15": 38.2,
+            "long_gt15": 54.4
+          },
+          "sample_count": 68
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 26.3,
+          "ellipsis_start_pct": 7.9,
+          "dash_pct": 0.0,
+          "exclamation_pct": 2.6,
+          "question_pct": 28.9,
+          "interpretation": "几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "我",
+          "frequency_per_line": 1.03,
+          "distribution_pct": {
+            "我": 100.0
+          },
+          "interpretation": "常用'我'，表达直接"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "孤独",
+          "breadth": "宽谱",
+          "active_emotion_count": 5,
+          "spectrum_pct": {
+            "孤独": 23.5,
+            "悲伤": 17.6,
+            "希望": 17.6,
+            "信任": 17.6,
+            "坚定": 17.6,
+            "温柔": 5.9
+          },
+          "examples": {
+            "孤独": [
+              "孤独",
+              "一个人",
+              "一个人"
+            ],
+            "悲伤": [
+              "失去",
+              "悲伤",
+              "痛"
+            ],
+            "希望": [
+              "希望",
+              "希望",
+              "未来"
+            ],
+            "信任": [
+              "同行",
+              "在一起",
+              "相信"
+            ],
+            "坚定": [
+              "一定",
+              "一定",
+              "一定"
+            ],
+            "温柔": [
+              "温柔"
+            ]
+          },
+          "interpretation": "主导情感为'孤独'，情感谱系宽谱（活跃情感5种）"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 2.6,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 23.7,
+          "interpretation": "修辞风格平实直白"
+        },
+        "6_address_pattern": {
+          "pattern": "亲昵型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 18.4,
+          "examples": {
+            "honorific": [],
+            "intimate": [
+              "特蕾西娅已经永远离开了，现在留在这里的我，只是一个存在于“魔王”之中的程序。因为阿米娅的情感，我才会",
+              "我会陪在阿米娅身边，也会陪着罗德岛的大家，虽然这也算不上对过去时光的补偿......博士，我不是PR",
+              "阿米娅看上去还是这么瘦弱，这个年纪的孩子，个子是不是应该更高一点才对？她到底有没有好好吃饭呢....",
+              "博士，你的眼里常怀愧疚。可你说，记忆能够决定一个人是谁吗？失去了记忆的你，和只是拥有她记忆的我，又如",
+              "......我是不是在作战画面里看到了阿米娅？"
+            ]
+          }
+        },
+        "7_natural_imagery": {
+          "density": 0,
+          "interpretation": "极少使用自然意象"
+        }
+      },
+      "summary": "句式长句型，平均18.6字；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'孤独'，情感谱系宽谱（活跃情感5种）；修辞风格平实直白；极少使用自然意象"
+    },
+    "interlocutor:？？？": {
+      "operator": "魔王",
+      "dialogue_count": 3,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "中句型",
+          "avg_length": 9.3,
+          "min": 5,
+          "max": 15,
+          "distribution_pct": {
+            "short_le5": 33.3,
+            "medium_6_15": 66.7,
+            "long_gt15": 0.0
+          },
+          "sample_count": 3
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 66.7,
+          "ellipsis_start_pct": 33.3,
+          "dash_pct": 33.3,
+          "exclamation_pct": 0.0,
+          "question_pct": 33.3,
+          "interpretation": "频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "省略自称",
+          "frequency_per_line": 0,
+          "distribution": {},
+          "interpretation": "极少使用第一人称，倾向省略主语或使用'我们'"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "unknown",
+          "spectrum": {},
+          "interpretation": "未检测到明显情感词汇"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 0.0,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 0.0,
+          "interpretation": "极少使用否定句，表达积极正向"
+        },
+        "6_address_pattern": {
+          "pattern": "省略称呼型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 0.0,
+          "examples": {
+            "honorific": [],
+            "intimate": []
+          }
+        },
+        "7_natural_imagery": {
+          "density": 0,
+          "interpretation": "极少使用自然意象"
+        }
+      },
+      "summary": "句式中句型，平均9.3字；频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制；极少使用第一人称，倾向省略主语或使用'我们'；未检测到明显情感词汇；极少使用否定句，表达积极正向；极少使用自然意象"
+    },
+    "interlocutor:预言家": {
+      "operator": "魔王",
+      "dialogue_count": 5,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "中句型",
+          "avg_length": 21.2,
+          "min": 8,
+          "max": 47,
+          "distribution_pct": {
+            "short_le5": 0.0,
+            "medium_6_15": 60.0,
+            "long_gt15": 40.0
+          },
+          "sample_count": 5
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 80.0,
+          "ellipsis_start_pct": 40.0,
+          "dash_pct": 0.0,
+          "exclamation_pct": 0.0,
+          "question_pct": 0.0,
+          "interpretation": "频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "我",
+          "frequency_per_line": 0.2,
+          "distribution_pct": {
+            "我": 100.0
+          },
+          "interpretation": "极少自称，倾向省略主语"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "信任",
+          "breadth": "窄谱",
+          "active_emotion_count": 0,
+          "spectrum_pct": {
+            "信任": 100.0
+          },
+          "examples": {
+            "信任": [
+              "信任"
+            ]
+          },
+          "interpretation": "主导情感为'信任'，情感谱系窄谱（活跃情感0种）"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 0.0,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 0.0,
+          "interpretation": "极少使用否定句，表达积极正向"
+        },
+        "6_address_pattern": {
+          "pattern": "省略称呼型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 0.0,
+          "examples": {
+            "honorific": [],
+            "intimate": []
+          }
+        },
+        "7_natural_imagery": {
+          "density": 0,
+          "interpretation": "极少使用自然意象"
+        }
+      },
+      "summary": "句式中句型，平均21.2字；频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制；极少自称，倾向省略主语；主导情感为'信任'，情感谱系窄谱（活跃情感0种）；极少使用否定句，表达积极正向；极少使用自然意象"
+    },
+    "phase:resurrected": {
+      "operator": "魔王",
+      "dialogue_count": 37,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "长句型",
+          "avg_length": 17.8,
+          "min": 1,
+          "max": 80,
+          "distribution_pct": {
+            "short_le5": 6.9,
+            "medium_6_15": 45.8,
+            "long_gt15": 47.2
+          },
+          "sample_count": 72
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 18.9,
+          "ellipsis_start_pct": 5.4,
+          "dash_pct": 0.0,
+          "exclamation_pct": 2.7,
+          "question_pct": 32.4,
+          "interpretation": "几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "我",
+          "frequency_per_line": 1.19,
+          "distribution_pct": {
+            "我": 100.0
+          },
+          "interpretation": "常用'我'，表达直接"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "希望",
+          "breadth": "宽谱",
+          "active_emotion_count": 5,
+          "spectrum_pct": {
+            "希望": 26.3,
+            "孤独": 21.1,
+            "悲伤": 15.8,
+            "信任": 15.8,
+            "坚定": 15.8,
+            "温柔": 5.3
+          },
+          "examples": {
+            "希望": [
+              "希望",
+              "未来",
+              "黎明"
+            ],
+            "孤独": [
+              "孤独",
+              "一个人",
+              "一个人"
+            ],
+            "悲伤": [
+              "失去",
+              "悲伤",
+              "痛"
+            ],
+            "信任": [
+              "同行",
+              "在一起",
+              "相信"
+            ],
+            "坚定": [
+              "一定",
+              "一定",
+              "一定"
+            ],
+            "温柔": [
+              "温柔"
+            ]
+          },
+          "interpretation": "主导情感为'希望'，情感谱系宽谱（活跃情感5种）"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 2.7,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 29.7,
+          "interpretation": "修辞风格平实直白"
+        },
+        "6_address_pattern": {
+          "pattern": "亲昵型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 16.2,
+          "examples": {
+            "honorific": [],
+            "intimate": [
+              "特蕾西娅已经永远离开了，现在留在这里的我，只是一个存在于“魔王”之中的程序。因为阿米娅的情感，我才会",
+              "我会陪在阿米娅身边，也会陪着罗德岛的大家，虽然这也算不上对过去时光的补偿......博士，我不是PR",
+              "阿米娅看上去还是这么瘦弱，这个年纪的孩子，个子是不是应该更高一点才对？她到底有没有好好吃饭呢....",
+              "博士，你的眼里常怀愧疚。可你说，记忆能够决定一个人是谁吗？失去了记忆的你，和只是拥有她记忆的我，又如",
+              "......我是不是在作战画面里看到了阿米娅？"
+            ]
+          }
+        },
+        "7_natural_imagery": {
+          "density_per_line": 0.03,
+          "density_level": "低频",
+          "category_distribution": {
+            "时间": 100.0
+          },
+          "top_5_words": {
+            "黎明": 1
+          },
+          "interpretation": "自然意象密度低频（0.03个/句），偏好时间意象"
+        }
+      },
+      "summary": "句式长句型，平均17.8字；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系宽谱（活跃情感5种）；修辞风格平实直白；自然意象密度低频（0.03个/句），偏好时间意象"
+    },
+    "phase:babel": {
+      "operator": "魔王",
+      "dialogue_count": 15,
+      "dimensions": {
+        "1_sentence_length": {
+          "type": "长句型",
+          "avg_length": 18.9,
+          "min": 5,
+          "max": 47,
+          "distribution_pct": {
+            "short_le5": 5.0,
+            "medium_6_15": 35.0,
+            "long_gt15": 60.0
+          },
+          "sample_count": 20
+        },
+        "2_pause_markers": {
+          "ellipsis_pct": 86.7,
+          "ellipsis_start_pct": 40.0,
+          "dash_pct": 6.7,
+          "exclamation_pct": 0.0,
+          "question_pct": 13.3,
+          "interpretation": "频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制"
+        },
+        "3_self_reference": {
+          "primary": "我",
+          "frequency_per_line": 0.13,
+          "distribution_pct": {
+            "我": 100.0
+          },
+          "interpretation": "极少自称，倾向省略主语"
+        },
+        "4_emotion_vocabulary": {
+          "dominant": "悲伤",
+          "breadth": "窄谱",
+          "active_emotion_count": 2,
+          "spectrum_pct": {
+            "悲伤": 42.9,
+            "希望": 28.6,
+            "坚定": 14.3,
+            "信任": 14.3
+          },
+          "examples": {
+            "悲伤": [
+              "遗憾",
+              "痛",
+              "叹息"
+            ],
+            "坚定": [
+              "一定"
+            ],
+            "希望": [
+              "一定会",
+              "未来"
+            ],
+            "信任": [
+              "信任"
+            ]
+          },
+          "interpretation": "主导情感为'悲伤'，情感谱系窄谱（活跃情感2种）"
+        },
+        "5_rhetoric_patterns": {
+          "rhetorical_question_pct": 0.0,
+          "metaphor_pct": 0.0,
+          "parallelism_pct": 0.0,
+          "negation_pct": 6.7,
+          "interpretation": "极少使用否定句，表达积极正向"
+        },
+        "6_address_pattern": {
+          "pattern": "亲昵型",
+          "honorific_pct": 0.0,
+          "intimate_pct": 13.3,
+          "examples": {
+            "honorific": [],
+            "intimate": [
+              "“罗德岛制药公司”，注册地是阿米娅的故乡呢。这些药物都是凯尔希研制的吗......怎么会遗憾？巴别塔",
+              "凯尔希......阿米娅......"
+            ]
+          }
+        },
+        "7_natural_imagery": {
+          "density": 0,
+          "interpretation": "极少使用自然意象"
+        }
+      },
+      "summary": "句式长句型，平均18.9字；频繁停顿，善于沉默；常以沉默开头，话语经过深思熟虑；几乎不用感叹号，语气极度克制；极少自称，倾向省略主语；主导情感为'悲伤'，情感谱系窄谱（活跃情感2种）；极少使用否定句，表达积极正向；极少使用自然意象"
+    }
+  },
+  "shifts": {
+    "situation:comfort": [
+      {
+        "dimension": "emotion_dominant",
+        "global_dominant": "希望",
+        "slice_dominant": "孤独",
+        "shift": "从'希望'偏移到'孤独'"
+      },
+      {
+        "dimension": "negation",
+        "global_pct": 23.1,
+        "slice_pct": 50.0,
+        "shift": "更多否定",
+        "magnitude": 1.16
+      }
+    ],
+    "interlocutor:博士": [
+      {
+        "dimension": "ellipsis",
+        "global_pct": 38.5,
+        "slice_pct": 66.7,
+        "shift": "更多沉默",
+        "magnitude": 0.73
+      },
+      {
+        "dimension": "negation",
+        "global_pct": 23.1,
+        "slice_pct": 50.0,
+        "shift": "更多否定",
+        "magnitude": 1.16
+      }
+    ],
+    "interlocutor:unknown": [
+      {
+        "dimension": "emotion_dominant",
+        "global_dominant": "希望",
+        "slice_dominant": "孤独",
+        "shift": "从'希望'偏移到'孤独'"
+      }
+    ],
+    "interlocutor:？？？": [
+      {
+        "dimension": "sentence_length",
+        "global_avg": 18.1,
+        "slice_avg": 9.3,
+        "shift": "偏短",
+        "magnitude": 0.49
+      },
+      {
+        "dimension": "ellipsis",
+        "global_pct": 38.5,
+        "slice_pct": 66.7,
+        "shift": "更多沉默",
+        "magnitude": 0.73
+      },
+      {
+        "dimension": "emotion_dominant",
+        "global_dominant": "希望",
+        "slice_dominant": "unknown",
+        "shift": "从'希望'偏移到'unknown'"
+      },
+      {
+        "dimension": "negation",
+        "global_pct": 23.1,
+        "slice_pct": 0.0,
+        "shift": "更少否定",
+        "magnitude": 1.0
+      }
+    ],
+    "interlocutor:预言家": [
+      {
+        "dimension": "ellipsis",
+        "global_pct": 38.5,
+        "slice_pct": 80.0,
+        "shift": "更多沉默",
+        "magnitude": 1.08
+      },
+      {
+        "dimension": "emotion_dominant",
+        "global_dominant": "希望",
+        "slice_dominant": "信任",
+        "shift": "从'希望'偏移到'信任'"
+      },
+      {
+        "dimension": "negation",
+        "global_pct": 23.1,
+        "slice_pct": 0.0,
+        "shift": "更少否定",
+        "magnitude": 1.0
+      }
+    ],
+    "phase:resurrected": [
+      {
+        "dimension": "ellipsis",
+        "global_pct": 38.5,
+        "slice_pct": 18.9,
+        "shift": "更少沉默",
+        "magnitude": 0.51
+      }
+    ],
+    "phase:babel": [
+      {
+        "dimension": "ellipsis",
+        "global_pct": 38.5,
+        "slice_pct": 86.7,
+        "shift": "更多沉默",
+        "magnitude": 1.25
+      },
+      {
+        "dimension": "emotion_dominant",
+        "global_dominant": "希望",
+        "slice_dominant": "悲伤",
+        "shift": "从'希望'偏移到'悲伤'"
+      },
+      {
+        "dimension": "negation",
+        "global_pct": 23.1,
+        "slice_pct": 6.7,
+        "shift": "更少否定",
+        "magnitude": 0.71
+      }
+    ]
+  }
+}

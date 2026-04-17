@@ -1,0 +1,256 @@
+{
+  "character": "魔王",
+  "slice_count": 2,
+  "slices": {
+    "resurrected": {
+      "metrics": {
+        "line_count": 37,
+        "avg_sentence_length": 17.8,
+        "ellipsis_pct": 18.9,
+        "exclamation_pct": 2.7,
+        "negation_pct": 27.0,
+        "self_reference_freq": 1.19,
+        "speech_act_distribution": {
+          "commit": 8,
+          "evade": 3,
+          "soothe": 1,
+          "affirm_presence": 5,
+          "promise_remember": 1
+        },
+        "interlocutor_distribution": {
+          "博士": 3,
+          "unknown": 34
+        }
+      },
+      "line_count": 37
+    },
+    "babel": {
+      "metrics": {
+        "line_count": 15,
+        "avg_sentence_length": 18.9,
+        "ellipsis_pct": 86.7,
+        "exclamation_pct": 0.0,
+        "negation_pct": 6.7,
+        "self_reference_freq": 0.13,
+        "speech_act_distribution": {
+          "commit": 1,
+          "evade": 12,
+          "farewell": 2
+        },
+        "interlocutor_distribution": {
+          "博士": 3,
+          "unknown": 4,
+          "？？？": 3,
+          "预言家": 5
+        }
+      },
+      "line_count": 15
+    }
+  },
+  "temporal_rules": [
+    {
+      "rule": "resurrected时期相比babel时期：沉默/停顿减少（86.7%→18.9%）",
+      "layer": 2,
+      "metric": "ellipsis_pct",
+      "phases": [
+        "babel",
+        "resurrected"
+      ],
+      "confidence": 0.95
+    },
+    {
+      "rule": "resurrected时期相比babel时期：否定表达增多（6.7%→27.0%）",
+      "layer": 2,
+      "metric": "negation_pct",
+      "phases": [
+        "babel",
+        "resurrected"
+      ],
+      "confidence": 0.95
+    },
+    {
+      "rule": "resurrected时期相比babel时期：回避行为显著减少（80.0%→16.7%）",
+      "layer": 2,
+      "metric": "speech_act:evade",
+      "phases": [
+        "babel",
+        "resurrected"
+      ],
+      "confidence": 0.95
+    },
+    {
+      "rule": "babel时期，对博士与对？？？的表达差异：句式偏短（20.0→9.3字）",
+      "layer": 4,
+      "metric": "avg_sentence_length",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "？？？"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "rule": "babel时期，对博士与对？？？的表达差异：否定表达减少（33.3%→0.0%）",
+      "layer": 4,
+      "metric": "negation_pct",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "？？？"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "rule": "babel时期，对博士与对预言家的表达差异：否定表达减少（33.3%→0.0%）",
+      "layer": 4,
+      "metric": "negation_pct",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "预言家"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "rule": "babel时期，对？？？与对预言家的表达差异：句式偏长（9.3→21.2字）",
+      "layer": 4,
+      "metric": "avg_sentence_length",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "？？？",
+        "预言家"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "rule": "babel时期，对博士与对？？？的表达差异：沉默/停顿减少（100.0%→66.7%）",
+      "layer": 4,
+      "metric": "ellipsis_pct",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "？？？"
+      ],
+      "confidence": 0.8324999999999999
+    },
+    {
+      "rule": "resurrected时期相比babel时期：承诺行为显著增多（6.7%→44.4%）",
+      "layer": 2,
+      "metric": "speech_act:commit",
+      "phases": [
+        "babel",
+        "resurrected"
+      ],
+      "confidence": 0.7559999999999999
+    },
+    {
+      "rule": "babel时期，对博士与对？？？的表达差异：回避行为显著增多（75.0%→100.0%）",
+      "layer": 4,
+      "metric": "speech_act:evade",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "？？？"
+      ],
+      "confidence": 0.625
+    },
+    {
+      "rule": "babel时期，对博士与对？？？的表达差异：承诺行为显著减少（25.0%→0.0%）",
+      "layer": 4,
+      "metric": "speech_act:commit",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "？？？"
+      ],
+      "confidence": 0.625
+    },
+    {
+      "rule": "babel时期，对博士与对预言家的表达差异：承诺行为显著减少（25.0%→0.0%）",
+      "layer": 4,
+      "metric": "speech_act:commit",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "预言家"
+      ],
+      "confidence": 0.625
+    },
+    {
+      "rule": "resurrected时期相比babel时期：存在确认行为显著增多（0.0%→27.8%）",
+      "layer": 2,
+      "metric": "speech_act:affirm_presence",
+      "phases": [
+        "babel",
+        "resurrected"
+      ],
+      "confidence": 0.556
+    },
+    {
+      "rule": "babel时期，对博士与对预言家的表达差异：告别行为显著增多（0.0%→20.0%）",
+      "layer": 4,
+      "metric": "speech_act:farewell",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "博士",
+        "预言家"
+      ],
+      "confidence": 0.5
+    },
+    {
+      "rule": "babel时期，对？？？与对预言家的表达差异：回避行为显著减少（100.0%→80.0%）",
+      "layer": 4,
+      "metric": "speech_act:evade",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "？？？",
+        "预言家"
+      ],
+      "confidence": 0.5
+    },
+    {
+      "rule": "babel时期，对？？？与对预言家的表达差异：告别行为显著增多（0.0%→20.0%）",
+      "layer": 4,
+      "metric": "speech_act:farewell",
+      "phases": [
+        "babel"
+      ],
+      "interlocutors": [
+        "？？？",
+        "预言家"
+      ],
+      "confidence": 0.5
+    },
+    {
+      "rule": "resurrected时期相比babel时期：告别行为显著减少（13.3%→0.0%）",
+      "layer": 2,
+      "metric": "speech_act:farewell",
+      "phases": [
+        "babel",
+        "resurrected"
+      ],
+      "confidence": 0.266
+    }
+  ],
+  "rule_count": 17
+}

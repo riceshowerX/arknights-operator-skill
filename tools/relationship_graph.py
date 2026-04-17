@@ -65,6 +65,21 @@ OPERATOR_DB = {
     "塞雷娅": {"en": "Saria", "race": "瓦伊凡", "faction": "莱茵生命"},
     "伊芙利特": {"en": "Ifrit", "race": "萨卡兹", "faction": "莱茵生命"},
     "赫默": {"en": "Silence", "race": "里拉", "faction": "莱茵生命"},
+    # 维多利亚/伦蒂尼姆
+    "推进之王": {"en": "Siege", "race": "阿斯兰", "faction": "维多利亚"},
+    "因陀罗": {"en": "Indra", "race": "维多利亚", "faction": "维多利亚"},
+    "达格达": {"en": "Dagda", "race": "阿斯兰", "faction": "维多利亚"},
+    "号角": {"en": "Horn", "race": "鲁珀", "faction": "维多利亚"},
+    "风笛": {"en": "Bagpipe", "race": "瑞柏巴", "faction": "维多利亚"},
+    # 卡兹戴尔/萨卡兹佣兵
+    "赫德雷": {"en": "Hoederer", "race": "萨卡兹", "faction": "卡兹戴尔"},
+    "伊内丝": {"en": "Ines", "race": "卡普里尼", "faction": "卡兹戴尔"},
+    "Scout": {"en": "Scout", "race": "萨卡兹", "faction": "罗德岛"},
+    "罗德岛精英干员Scout": {"en": "Scout", "race": "萨卡兹", "faction": "罗德岛"},
+    "迷迭香": {"en": "Rosa", "race": "斐迪亚", "faction": "罗德岛"},
+    "Logos": {"en": "Logos", "race": "萨卡兹", "faction": "罗德岛"},
+    "赦罪师": {"en": "Confessor", "race": "萨卡兹", "faction": "卡兹戴尔"},
+    "军事委员会": {"en": "Military Commission", "race": "萨卡兹", "faction": "卡兹戴尔"},
     # 其他
     "银灰": {"en": "SilverAsh", "race": "菲林", "faction": "喀兰贸易"},
     "煌": {"en": "Blaze", "race": "萨卡兹", "faction": "罗德岛"},
@@ -79,6 +94,8 @@ ALIAS_MAP = {
     "Kal'tsit": "凯尔希",
     "Closure": "可露希尔",
     "Wiš'adel": "W",
+    "W": "W",
+    "维什戴尔": "W",
     "Talulah": "塔露拉",
     "Ch'en": "陈",
     "Saria": "塞雷娅",
@@ -88,6 +105,29 @@ ALIAS_MAP = {
     "爱国者": "爱国者",
     "Patriot": "爱国者",
     "FrostNova": "霜星",
+    # 维多利亚/伦蒂尼姆
+    "Siege": "推进之王",
+    "维娜": "推进之王",
+    "Horn": "号角",
+    "Bagpipe": "风笛",
+    # 卡兹戴尔/萨卡兹佣兵
+    "Hoederer": "赫德雷",
+    "Ines": "伊内丝",
+    "Scout": "Scout",
+    "Rosa": "迷迭香",
+    "Logos": "Logos",
+    "Mephisto": "梅菲斯特",
+    "Faust": "浮士德",
+    "Hoshiguma": "星熊",
+    "Silence": "赫默",
+    # 中文别称
+    "魔王": "特蕾西娅",
+    "兄长": "特雷西斯",
+    "小兔子": "阿米娅",
+    "老女人": "凯尔希",
+    "凯太后": "凯尔希",
+    "赫总": "赫德雷",
+    "伊内丝小姐": "伊内丝",
 }
 
 

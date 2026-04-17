@@ -1,0 +1,33 @@
+{
+  "character": "W",
+  "slice_count": 1,
+  "slices": {
+    "early": {
+      "metrics": {
+        "line_count": 152,
+        "avg_sentence_length": 15.4,
+        "ellipsis_pct": 17.8,
+        "exclamation_pct": 1.3,
+        "negation_pct": 13.2,
+        "self_reference_freq": 0.28,
+        "speech_act_distribution": {
+          "console": 1,
+          "affirm_presence": 1,
+          "invite": 1,
+          "commit": 3,
+          "evade": 18,
+          "soothe": 2
+        },
+        "interlocutor_distribution": {
+          "博士": 4,
+          "unknown": 79,
+          "坚强的孩子": 57,
+          "孱弱的孩子": 12
+        }
+      },
+      "line_count": 152
+    }
+  },
+  "temporal_rules": [],
+  "rule_count": 0
+}

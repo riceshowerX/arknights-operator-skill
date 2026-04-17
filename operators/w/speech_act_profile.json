@@ -1,0 +1,79 @@
+{
+  "global": {
+    "console": 0.038,
+    "affirm_presence": 0.038,
+    "invite": 0.038,
+    "commit": 0.115,
+    "evade": 0.692,
+    "soothe": 0.077
+  },
+  "global_raw": {
+    "console": 1,
+    "affirm_presence": 1,
+    "invite": 1,
+    "commit": 3,
+    "evade": 18,
+    "soothe": 2
+  },
+  "by_situation": {
+    "casual": {
+      "console": 1,
+      "affirm_presence": 1,
+      "invite": 1,
+      "commit": 3,
+      "evade": 16,
+      "soothe": 2
+    },
+    "comfort": {
+      "evade": 1
+    },
+    "decide": {
+      "evade": 1
+    }
+  },
+  "by_interlocutor": {
+    "unknown": {
+      "console": 1,
+      "affirm_presence": 1,
+      "invite": 1,
+      "commit": 3,
+      "evade": 5,
+      "soothe": 2
+    },
+    "博士": {
+      "evade": 1
+    },
+    "孱弱的孩子": {
+      "evade": 1
+    },
+    "坚强的孩子": {
+      "evade": 11
+    }
+  },
+  "by_phase": {
+    "early": {
+      "console": 1,
+      "affirm_presence": 1,
+      "invite": 1,
+      "commit": 3,
+      "evade": 18,
+      "soothe": 2
+    }
+  },
+  "total_acts": 26,
+  "lines_with_acts": 21,
+  "behavioral_patterns": [
+    {
+      "pattern": "high_evade",
+      "rule": "在被追问时倾向回避直接回答（回避行为占比69%），常用省略号结尾或反问代替回答",
+      "layer": 0,
+      "confidence": 1.0
+    },
+    {
+      "pattern": "interlocutor_evade",
+      "rule": "对坚强的孩子的对话中，回避行为占比最高（100%）——用回避的方式回应坚强的孩子",
+      "layer": 4,
+      "confidence": 0.9
+    }
+  ]
+}

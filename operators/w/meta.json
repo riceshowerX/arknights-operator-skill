@@ -3,21 +3,21 @@
   "name_en": "W",
   "slug": "w",
   "created_at": "2026-04-16T16:32:56.622511",
-  "updated_at": "2026-04-16T16:32:56.622511",
-  "version": "v1.0",
+  "updated_at": "2026-04-16T21:50:00.000000",
+  "version": "v1.1",
   "profile": {
     "game": "明日方舟",
-    "faction": "unknown",
-    "identity": "unknown",
-    "mbti": "unknown",
-    "key_relationships": []
+    "faction": "罗德岛（战略合作）",
+    "identity": "萨卡兹佣兵头目，前整合运动成员",
+    "mbti": "ENTP",
+    "key_relationships": ["特蕾西娅", "阿米娅", "凯尔希", "博士", "赫德雷"]
   },
   "tags": {
-    "personality": [],
-    "leadership": [],
-    "philosophy": []
+    "personality": ["戏谑", "狡黠", "执念", "伪装", "尖锐"],
+    "leadership": ["谋略型"],
+    "philosophy": ["用疯癫对抗绝望", "忠诚藏在背叛之下", "生存是最基本的执念"]
   },
-  "impression": "",
-  "knowledge_sources": [],
+  "impression": "用疯癫掩饰痛苦的萨卡兹佣兵，对逝去之人的执念比任何炸弹都危险",
+  "knowledge_sources": ["PRTS Wiki (game_data_parser)", "DM-ST-1 剧情提取 (story_extractor)"],
   "corrections_count": 0
 }

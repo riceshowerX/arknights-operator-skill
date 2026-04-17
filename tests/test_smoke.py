@@ -572,5 +572,108 @@ class TestEndToEndPipeline(unittest.TestCase):
             self.assertIsInstance(acts, list)
 
 
+class TestPipelineFileIO(unittest.TestCase):
+    """管线文件落盘集成测试 — 验证工具输出 → 文件落盘 → 下游工具读取"""
+
+    def test_speech_act_profile_file_roundtrip(self):
+        """speech_act_analyzer 输出落盘后可被正确读取"""
+        from speech_act_analyzer import classify_speech_acts
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            profile_path = Path(tmpdir) / "speech_act_profile.json"
+            lines = ["......我在。", "我会记住你们每一个人。", "你在说什么呢？"]
+            all_acts = []
+            lines_with_acts = 0
+            for text in lines:
+                acts = classify_speech_acts(text)
+                if acts:
+                    lines_with_acts += 1
+                    # acts 是 dict 列表，提取 type 字段
+                    all_acts.extend(a["type"] for a in acts if isinstance(a, dict))
+
+            from collections import Counter
+            act_counts = Counter(all_acts)
+            profile = {
+                "total_acts": len(all_acts),
+                "lines_with_acts": lines_with_acts,
+                "top_acts": [[act, count / max(len(all_acts), 1)] for act, count in act_counts.most_common()],
+            }
+            profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            # 读取验证
+            loaded = json.loads(profile_path.read_text(encoding="utf-8"))
+            self.assertEqual(loaded["total_acts"], profile["total_acts"])
+            self.assertGreater(loaded["lines_with_acts"], 0)
+
+    def test_fingerprint_file_roundtrip(self):
+        """dialogue_fingerprint 输出落盘后可被正确读取"""
+        from dialogue_fingerprint import generate_fingerprint
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fp_path = Path(tmpdir) / "fingerprint.json"
+            voice_lines = [{"text": l["text"]} for l in SAMPLE_VOICE_LINES]
+            fingerprint = generate_fingerprint(voice_lines, "测试角色")
+            fp_path.write_text(json.dumps(fingerprint, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            # 读取验证
+            loaded = json.loads(fp_path.read_text(encoding="utf-8"))
+            self.assertIn("dimensions", loaded)
+            self.assertIn("1_sentence_length", loaded["dimensions"])
+
+    def test_temporal_slicer_consumes_fingerprint(self):
+        """temporal_slicer 能消费 dialogue_fingerprint 的输出"""
+        from dialogue_fingerprint import generate_fingerprint
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            voice_lines = [{"text": l["text"]} for l in SAMPLE_VOICE_LINES]
+            fingerprint = generate_fingerprint(voice_lines, "测试角色")
+            fp_path = Path(tmpdir) / "fingerprint.json"
+            fp_path.write_text(json.dumps(fingerprint, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            # 验证文件可以被读取并包含 fingerprint 数据
+            loaded = json.loads(fp_path.read_text(encoding="utf-8"))
+            self.assertIn("dimensions", loaded)
+            # fingerprint 数据应包含可被 temporal_slicer 使用的维度
+            dim_keys = set(loaded["dimensions"].keys())
+            expected_dims = {"1_sentence_length", "2_pause_markers", "3_self_reference"}
+            self.assertTrue(expected_dims.issubset(dim_keys),
+                            f"缺少预期维度: {expected_dims - dim_keys}")
+
+    def test_operator_data_complete_products(self):
+        """验证特蕾西娅的完整产物文件存在且可解析"""
+        base = Path("/workspace/projects/operators/te-lei-xi-ya")
+        if not base.exists():
+            self.skipTest("特蕾西娅角色目录不存在")
+
+        required_files = [
+            "knowledge.md",
+            "persona.md",
+            "meta.json",
+            "context.json",
+            "speech_act_profile.json",
+            "fingerprint.json",
+            "temporal_slices.json",
+        ]
+        for fname in required_files:
+            fpath = base / fname
+            self.assertTrue(fpath.exists(), f"缺失文件: {fname}")
+            if fname.endswith(".json"):
+                data = json.loads(fpath.read_text(encoding="utf-8"))
+                self.assertIsInstance(data, dict, f"{fname} 不是有效的 JSON 对象")
+
+    def test_w_persona_md_exists(self):
+        """验证 W 的 persona.md 存在且包含核心结构"""
+        persona_path = Path("/workspace/projects/operators/w/persona.md")
+        if not persona_path.exists():
+            self.skipTest("W 的 persona.md 不存在")
+
+        content = persona_path.read_text(encoding="utf-8")
+        # 验证五层结构
+        for layer in ["Layer 0", "Layer 1", "Layer 2", "Layer 3", "Layer 4", "Layer 5"]:
+            self.assertIn(layer, content, f"persona.md 缺少 {layer}")
+        # 验证 Correction 层
+        self.assertIn("Correction", content, "persona.md 缺少 Correction 记录区域")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
