@@ -40,8 +40,10 @@ def parse_persona(filepath: str) -> dict:
 
     result = {
         "layer0_rules": [],
+        "layer1_identity": [],
         "layer2_style": {},
         "layer3_values": [],
+        "layer4_relations": [],
         "layer5_taboos": [],
         "corrections": [],
     }
@@ -58,6 +60,19 @@ def parse_persona(filepath: str) -> dict:
             line = line.strip()
             if line.startswith("-"):
                 result["layer0_rules"].append(line.lstrip("- "))
+
+    # 提取 Layer 1 身份与自我认知
+    layer1_match = re.search(
+        r"##\s+Layer\s*1.*?\n(.*?)(?=\n##\s+Layer|\n##\s+Correction|\Z)",
+        content,
+        re.DOTALL,
+    )
+    if layer1_match:
+        text = layer1_match.group(1)
+        for line in text.split("\n"):
+            line = line.strip()
+            if line.startswith("-"):
+                result["layer1_identity"].append(line.lstrip("- "))
 
     # 提取 Layer 2 表达风格
     layer2_match = re.search(
@@ -81,6 +96,32 @@ def parse_persona(filepath: str) -> dict:
         self_ref_match = re.search(r"自称[：:](.*?)(?:\n|$)", style_text)
         if self_ref_match:
             result["layer2_style"]["self_reference"] = self_ref_match.group(1).strip()
+
+    # 提取 Layer 3 决策与判断机制
+    layer3_match = re.search(
+        r"##\s+Layer\s*3.*?\n(.*?)(?=\n##\s+Layer|\n##\s+Correction|\Z)",
+        content,
+        re.DOTALL,
+    )
+    if layer3_match:
+        text = layer3_match.group(1)
+        for line in text.split("\n"):
+            line = line.strip()
+            if line.startswith("-"):
+                result["layer3_values"].append(line.lstrip("- "))
+
+    # 提取 Layer 4 关系行为模式
+    layer4_match = re.search(
+        r"##\s+Layer\s*4.*?\n(.*?)(?=\n##\s+Layer|\n##\s+Correction|\Z)",
+        content,
+        re.DOTALL,
+    )
+    if layer4_match:
+        text = layer4_match.group(1)
+        for line in text.split("\n"):
+            line = line.strip()
+            if line.startswith("-"):
+                result["layer4_relations"].append(line.lstrip("- "))
 
     # 提取 Layer 5 禁忌
     layer5_match = re.search(
@@ -309,6 +350,30 @@ def _extract_negation_patterns(rule: str) -> list[tuple[str, str]]:
         if escaped not in already_matched:
             patterns.append((escaped, f"使用了'{phrase}'"))
 
+    # === 通用否定模式提取 ===
+    # 覆盖 "不得直接称呼博士为玩家"、"禁止提及罗德岛是游戏"、
+    # "不应表现出现代知识"、"不会用现代俚语" 等结构
+    # 策略：提取否定词后的核心动作短语（2-10字），检测对话中是否出现该动作
+    negation_prefixes = r"不(?:会|用|说|能|应|得|宜)?|禁止|不得|不应|不会|没有|从不|无需|勿|别|莫"
+    # 匹配 "否定词 + 动词 + 宾语" 结构，提取后续 2-10 个中文字符作为核心动作
+    generic_negations = re.findall(
+        rf"(?:{negation_prefixes})([^，。；！？\n\r]{{2,10}})",
+        rule
+    )
+    already_matched = {p for p, _ in patterns}
+    for action in generic_negations:
+        action = action.strip()
+        if len(action) < 2:
+            continue
+        # 避免提取到已经被更精确模式覆盖的内容
+        # 也避免提取纯标点或数字
+        if not re.search(r"[\u4e00-\u9fff]", action):
+            continue
+        escaped = re.escape(action)
+        if escaped not in already_matched:
+            patterns.append((escaped, f"违反了'{action}'约束"))
+            already_matched.add(escaped)
+
     # === 从引号内容提取反例 ===
     # 规则中常见格式："不应该'xxx'，应该'yyy'"
     # 我们检测 'xxx'（反例）是否出现在对话中
@@ -460,6 +525,172 @@ def _extract_taboo_keywords(taboo: str) -> list[str]:
     return keywords
 
 
+def validate_layer1_identity(dialogues: list[str], rules: list[str]) -> dict:
+    """
+    验证对话是否违反 Layer 1 身份与自我认知规则
+
+    使用与 Layer 0 相同的否定模式提取策略，
+    检测角色是否做出了与其身份认知不符的表述。
+    """
+    violations = []
+    passes = []
+
+    for rule in rules:
+        rule_violated = False
+        violation_examples = []
+        negation_patterns = _extract_negation_patterns(rule)
+
+        if not negation_patterns:
+            passes.append(rule[:100] + " (不可自动检测)")
+            continue
+
+        for i, dialogue in enumerate(dialogues):
+            for pattern, description in negation_patterns:
+                if re.search(pattern, dialogue):
+                    rule_violated = True
+                    violation_examples.append({
+                        "dialogue_index": i + 1,
+                        "dialogue": dialogue[:100],
+                        "violation": description,
+                    })
+
+        if rule_violated:
+            violations.append({
+                "rule": rule[:100],
+                "violation_count": len(violation_examples),
+                "examples": violation_examples[:3],
+            })
+        else:
+            passes.append(rule[:100])
+
+    total = len(rules)
+    untestable = sum(1 for p in passes if "不可自动检测" in p)
+    testable = total - untestable
+    testable_passes = [p for p in passes if "不可自动检测" not in p]
+    pass_count = len(testable_passes)
+    score = round(pass_count / testable * 100, 1) if testable > 0 else 100
+
+    return {
+        "score": score,
+        "total_rules": total,
+        "testable_rules": testable,
+        "passed": pass_count,
+        "violated": total - pass_count,
+        "violations": violations,
+        "pass_examples": passes[:5],
+    }
+
+
+def validate_layer3_values(dialogues: list[str], rules: list[str]) -> dict:
+    """
+    验证对话是否违反 Layer 3 决策与判断机制规则
+
+    检测角色的决策模式是否符合其价值观体系。
+    """
+    violations = []
+    passes = []
+
+    for rule in rules:
+        rule_violated = False
+        violation_examples = []
+        negation_patterns = _extract_negation_patterns(rule)
+
+        if not negation_patterns:
+            passes.append(rule[:100] + " (不可自动检测)")
+            continue
+
+        for i, dialogue in enumerate(dialogues):
+            for pattern, description in negation_patterns:
+                if re.search(pattern, dialogue):
+                    rule_violated = True
+                    violation_examples.append({
+                        "dialogue_index": i + 1,
+                        "dialogue": dialogue[:100],
+                        "violation": description,
+                    })
+
+        if rule_violated:
+            violations.append({
+                "rule": rule[:100],
+                "violation_count": len(violation_examples),
+                "examples": violation_examples[:3],
+            })
+        else:
+            passes.append(rule[:100])
+
+    total = len(rules)
+    untestable = sum(1 for p in passes if "不可自动检测" in p)
+    testable = total - untestable
+    testable_passes = [p for p in passes if "不可自动检测" not in p]
+    pass_count = len(testable_passes)
+    score = round(pass_count / testable * 100, 1) if testable > 0 else 100
+
+    return {
+        "score": score,
+        "total_rules": total,
+        "testable_rules": testable,
+        "passed": pass_count,
+        "violated": total - pass_count,
+        "violations": violations,
+        "pass_examples": passes[:5],
+    }
+
+
+def validate_layer4_relations(dialogues: list[str], rules: list[str]) -> dict:
+    """
+    验证对话是否违反 Layer 4 关系行为模式规则
+
+    检测角色在对话中是否表现出与其关系模式不符的行为。
+    """
+    violations = []
+    passes = []
+
+    for rule in rules:
+        rule_violated = False
+        violation_examples = []
+        negation_patterns = _extract_negation_patterns(rule)
+
+        if not negation_patterns:
+            passes.append(rule[:100] + " (不可自动检测)")
+            continue
+
+        for i, dialogue in enumerate(dialogues):
+            for pattern, description in negation_patterns:
+                if re.search(pattern, dialogue):
+                    rule_violated = True
+                    violation_examples.append({
+                        "dialogue_index": i + 1,
+                        "dialogue": dialogue[:100],
+                        "violation": description,
+                    })
+
+        if rule_violated:
+            violations.append({
+                "rule": rule[:100],
+                "violation_count": len(violation_examples),
+                "examples": violation_examples[:3],
+            })
+        else:
+            passes.append(rule[:100])
+
+    total = len(rules)
+    untestable = sum(1 for p in passes if "不可自动检测" in p)
+    testable = total - untestable
+    testable_passes = [p for p in passes if "不可自动检测" not in p]
+    pass_count = len(testable_passes)
+    score = round(pass_count / testable * 100, 1) if testable > 0 else 100
+
+    return {
+        "score": score,
+        "total_rules": total,
+        "testable_rules": testable,
+        "passed": pass_count,
+        "violated": total - pass_count,
+        "violations": violations,
+        "pass_examples": passes[:5],
+    }
+
+
 # ──────────────────────────────────────────────
 # 主验证流程
 # ──────────────────────────────────────────────
@@ -474,21 +705,30 @@ def validate(persona_path: str, dialogues_path: str, fmt: str = "plain") -> dict
 
     # 各层验证
     layer0_result = validate_layer0(dialogues, persona["layer0_rules"])
+    layer1_result = validate_layer1_identity(dialogues, persona["layer1_identity"])
     layer2_result = validate_layer2_style(dialogues, persona["layer2_style"])
+    layer3_result = validate_layer3_values(dialogues, persona["layer3_values"])
+    layer4_result = validate_layer4_relations(dialogues, persona["layer4_relations"])
     layer5_result = validate_layer5_taboos(dialogues, persona["layer5_taboos"])
 
-    # 综合评分（Layer 0 权重最高）
+    # 综合评分（Layer 0 权重最高，新增 Layer 1/3/4 参与计算）
     overall_score = (
-        layer0_result["score"] * 0.5
-        + layer2_result["score"] * 0.3
-        + layer5_result["score"] * 0.2
+        layer0_result["score"] * 0.35
+        + layer1_result["score"] * 0.10
+        + layer2_result["score"] * 0.20
+        + layer3_result["score"] * 0.10
+        + layer4_result["score"] * 0.05
+        + layer5_result["score"] * 0.20
     )
 
     return {
         "overall_score": round(overall_score, 1),
         "dialogue_count": len(dialogues),
         "layer0_core_personality": layer0_result,
+        "layer1_identity": layer1_result,
         "layer2_expression_style": layer2_result,
+        "layer3_values": layer3_result,
+        "layer4_relations": layer4_result,
         "layer5_boundaries": layer5_result,
         "corrections_count": len(persona["corrections"]),
         "grade": _score_to_grade(overall_score),
@@ -644,19 +884,28 @@ def validate_with_context(persona_path: str, context_path: str) -> dict:
 def _validate_against_dialogues(persona: dict, dialogues: list[str]) -> dict:
     """对一组对话执行完整验证"""
     layer0_result = validate_layer0(dialogues, persona["layer0_rules"])
+    layer1_result = validate_layer1_identity(dialogues, persona["layer1_identity"])
     layer2_result = validate_layer2_style(dialogues, persona["layer2_style"])
+    layer3_result = validate_layer3_values(dialogues, persona["layer3_values"])
+    layer4_result = validate_layer4_relations(dialogues, persona["layer4_relations"])
     layer5_result = validate_layer5_taboos(dialogues, persona["layer5_taboos"])
 
     overall_score = (
-        layer0_result["score"] * 0.5
-        + layer2_result["score"] * 0.3
-        + layer5_result["score"] * 0.2
+        layer0_result["score"] * 0.35
+        + layer1_result["score"] * 0.10
+        + layer2_result["score"] * 0.20
+        + layer3_result["score"] * 0.10
+        + layer4_result["score"] * 0.05
+        + layer5_result["score"] * 0.20
     )
 
     return {
         "overall_score": round(overall_score, 1),
         "layer0_core_personality": layer0_result,
+        "layer1_identity": layer1_result,
         "layer2_expression_style": layer2_result,
+        "layer3_values": layer3_result,
+        "layer4_relations": layer4_result,
         "layer5_boundaries": layer5_result,
         "dialogue_count": len(dialogues),
         "grade": _score_to_grade(overall_score),

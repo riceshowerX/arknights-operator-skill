@@ -179,8 +179,14 @@ def _rate_limited_urlopen(req, timeout=None):
     _last_request_time = time.time()
     return result
 
-def fetch_chapter_wikitext(chapter: str) -> str:
+def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
     """获取剧情页面的 wikitext 原文，自动跟随 redirect"""
+    if _depth > 3:
+        print(json.dumps({
+            "error": f"重定向链太深: '{chapter}'",
+            "chapter": chapter
+        }, ensure_ascii=False), file=sys.stderr)
+        return ""
     # 先尝试用 action=parse（自动跟随 redirect）
     params = urlencode({
         'action': 'parse',
@@ -213,7 +219,7 @@ def fetch_chapter_wikitext(chapter: str) -> str:
                 "info": f"跟随重定向: '{chapter}' → '{target}'",
                 "chapter": chapter
             }, ensure_ascii=False), file=sys.stderr)
-            return fetch_chapter_wikitext(target)
+            return fetch_chapter_wikitext(target, _depth=_depth + 1)
 
     # 如果内容为空，尝试查找 /NBT 子页面
     if not wikitext:

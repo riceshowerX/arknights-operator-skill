@@ -123,6 +123,16 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
         raise ValueError(f"不支持的格式: {fmt}")
 
 
+def split_sentences(text: str) -> list[str]:
+    """
+    按中文标点将文本分句，返回非空句子列表。
+
+    被 temporal_slicer.py 共享使用，避免代码重复。
+    """
+    sentences = re.split(r"[。！？；…—]+", text)
+    return [s.strip() for s in sentences if s.strip()]
+
+
 def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
     """
     维度 1：句式长度分布
@@ -133,11 +143,8 @@ def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
     for d in dialogues:
         text = d.get("text", "")
         # 按中文标点分句
-        sentences = re.split(r"[。！？；…—]+", text)
-        for s in sentences:
-            s = s.strip()
-            if len(s) > 0:
-                lengths.append(len(s))
+        for s in split_sentences(text):
+            lengths.append(len(s))
 
     if not lengths:
         return {"type": "unknown", "avg": 0, "distribution": {}}

@@ -33,6 +33,14 @@ except ImportError:
         "farewell": "告别", "soothe": "安抚",
     }
 
+# 从 dialogue_fingerprint 引入共享的分句函数
+try:
+    from dialogue_fingerprint import split_sentences
+except ImportError:
+    def split_sentences(text: str) -> list[str]:
+        sentences = re.split(r"[。！？；…—]+", text)
+        return [s.strip() for s in sentences if s.strip()]
+
 
 # ──────────────────────────────────────────────
 # 切片构建
@@ -66,14 +74,11 @@ def compute_slice_metrics(lines: list[dict]) -> dict:
     texts = [l.get("text", "") for l in lines]
     total = len(texts)
 
-    # 句式长度
+    # 句式长度（使用共享分句函数）
     lengths = []
     for t in texts:
-        sentences = re.split(r"[。！？；…—]+", t)
-        for s in sentences:
-            s = s.strip()
-            if len(s) > 0:
-                lengths.append(len(s))
+        for s in split_sentences(t):
+            lengths.append(len(s))
 
     avg_length = round(sum(lengths) / len(lengths), 1) if lengths else 0
 

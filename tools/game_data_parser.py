@@ -163,13 +163,18 @@ def _extract_template_body(wikitext: str, template_name: str) -> Optional[str]:
     """
     # 构建模板开始标记的转义正则
     escaped_name = re.escape(template_name)
-    start_pattern = re.compile(r"\{\{" + escaped_name + r"\s*\n")
+    # 支持两种格式: {{TemplateName\n...}} 和 {{TemplateName|...}}
+    start_pattern = re.compile(r"\{\{" + escaped_name + r"(?:\s*\n|\s*\|)")
     start_match = start_pattern.search(wikitext)
     if not start_match:
         return None
 
+    # 判断模板名后紧跟的是换行还是 |
+    matched_suffix = start_match.group(0)
+    starts_with_pipe = matched_suffix.endswith("|")
+
     # 从模板开始位置计数大括号深度
-    pos = start_match.end()  # 跳过 {{TemplateName\n
+    pos = start_match.end()  # 跳过 {{TemplateName\n 或 {{TemplateName|
     depth = 1  # 已经进入了第一层 {{
     body_start = pos
 
@@ -192,7 +197,12 @@ def _extract_template_body(wikitext: str, template_name: str) -> Optional[str]:
             pos = next_close + 2
             if depth == 0:
                 # 模板闭合，返回内部内容
-                return wikitext[body_start:next_close]
+                body = wikitext[body_start:next_close]
+                # 如果模板名后紧跟的是 |（如 {{TemplateName|...}}），
+                # 补回开头的 |，使解析逻辑与 {{TemplateName\n|...}} 一致
+                if starts_with_pipe and not body.startswith("|"):
+                    body = "|" + body
+                return body
 
     # 未找到完整闭合，返回可能不完整的匹配
     return wikitext[body_start:pos] if depth <= 0 else None
