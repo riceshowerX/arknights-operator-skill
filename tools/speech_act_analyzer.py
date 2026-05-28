@@ -102,23 +102,20 @@ def classify_speech_acts(text: str) -> list[dict]:
     """对单条台词分类话语行为
 
     同一行为类型只保留置信度最高的一次匹配，避免多条规则命中同一类型时产生重复。
+    使用 dict 存储最优结果，避免每次匹配都重建列表，时间复杂度从 O(n²) 降至 O(n)。
     """
-    acts = []
-    seen_types: dict[str, float] = {}  # type → best confidence
+    best: dict[str, tuple[float, str]] = {}  # type → (confidence, label)
     for pattern, act_type, confidence, label in COMPILED_RULES:
         if pattern.search(text):
             # 同类型只保留置信度最高的匹配
-            if act_type in seen_types and seen_types[act_type] >= confidence:
+            if act_type in best and best[act_type][0] >= confidence:
                 continue
-            seen_types[act_type] = confidence
-            # 如果之前已添加过同类型低置信度结果，移除旧的
-            acts = [a for a in acts if a["type"] != act_type]
-            acts.append({
-                "type": act_type,
-                "label": label,
-                "confidence": confidence,
-            })
-    return acts
+            best[act_type] = (confidence, label)
+
+    return [
+        {"type": act_type, "label": label, "confidence": conf}
+        for act_type, (conf, label) in best.items()
+    ]
 
 
 # ──────────────────────────────────────────────
@@ -127,10 +124,12 @@ def classify_speech_acts(text: str) -> list[dict]:
 
 def build_speech_act_profile(annotated_lines: list[dict]) -> dict:
     """构建话语行为分布画像"""
-    global_dist = {}
-    by_situation = {}
-    by_interlocutor = {}
-    by_phase = {}
+    from collections import defaultdict
+
+    global_dist: dict[str, int] = defaultdict(int)
+    by_situation: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    by_interlocutor: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    by_phase: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     lines_with_acts = 0
 
     for line in annotated_lines:
@@ -150,17 +149,10 @@ def build_speech_act_profile(annotated_lines: list[dict]) -> dict:
 
         for act in acts:
             act_type = act["type"]
-
-            global_dist[act_type] = global_dist.get(act_type, 0) + 1
-
-            by_situation.setdefault(situation, {})
-            by_situation[situation][act_type] = by_situation[situation].get(act_type, 0) + 1
-
-            by_interlocutor.setdefault(interlocutor, {})
-            by_interlocutor[interlocutor][act_type] = by_interlocutor[interlocutor].get(act_type, 0) + 1
-
-            by_phase.setdefault(phase, {})
-            by_phase[phase][act_type] = by_phase[phase].get(act_type, 0) + 1
+            global_dist[act_type] += 1
+            by_situation[situation][act_type] += 1
+            by_interlocutor[interlocutor][act_type] += 1
+            by_phase[phase][act_type] += 1
 
     # 归一化全局分布
     total = sum(global_dist.values()) or 1
@@ -168,10 +160,10 @@ def build_speech_act_profile(annotated_lines: list[dict]) -> dict:
 
     return {
         "global": global_pct,
-        "global_raw": global_dist,
-        "by_situation": by_situation,
-        "by_interlocutor": by_interlocutor,
-        "by_phase": by_phase,
+        "global_raw": dict(global_dist),
+        "by_situation": {k: dict(v) for k, v in by_situation.items()},
+        "by_interlocutor": {k: dict(v) for k, v in by_interlocutor.items()},
+        "by_phase": {k: dict(v) for k, v in by_phase.items()},
         "total_acts": sum(global_dist.values()),
         "lines_with_acts": lines_with_acts,
     }

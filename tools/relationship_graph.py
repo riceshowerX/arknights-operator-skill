@@ -340,31 +340,27 @@ def extract_relationships_from_text(
     return relationships
 
 
+# 预编译分句正则，避免每次调用重复编译
+_SENTENCE_SPLIT_RE = re.compile(r"[。！？\n]+")
+
+_NEGATION_MARKERS = frozenset(["≠", "不是", "并非", "不等于", "误解", "错误", "没有", "不曾", "未尝", "并不"])
+
+
+def _is_negation_context(s: str) -> bool:
+    return any(marker in s for marker in _NEGATION_MARKERS)
+
+
 def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> list[str]:
     """从文本中提取同时包含两个角色名的句子/段落"""
-    sentences = re.split(r"[。！？\n]+", text)
+    sentences = _SENTENCE_SPLIT_RE.split(text)
     sentences = [s.strip() for s in sentences if s.strip()]
 
-    negation_markers = ["≠", "不是", "并非", "不等于", "误解", "错误", "没有", "不曾", "未尝", "并不"]
-
-    def _is_negation_context(s: str) -> bool:
-        return any(marker in s for marker in negation_markers)
-
-    joint_sentences = []
-    for s in sentences:
-        if e1 in s and e2 in s and not _is_negation_context(s):
-            joint_sentences.append(s)
-
+    joint_sentences = [s for s in sentences if e1 in s and e2 in s and not _is_negation_context(s)]
     if joint_sentences:
         return joint_sentences
 
-    e1_indices = set()
-    e2_indices = set()
-    for i, s in enumerate(sentences):
-        if e1 in s:
-            e1_indices.add(i)
-        if e2 in s:
-            e2_indices.add(i)
+    e1_indices = {i for i, s in enumerate(sentences) if e1 in s}
+    e2_indices = {i for i, s in enumerate(sentences) if e2 in s}
 
     merged = []
     for i1 in e1_indices:
@@ -378,7 +374,7 @@ def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> l
                 if len(segment) <= max_gap * 3:
                     merged.append(segment)
 
-    return merged if merged else []
+    return merged
 
 
 def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
@@ -436,9 +432,9 @@ def _calc_confidence(text: str, rel_pattern: str) -> str:
 
 def _extract_context(text: str, e1: str, e2: str, rel_pattern: str) -> str:
     """提取关系出现的上下文"""
-    sentences = re.split(r"[。！？\n]", text)
-    for s in sentences:
-        if (e1 in s or e2 in s) and re.search(rel_pattern, s):
+    compiled = re.compile(rel_pattern)
+    for s in _SENTENCE_SPLIT_RE.split(text):
+        if (e1 in s or e2 in s) and compiled.search(s):
             return s.strip()[:200]
     return ""
 

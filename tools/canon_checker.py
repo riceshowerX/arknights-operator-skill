@@ -226,7 +226,7 @@ def extract_canon_claims(text: str, source_label: str) -> list[dict]:
     for field, config in CANON_FIELDS.items():
         for pattern in config["patterns"]:
             for match in re.finditer(pattern, text):
-                value = match.group(1).strip() if match.lastindex else match.group(0).strip()
+                value = (match.group(1) if match.lastindex else match.group(0)).strip()
                 if value and len(value) < 50:
                     # 提取上下文
                     start = max(0, match.start() - 30)

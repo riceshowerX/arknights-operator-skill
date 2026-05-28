@@ -295,6 +295,11 @@ def _extract_charinfo(wikitext: str) -> dict:
         "中文配音": "cv_zh",
     }
 
+    # 预编译清洗正则，避免循环内重复编译
+    _COLOR_RE = re.compile(r"\{\{color\|[^|]*\|([^}]*)\}\}")
+    _TEMPLATE_RE = re.compile(r"\{\{[^{}]*\}\}")
+    _WIKILINK_RE = re.compile(r"\[\[([^|\]]*\|)?([^\]]*)\]\]")
+
     for line in fields.split("\n"):
         line = line.strip()
         if not line.startswith("|"):
@@ -307,10 +312,10 @@ def _extract_charinfo(wikitext: str) -> dict:
 
         if key in field_map and value:
             output_key = field_map[key]
-            # 清洗模板标记
-            value = re.sub(r"\{\{color\|[^|]*\|([^}]*)\}\}", r"\1", value)
-            value = re.sub(r"\{\{[^{}]*\}\}", "", value)
-            value = re.sub(r"\[\[([^|\]]*\|)?([^\]]*)\]\]", r"\2", value)
+            # 清洗模板标记（使用预编译正则）
+            value = _COLOR_RE.sub(r"\1", value)
+            value = _TEMPLATE_RE.sub("", value)
+            value = _WIKILINK_RE.sub(r"\2", value)
             value = value.strip()
             if value:
                 info[output_key] = value

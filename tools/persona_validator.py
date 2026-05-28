@@ -247,12 +247,11 @@ def _filter_dialogue_lines(lines: list[str]) -> list[str]:
 # 验证逻辑
 # ──────────────────────────────────────────────
 
-def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
+def _validate_negation_rules(dialogues: list[str], rules: list[str], layer_name: str) -> dict:
     """
-    验证对话是否违反 Layer 0 规则
+    通用否定规则验证引擎（供 Layer 0/1/3/4 复用）
 
-    检测策略：从每条 Layer 0 规则中提取关键否定约束，
-    检查对话中是否存在违反
+    从每条规则中提取否定模式，检测对话中是否存在违反。
     """
     violations = []
     passes = []
@@ -260,11 +259,8 @@ def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
     for rule in rules:
         rule_violated = False
         violation_examples = []
-
-        # 从规则中提取否定模式
         negation_patterns = _extract_negation_patterns(rule)
 
-        # 无可检测模式 → 标记为 untested
         if not negation_patterns:
             passes.append(rule[:100] + " (不可自动检测)")
             continue
@@ -291,7 +287,6 @@ def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
     total = len(rules)
     untestable_count = sum(1 for p in passes if "不可自动检测" in p)
     testable = total - untestable_count
-    # pass_count 仅统计可测试规则中通过的数量
     testable_passes = [p for p in passes if "不可自动检测" not in p]
     pass_count = len(testable_passes)
     score = round(pass_count / testable * 100, 1) if testable > 0 else 100
@@ -305,6 +300,11 @@ def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
         "violations": violations,
         "pass_examples": passes[:5],
     }
+
+
+def validate_layer0(dialogues: list[str], rules: list[str]) -> dict:
+    """验证对话是否违反 Layer 0 规则"""
+    return _validate_negation_rules(dialogues, rules, "Layer 0")
 
 
 def _extract_negation_patterns(rule: str) -> list[tuple[str, str]]:
@@ -526,169 +526,18 @@ def _extract_taboo_keywords(taboo: str) -> list[str]:
 
 
 def validate_layer1_identity(dialogues: list[str], rules: list[str]) -> dict:
-    """
-    验证对话是否违反 Layer 1 身份与自我认知规则
-
-    使用与 Layer 0 相同的否定模式提取策略，
-    检测角色是否做出了与其身份认知不符的表述。
-    """
-    violations = []
-    passes = []
-
-    for rule in rules:
-        rule_violated = False
-        violation_examples = []
-        negation_patterns = _extract_negation_patterns(rule)
-
-        if not negation_patterns:
-            passes.append(rule[:100] + " (不可自动检测)")
-            continue
-
-        for i, dialogue in enumerate(dialogues):
-            for pattern, description in negation_patterns:
-                if re.search(pattern, dialogue):
-                    rule_violated = True
-                    violation_examples.append({
-                        "dialogue_index": i + 1,
-                        "dialogue": dialogue[:100],
-                        "violation": description,
-                    })
-
-        if rule_violated:
-            violations.append({
-                "rule": rule[:100],
-                "violation_count": len(violation_examples),
-                "examples": violation_examples[:3],
-            })
-        else:
-            passes.append(rule[:100])
-
-    total = len(rules)
-    untestable = sum(1 for p in passes if "不可自动检测" in p)
-    testable = total - untestable
-    testable_passes = [p for p in passes if "不可自动检测" not in p]
-    pass_count = len(testable_passes)
-    score = round(pass_count / testable * 100, 1) if testable > 0 else 100
-
-    return {
-        "score": score,
-        "total_rules": total,
-        "testable_rules": testable,
-        "passed": pass_count,
-        "violated": total - pass_count,
-        "violations": violations,
-        "pass_examples": passes[:5],
-    }
+    """验证对话是否违反 Layer 1 身份与自我认知规则"""
+    return _validate_negation_rules(dialogues, rules, "Layer 1")
 
 
 def validate_layer3_values(dialogues: list[str], rules: list[str]) -> dict:
-    """
-    验证对话是否违反 Layer 3 决策与判断机制规则
-
-    检测角色的决策模式是否符合其价值观体系。
-    """
-    violations = []
-    passes = []
-
-    for rule in rules:
-        rule_violated = False
-        violation_examples = []
-        negation_patterns = _extract_negation_patterns(rule)
-
-        if not negation_patterns:
-            passes.append(rule[:100] + " (不可自动检测)")
-            continue
-
-        for i, dialogue in enumerate(dialogues):
-            for pattern, description in negation_patterns:
-                if re.search(pattern, dialogue):
-                    rule_violated = True
-                    violation_examples.append({
-                        "dialogue_index": i + 1,
-                        "dialogue": dialogue[:100],
-                        "violation": description,
-                    })
-
-        if rule_violated:
-            violations.append({
-                "rule": rule[:100],
-                "violation_count": len(violation_examples),
-                "examples": violation_examples[:3],
-            })
-        else:
-            passes.append(rule[:100])
-
-    total = len(rules)
-    untestable = sum(1 for p in passes if "不可自动检测" in p)
-    testable = total - untestable
-    testable_passes = [p for p in passes if "不可自动检测" not in p]
-    pass_count = len(testable_passes)
-    score = round(pass_count / testable * 100, 1) if testable > 0 else 100
-
-    return {
-        "score": score,
-        "total_rules": total,
-        "testable_rules": testable,
-        "passed": pass_count,
-        "violated": total - pass_count,
-        "violations": violations,
-        "pass_examples": passes[:5],
-    }
+    """验证对话是否违反 Layer 3 决策与判断机制规则"""
+    return _validate_negation_rules(dialogues, rules, "Layer 3")
 
 
 def validate_layer4_relations(dialogues: list[str], rules: list[str]) -> dict:
-    """
-    验证对话是否违反 Layer 4 关系行为模式规则
-
-    检测角色在对话中是否表现出与其关系模式不符的行为。
-    """
-    violations = []
-    passes = []
-
-    for rule in rules:
-        rule_violated = False
-        violation_examples = []
-        negation_patterns = _extract_negation_patterns(rule)
-
-        if not negation_patterns:
-            passes.append(rule[:100] + " (不可自动检测)")
-            continue
-
-        for i, dialogue in enumerate(dialogues):
-            for pattern, description in negation_patterns:
-                if re.search(pattern, dialogue):
-                    rule_violated = True
-                    violation_examples.append({
-                        "dialogue_index": i + 1,
-                        "dialogue": dialogue[:100],
-                        "violation": description,
-                    })
-
-        if rule_violated:
-            violations.append({
-                "rule": rule[:100],
-                "violation_count": len(violation_examples),
-                "examples": violation_examples[:3],
-            })
-        else:
-            passes.append(rule[:100])
-
-    total = len(rules)
-    untestable = sum(1 for p in passes if "不可自动检测" in p)
-    testable = total - untestable
-    testable_passes = [p for p in passes if "不可自动检测" not in p]
-    pass_count = len(testable_passes)
-    score = round(pass_count / testable * 100, 1) if testable > 0 else 100
-
-    return {
-        "score": score,
-        "total_rules": total,
-        "testable_rules": testable,
-        "passed": pass_count,
-        "violated": total - pass_count,
-        "violations": violations,
-        "pass_examples": passes[:5],
-    }
+    """验证对话是否违反 Layer 4 关系行为模式规则"""
+    return _validate_negation_rules(dialogues, rules, "Layer 4")
 
 
 # ──────────────────────────────────────────────
