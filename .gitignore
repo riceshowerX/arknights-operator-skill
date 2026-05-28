@@ -50,3 +50,4 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+.cozeproj/reduction
