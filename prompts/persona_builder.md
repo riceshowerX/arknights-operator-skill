@@ -212,6 +212,28 @@
 
 ---
 
+## 数据上下文注入
+
+在生成 Persona 之前，运行以下命令获取量化分析数据：
+
+```bash
+python -m tools.data_injector --slug {角色slug} --output operators/{角色slug}/data_context.md
+```
+
+将输出的 `data_context.md` 内容粘贴到下方 `{DATA_CONTEXT}` 占位符处。
+
+**生成规则**：
+1. Layer 2 的表达风格描述**必须**与对话指纹数据一致（句式长度、停顿习惯、自称、情感光谱、修辞偏好、口头禅）
+2. Layer 0 的行为规则**必须**参考话语行为模式和时序演变规则
+3. Layer 4 的关系行为**必须**参考关系图谱数据（关系类型、强度、演变趋势）
+4. 如果数据上下文中的量化指标与你的描述矛盾，以数据为准
+
+```
+{DATA_CONTEXT}
+```
+
+---
+
 ## 生成注意事项
 
 **Layer 0 的质量决定整个 Persona 的质量。**

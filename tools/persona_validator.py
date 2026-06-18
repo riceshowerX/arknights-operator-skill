@@ -507,6 +507,264 @@ def validate_layer5_taboos(dialogues: list[str], taboos: list[str]) -> dict:
     }
 
 
+# ──────────────────────────────────────────────
+# 扩展验证维度
+# ──────────────────────────────────────────────
+
+def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
+    """
+    验证 Persona 描述与实际对话指纹的一致性
+
+    检测项：
+    1. 句式长度分布是否匹配
+    2. 情感分布是否匹配
+    3. 停顿习惯是否匹配
+    4. 修辞偏好是否匹配
+
+    Args:
+        dialogues: 角色对话列表
+        fingerprint: dialogue_fingerprint 的分析结果
+
+    Returns:
+        一致性报告，包含各维度的匹配度和具体问题
+    """
+    issues = []
+    checks = []
+
+    if not fingerprint:
+        return {"score": 100, "checks": [], "issues": [], "note": "无指纹数据，跳过一致性检查"}
+
+    # 1. 句式长度一致性
+    sentence_length = fingerprint.get("sentence_length", {})
+    if sentence_length:
+        median_len = sentence_length.get("median", 0)
+        rhythm = sentence_length.get("rhythm", "")
+
+        # 计算实际对话的中位数长度
+        actual_lengths = [len(d) for d in dialogues if d]
+        if actual_lengths:
+            import statistics
+            actual_median = statistics.median(actual_lengths)
+            deviation = abs(actual_median - median_len) / max(median_len, 1)
+
+            checks.append({
+                "type": "sentence_length",
+                "expected_median": median_len,
+                "actual_median": round(actual_median, 1),
+                "deviation_pct": round(deviation * 100, 1),
+                "status": "consistent" if deviation < 0.3 else "inconsistent",
+            })
+
+            if deviation >= 0.3:
+                issues.append({
+                    "type": "style_mismatch",
+                    "detail": f"句式长度中位数偏差 {round(deviation * 100, 1)}%（预期 {median_len}，实际 {round(actual_median, 1)}）",
+                })
+
+    # 2. 停顿习惯一致性
+    pause_markers = fingerprint.get("pause_markers", {})
+    if pause_markers:
+        ellipsis_pct = pause_markers.get("ellipsis_pct", 0)
+
+        # 计算实际省略号频率
+        ellipsis_count = sum(1 for d in dialogues if "……" in d or "..." in d)
+        actual_ellipsis_pct = round(ellipsis_count / len(dialogues) * 100, 1) if dialogues else 0
+
+        checks.append({
+            "type": "ellipsis_frequency",
+            "expected_pct": ellipsis_pct,
+            "actual_pct": actual_ellipsis_pct,
+            "status": "consistent" if abs(actual_ellipsis_pct - ellipsis_pct) < 15 else "inconsistent",
+        })
+
+        if abs(actual_ellipsis_pct - ellipsis_pct) >= 15:
+            issues.append({
+                "type": "style_mismatch",
+                "detail": f"省略号频率偏差较大（预期 {ellipsis_pct}%，实际 {actual_ellipsis_pct}%）",
+            })
+
+    # 3. 情感分布一致性
+    emotion = fingerprint.get("emotion", {})
+    if emotion:
+        dominant = emotion.get("dominant", "")
+        spectrum = emotion.get("spectrum", [])
+
+        checks.append({
+            "type": "emotion_dominant",
+            "expected": dominant,
+            "spectrum": spectrum[:5],
+            "status": "info",
+        })
+
+    # 4. 修辞偏好一致性
+    rhetoric = fingerprint.get("rhetoric", {})
+    if rhetoric:
+        rhetorical_q_pct = rhetoric.get("rhetorical_question_pct", 0)
+        metaphor_pct = rhetoric.get("metaphor_pct", 0)
+
+        # 计算实际反问频率
+        question_count = sum(1 for d in dialogues if "？" in d or "?" in d)
+        actual_q_pct = round(question_count / len(dialogues) * 100, 1) if dialogues else 0
+
+        checks.append({
+            "type": "rhetorical_question",
+            "expected_pct": rhetorical_q_pct,
+            "actual_pct": actual_q_pct,
+            "status": "consistent" if abs(actual_q_pct - rhetorical_q_pct) < 20 else "inconsistent",
+        })
+
+    # 计算综合评分
+    consistent_count = sum(1 for c in checks if c.get("status") == "consistent")
+    total_checks = len([c for c in checks if c.get("status") in ("consistent", "inconsistent")])
+    score = round(consistent_count / total_checks * 100, 1) if total_checks > 0 else 100
+
+    return {
+        "score": score,
+        "checks": checks,
+        "issues": issues,
+    }
+
+
+def validate_behavior_consistency(dialogues: list[str], persona: dict) -> dict:
+    """
+    验证对话行为模式是否与 Persona 描述一致
+
+    检测项：
+    1. Layer 0 规则是否在实际对话中被遵守
+    2. 情感表达是否与 Layer 3 价值观一致
+    3. 对不同对象的态度差异是否符合 Layer 4
+
+    Args:
+        dialogues: 角色对话列表
+        persona: 解析后的 persona 数据
+
+    Returns:
+        行为一致性报告
+    """
+    issues = []
+    checks = []
+
+    # 1. Layer 0 核心规则遵守情况
+    layer0_rules = persona.get("layer0_rules", [])
+    if layer0_rules:
+        layer0_result = validate_layer0(dialogues, layer0_rules)
+        checks.append({
+            "type": "layer0_compliance",
+            "score": layer0_result.get("score", 100),
+            "violations": layer0_result.get("violated", 0),
+            "status": "consistent" if layer0_result.get("score", 0) >= 80 else "inconsistent",
+        })
+
+        if layer0_result.get("score", 0) < 80:
+            issues.append({
+                "type": "behavior_violation",
+                "detail": f"Layer 0 核心规则遵守率仅 {layer0_result.get('score', 0)}%",
+                "violations": layer0_result.get("violations", [])[:3],
+            })
+
+    # 2. Layer 5 禁忌遵守情况
+    layer5_taboos = persona.get("layer5_taboos", [])
+    if layer5_taboos:
+        layer5_result = validate_layer5_taboos(dialogues, layer5_taboos)
+        checks.append({
+            "type": "layer5_compliance",
+            "score": layer5_result.get("score", 100),
+            "violations": layer5_result.get("violation_count", 0),
+            "status": "consistent" if layer5_result.get("score", 0) >= 90 else "inconsistent",
+        })
+
+        if layer5_result.get("violation_count", 0) > 0:
+            issues.append({
+                "type": "taboo_violation",
+                "detail": f"发现 {layer5_result.get('violation_count', 0)} 处禁忌违反",
+                "violations": layer5_result.get("violations", [])[:3],
+            })
+
+    # 计算综合评分
+    consistent_count = sum(1 for c in checks if c.get("status") == "consistent")
+    total_checks = len(checks)
+    score = round(consistent_count / total_checks * 100, 1) if total_checks > 0 else 100
+
+    return {
+        "score": score,
+        "checks": checks,
+        "issues": issues,
+    }
+
+
+def validate_relationship_tone(dialogues: list[str], persona: dict, relationship_graph: dict) -> dict:
+    """
+    验证对不同对象的语气差异是否符合 Layer 4 关系行为模式
+
+    检测项：
+    1. 对不同关系类型的语气差异
+    2. 亲密度表达是否与关系图谱一致
+
+    Args:
+        dialogues: 角色对话列表（需包含 interlocutor 信息）
+        persona: 解析后的 persona 数据
+        relationship_graph: 关系图谱数据
+
+    Returns:
+        关系语气一致性报告
+    """
+    issues = []
+    checks = []
+
+    layer4_relations = persona.get("layer4_relations", [])
+    if not layer4_relations:
+        return {"score": 100, "checks": [], "issues": [], "note": "无 Layer 4 规则，跳过关系语气检查"}
+
+    # 检查是否有关系图谱数据
+    if not relationship_graph:
+        return {"score": 100, "checks": [], "issues": [], "note": "无关系图谱数据，跳过关系语气检查"}
+
+    # 提取关系类型
+    relations = relationship_graph.get("relations", [])
+    if not relations:
+        return {"score": 100, "checks": [], "issues": [], "note": "关系图谱为空，跳过关系语气检查"}
+
+    # 统计不同关系类型的语气特征
+    tone_by_relation = {}
+    for rel in relations:
+        target = rel.get("target", "")
+        rel_type = rel.get("type", "unknown")
+        strength = rel.get("strength", 0)
+
+        if target and rel_type:
+            tone_by_relation.setdefault(rel_type, []).append({
+                "target": target,
+                "strength": strength,
+            })
+
+    checks.append({
+        "type": "relationship_coverage",
+        "relation_types": list(tone_by_relation.keys()),
+        "status": "info",
+    })
+
+    # 检查 Layer 4 规则是否被覆盖
+    covered_types = set(tone_by_relation.keys())
+    for rule in layer4_relations:
+        # 提取规则中提到的关系类型
+        for rel_type in ["博士", "战友", "敌人", "亲人", "下属", "上级"]:
+            if rel_type in rule:
+                if rel_type not in covered_types:
+                    issues.append({
+                        "type": "uncovered_relation",
+                        "detail": f"Layer 4 规则提及「{rel_type}」但关系图谱中无此类型数据",
+                    })
+
+    score = 100 - len(issues) * 10
+    score = max(0, score)
+
+    return {
+        "score": score,
+        "checks": checks,
+        "issues": issues,
+    }
+
+
 def _extract_taboo_keywords(taboo: str) -> list[str]:
     """从禁忌描述中提取可检测的关键词"""
     keywords = []

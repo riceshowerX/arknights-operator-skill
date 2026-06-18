@@ -170,18 +170,19 @@ Correction 序号越大越新，越新越优先
 
 | 工具 | 功能 |
 |------|------|
-| `context_annotator.py` | 统一标注：场景/时期/对话对象 → `context.json` |
-| `speech_act_analyzer.py` | 话语行为分类（邀请/回避/承诺/克制等 7 种核心类型） |
-| `dialogue_fingerprint.py` | 7 维度量化语言指纹（单次遍历优化） |
-| `relationship_graph.py` | 12 种关系类型识别 + Aho-Corasick 多模式匹配 + 可信度评级 |
-| `temporal_slicer.py` | 跨期行为演变检测 → Persona Layer 2 规则 |
+| `context_annotator.py` | 多信号场景分类 + 对话对象内容推断 → `context.json` |
+| `speech_act_analyzer.py` | 上下文感知话语行为分类（7 种核心类型）+ 行为链检测 |
+| `dialogue_fingerprint.py` | 8 维度量化语言指纹（含口头禅检测 + 加权情感词典） |
+| `relationship_graph.py` | 12 种关系类型 + Aho-Corasick + 关系强度量化 + 演变追踪 |
+| `temporal_slicer.py` | 统计显著性检验 + 情感弧线检测 → Persona Layer 2 规则 |
 
 ### 验证与生成
 
 | 工具 | 功能 |
 |------|------|
-| `persona_validator.py` | 四维度多切片验证 + A-D 评分 + 智能修改建议 |
-| `canon_checker.py` | 多来源交叉验证 + 内置常见误解检测 + ReDoS 防护 |
+| `persona_validator.py` | 四维度多切片验证 + 风格一致性验证 + A-D 评分 |
+| `canon_checker.py` | 多来源交叉验证 + 外置误解库 + 通用模式检测 + ReDoS 防护 |
+| `data_injector.py` | 将工具量化数据注入到 Prompt 模板占位符 |
 | `skill_writer.py` | Skill 文件管理（list / create / delete） |
 | `version_manager.py` | 版本快照与回滚 |
 
@@ -217,19 +218,21 @@ arknights-operator-skill/
 │   ├── prts_client.py             #   PRTS API 客户端（重试 + 线程安全）
 │   ├── shared_utils.py            #   通用工具函数（含原子写入）
 │   ├── pipeline.py                #   一键编排器（支持断点续传）
-│   ├── context_annotator.py       #   语境标注器
-│   ├── speech_act_analyzer.py     #   话语行为分析（7 种核心类型）
-│   ├── temporal_slicer.py         #   时序切片分析
-│   ├── dialogue_fingerprint.py    #   对话指纹分析（单次遍历）
-│   ├── relationship_graph.py      #   关系图谱构建（Aho-Corasick）
-│   ├── persona_validator.py       #   Persona 验证器
-│   ├── canon_checker.py           #   设定交叉验证
+│   ├── context_annotator.py       #   语境标注器（多信号分类）
+│   ├── speech_act_analyzer.py     #   话语行为分析（上下文感知 + 行为链）
+│   ├── temporal_slicer.py         #   时序切片分析（统计显著性 + 弧线检测）
+│   ├── dialogue_fingerprint.py    #   对话指纹分析（8 维度 + 口头禅）
+│   ├── relationship_graph.py      #   关系图谱构建（强度量化 + 演变追踪）
+│   ├── persona_validator.py       #   Persona 验证器（风格一致性）
+│   ├── canon_checker.py           #   设定交叉验证（外置误解库）
+│   ├── data_injector.py           #   数据注入器（Prompt 模板填充）
 │   ├── game_data_parser.py        #   游戏资料解析
-│   ├── story_extractor.py         #   剧情提取器
+│   ├── story_extractor.py         #   剧情提取器（情感标注）
 │   ├── skill_writer.py            #   Skill 文件管理
 │   └── version_manager.py         #   版本存档与回滚
 ├── data/                          # 配置文件
-│   └── pinyin_map.json            #   拼音映射（可用户扩展）
+│   ├── pinyin_map.json            #   拼音映射（可用户扩展）
+│   └── misconceptions.json        #   外置误解库（按角色分组）
 ├── operators/                     # 生成的角色 Skill
 │   └── te-lei-xi-ya/              #   特蕾西娅示例
 │       ├── knowledge.md           #     Part A — 知识库
@@ -242,7 +245,7 @@ arknights-operator-skill/
 │       ├── temporal_slices.json
 │       └── versions/              #     版本快照
 ├── tests/
-│   └── test_smoke.py              # 冒烟测试（76 个用例）
+│   └── test_smoke.py              # 冒烟测试（98 个用例）
 ├── requirements.txt               # 核心依赖（仅标准库）
 ├── requirements-optional.txt      # 可选依赖（pypinyin）
 ├── .gitignore
@@ -309,20 +312,30 @@ arknights-operator-skill/
 
 > *诚实地说，博士——我们能做到的，和角色本身之间，还有很长的路。*
 
-### 总体判断：约 65–75%
+### 总体判断：约 70–80%
 
 | 维度 | 还原度 | 说明 |
 |------|--------|------|
 | 事实性还原 | ~90% | 种族、阵营、身份、核心事件——PRTS API + canon_checker 交叉验证 |
-| 表面语言模仿 | ~65–75% | 话语行为分类 + 语境化指纹 + per-situation 分片 |
-| 关系还原 | ~55–65% | 12 种关系类型 + 时序轨迹，但基于关键词匹配 |
-| 情感深度 | ~40–50% | 可检测克制型表达模式，无法捕捉矛盾情感 |
-| 决策还原 | ~35–45% | 对象差异化分析支撑 Layer 4，深层动机仍依赖 LLM |
+| 表面语言模仿 | ~75–85% | 8 维度对话指纹 + 口头禅检测 + 加权情感词典 + Prompt 数据注入 |
+| 关系还原 | ~65–75% | 12 种关系类型 + 强度量化(0.0-1.0) + 跨期演变追踪 |
+| 情感深度 | ~50–60% | 上下文感知分类 + 行为链检测 + 情感弧线识别 |
+| 决策还原 | ~40–50% | 对象差异化分析 + 多信号场景分类 + 风格一致性验证 |
+
+### 算法升级亮点（v3.1）
+
+1. **8 维度对话指纹** — 新增口头禅/高频短语提取（n-gram 分析），句式长度改用统计分布（百分位数 + CV）
+2. **加权情感词典** — 12 类情感（+嘲讽/绝望/好奇/戏谑），每词带权重（0.5-1.5）
+3. **关系强度量化** — 综合共现频率、情感词密度、直接对话次数，输出 0.0-1.0 强度值
+4. **上下文感知分类** — 考虑前后文调整话语行为分类置信度，检测行为链（如 question→evade→comfort）
+5. **Prompt 数据注入** — 工具量化数据直接填充到 Prompt 模板占位符，消除工具-LLM 断层
+6. **统计显著性检验** — 小样本警告 + 情感弧线检测（U型/下降/平稳/波动）
+7. **多证据融合推断** — 时期推断从串行改为加权投票，多证据一致时置信度更高
 
 ### 局限性
 
 1. **量化 ≠ 理解**——可以统计省略号频率，但无法理解沉默
-2. **关键词匹配的天花板**——含蓄表达会失效
+2. **关键词匹配的天花板**——含蓄表达会失效（暗喻检测已部分缓解）
 3. **情感复杂性的缺失**——无法捕捉矛盾情感和情感转折
 4. **决策逻辑的黑盒**——"她为什么这样做"只能交给 LLM 推断
 5. **数据覆盖偏差**——语音数据量远大于剧情数据，且场景单一
@@ -348,10 +361,10 @@ arknights-operator-skill/
 |------|-------------------|-------------------------|
 | 蒸馏对象 | 真人（前任/同事） | 游戏角色（有官方设定可考证） |
 | 架构 | 单层人格描述 | Knowledge + Persona 双轨 + 五层优先级 |
-| 语言风格 | 主观描述 | 7 维度量化语言指纹 |
-| 关系网络 | 手动罗列 | 自动提取（12 种关系 + 可信度评级） |
-| 一致性验证 | 无 | Persona 验证器（A-D 评分） |
-| 设定准确性 | 依赖主观记忆 | 多来源交叉验证 + 误解检测 |
+| 语言风格 | 主观描述 | 8 维度量化语言指纹 + 口头禅检测 + Prompt 数据注入 |
+| 关系网络 | 手动罗列 | 自动提取（12 种关系 + 强度量化 + 演变追踪） |
+| 一致性验证 | 无 | Persona 验证器（风格一致性 + A-D 评分） |
+| 设定准确性 | 依赖主观记忆 | 多来源交叉验证 + 外置误解库 + 通用模式检测 |
 | 纠正方式 | 重新生成 | Correction 层即时写入 |
 | 版本管理 | 无 | 自动快照 + 回滚 + 冲突解决 |
 

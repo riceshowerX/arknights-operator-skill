@@ -172,6 +172,28 @@
 
 ---
 
+## 数据上下文注入
+
+在生成 Knowledge 之前，运行以下命令获取量化分析数据：
+
+```bash
+python -m tools.data_injector --slug {角色slug} --section relationships --section temporal --section context --output operators/{角色slug}/data_context_knowledge.md
+```
+
+将输出的内容粘贴到下方 `{DATA_CONTEXT}` 占位符处。
+
+**生成规则**：
+1. "关键人物关系"章节**必须**参考关系图谱数据（关系类型、强度、证据数量）
+2. "核心事件时间线"章节**必须**参考时序切片数据中的时期定义
+3. 存在关系演变数据时，在关系描述中**必须**标注跨期变化
+4. 如果数据上下文中的信息与你的描述矛盾，以数据为准
+
+```
+{DATA_CONTEXT}
+```
+
+---
+
 ## 生成注意事项
 
 1. **资料不足的维度**：用"（暂无足够信息，建议追加资料）"占位

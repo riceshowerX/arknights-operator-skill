@@ -589,6 +589,157 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
 
 
 # ──────────────────────────────────────────────
+# 关系强度量化（升级新增）
+# ──────────────────────────────────────────────
+
+def compute_relationship_strength(
+    co_occurrence: int,
+    total_lines: int,
+    sentiment_words: list[str],
+    dialogue_count: int,
+) -> float:
+    """量化关系强度 (0.0 ~ 1.0)
+
+    综合考虑：
+    - 共现频率（归一化）
+    - 情感词密度（共现段落中的情感词数）
+    - 直接对话次数
+    """
+    if total_lines <= 0 or co_occurrence <= 0:
+        return 0.0
+
+    co_freq = co_occurrence / total_lines
+    sentiment_density = len(sentiment_words) / co_occurrence
+    dialogue_ratio = dialogue_count / co_occurrence
+
+    # 加权综合
+    strength = (
+        0.3 * min(co_freq * 10, 1.0)
+        + 0.3 * min(sentiment_density, 1.0)
+        + 0.4 * min(dialogue_ratio, 1.0)
+    )
+    return round(strength, 3)
+
+
+def enrich_edges_with_strength(
+    graph: dict,
+    all_texts: list[str],
+    operator_db: Optional[dict] = None,
+) -> dict:
+    """为图谱中的每条边计算关系强度
+
+    在 merge_relationships 的输出基础上，为每条边添加 strength 字段。
+    """
+    db = operator_db or OPERATOR_DB
+    total_lines = len(all_texts)
+
+    # 情感词集合（用于检测共现段落中的情感密度）
+    _sentiment_words = {
+        "信任", "相信", "托付", "关怀", "温柔", "珍视", "在乎",
+        "恨", "愤怒", "厌恶", "憎恨", "背叛", "敌人", "对手",
+        "战友", "并肩", "共同", "教导", "培养", "依赖",
+    }
+
+    for edge in graph.get("edges", []):
+        from_name = edge["from"]
+        to_name = edge["to"]
+
+        # 统计共现次数和情感词
+        co_count = 0
+        sentiment_found: list[str] = []
+        dialogue_count = 0
+
+        for text in all_texts:
+            has_from = from_name in text
+            has_to = to_name in text
+            if has_from and has_to:
+                co_count += 1
+                for sw in _sentiment_words:
+                    if sw in text:
+                        sentiment_found.append(sw)
+                # 检测是否有直接对话（引号内的交互）
+                if '"' in text or '"' in text or '「' in text:
+                    dialogue_count += 1
+
+        edge["strength"] = compute_relationship_strength(
+            co_count, total_lines, sentiment_found, dialogue_count
+        )
+
+    return graph
+
+
+def detect_relationship_evolution(
+    phase_graphs: dict[str, dict],
+    phase_order: list[str] | None = None,
+) -> list[dict]:
+    """检测关系的跨期演变（量化版）
+
+    输出每条关系的强度变化轨迹：
+    - 方向：加深/疏远/稳定
+    - delta：强度变化量
+    - 各时期强度值
+    """
+    if len(phase_graphs) < 2:
+        return []
+
+    # 按时序排列时期
+    if phase_order:
+        phases_sorted = [p for p in phase_order if p in phase_graphs]
+    else:
+        phases_sorted = sorted(phase_graphs.keys())
+
+    # 收集所有边
+    all_edge_keys: set[tuple[str, str, str]] = set()
+    for graph in phase_graphs.values():
+        for edge in graph.get("edges", []):
+            all_edge_keys.add((edge["from"], edge["to"], edge["type"]))
+
+    evolutions: list[dict] = []
+
+    for from_name, to_name, rel_type in sorted(all_edge_keys):
+        phase_strengths: dict[str, float] = {}
+        for phase in phases_sorted:
+            graph = phase_graphs[phase]
+            for edge in graph.get("edges", []):
+                if (edge["from"] == from_name and
+                    edge["to"] == to_name and
+                    edge["type"] == rel_type):
+                    phase_strengths[phase] = edge.get("strength", 0.0)
+                    break
+
+        if len(phase_strengths) < 2:
+            continue
+
+        present_phases = list(phase_strengths.keys())
+        first_strength = phase_strengths[present_phases[0]]
+        last_strength = phase_strengths[present_phases[-1]]
+        delta = last_strength - first_strength
+
+        if abs(delta) < 0.05:
+            direction = "稳定"
+        elif delta > 0:
+            direction = "加深"
+        else:
+            direction = "疏远"
+
+        evolutions.append({
+            "from": from_name,
+            "to": to_name,
+            "type": rel_type,
+            "direction": direction,
+            "delta": round(delta, 3),
+            "phase_strengths": phase_strengths,
+            "description": (
+                f"与{to_name}的{rel_type}关系从{present_phases[0]}时期"
+                f"({first_strength:.2f})到{present_phases[-1]}时期"
+                f"({last_strength:.2f})，趋势：{direction}"
+            ),
+        })
+
+    return evolutions
+
+
+# ──────────────────────────────────────────────
 # 文件读取
 # ──────────────────────────────────────────────
 
@@ -657,6 +808,9 @@ def generate_contextual_relationships(
     )
     global_graph = merge_relationships(global_rels, db)
 
+    # 为全局图谱添加关系强度
+    global_graph = enrich_edges_with_strength(global_graph, all_texts, db)
+
     # 按 period 提取关系
     phase_graphs = {}
     for phase, texts in phase_texts.items():
@@ -667,10 +821,15 @@ def generate_contextual_relationships(
             phase_text, f"context:phase:{phase}", db, aliases
         )
         if phase_rels:
-            phase_graphs[phase] = merge_relationships(phase_rels, db)
+            phase_graph = merge_relationships(phase_rels, db)
+            # 为分期图谱添加关系强度
+            phase_graph = enrich_edges_with_strength(phase_graph, texts, db)
+            phase_graphs[phase] = phase_graph
 
-    # 计算关系演变轨迹
+    # 计算关系演变轨迹（量化版）
     trajectories = compute_relation_trajectories(global_graph, phase_graphs)
+    # 添加量化演变检测
+    quantified_evolutions = detect_relationship_evolution(phase_graphs, PHASE_ORDER)
 
     # 构建 annotated_relations
     annotated_relations = []
@@ -712,6 +871,7 @@ def generate_contextual_relationships(
         "global_graph": global_graph,
         "phase_graphs": phase_graphs,
         "trajectories": trajectories,
+        "quantified_evolutions": quantified_evolutions,
         "annotated_relations": annotated_relations,
     }
 

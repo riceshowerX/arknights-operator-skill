@@ -304,6 +304,104 @@ def detect_situation_type(scene: str, text: str, narration: list) -> str:
     return "casual"
 
 
+# ──────────────────────────────────────────────
+# 对话归属精确化（升级新增）
+# ──────────────────────────────────────────────
+
+# 常见角色别名映射
+_SPEAKER_ALIAS_MAP = {
+    "魔王": "特蕾西娅",
+    "特雷西斯": "特雷西斯",
+    "博士": "博士",
+    "Doctor": "博士",
+    "凯尔希": "凯尔希",
+    "阿米娅": "阿米娅",
+    "W": "W",
+    "维什戴尔": "W",
+}
+
+
+def normalize_speaker_name(raw_name: str, target_character: str = "") -> str:
+    """标准化说话者名称
+
+    处理：
+    - 括号注释：特蕾西娅(幼年) → 特蕾西娅
+    - 别名：魔王 → 特蕾西娅
+    - 去除多余空白
+
+    Args:
+        raw_name: 原始说话者名称
+        target_character: 目标角色名（用于判断别名是否指向目标）
+
+    Returns:
+        标准化后的名称
+    """
+    # 去除括号注释
+    clean = re.sub(r'[（(].+?[）)]', '', raw_name).strip()
+
+    # 去除多余空白
+    clean = re.sub(r'\s+', '', clean)
+
+    # 别名映射
+    if clean in _SPEAKER_ALIAS_MAP:
+        return _SPEAKER_ALIAS_MAP[clean]
+
+    # 如果目标角色有别名，检查是否匹配
+    if target_character:
+        for alias, canonical in _SPEAKER_ALIAS_MAP.items():
+            if canonical == target_character and clean == alias:
+                return canonical
+
+    return clean
+
+
+# ──────────────────────────────────────────────
+# 情感标注（升级新增）
+# ──────────────────────────────────────────────
+
+# 舞台指示中的情感关键词
+_EMOTION_STAGE_KEYWORDS = {
+    "温柔": ["柔和", "微笑", "温暖", "轻声", "温柔", "柔声"],
+    "悲伤": ["沉默", "低头", "叹息", "泪水", "悲伤", "哀伤", "哽咽"],
+    "愤怒": ["愤怒", "厉声", "冷声", "目光锐利", "怒视", "咬牙"],
+    "坚定": ["坚定", "直视", "平静", "沉稳", "决然"],
+    "惊讶": ["惊讶", "震惊", "愣住", "意外"],
+    "嘲讽": ["冷笑", "嗤笑", "嘲讽", "讥讽", "轻蔑"],
+    "克制": ["克制", "压抑", "沉默片刻", "停顿"],
+}
+
+
+def extract_emotion_from_stage_direction(narration: list[str]) -> str | None:
+    """从舞台指示中提取情感标注
+
+    如：narration = ["目光柔和"] → emotion = "温柔"
+        narration = ["沉默", "低头"] → emotion = "悲伤"
+
+    Args:
+        narration: 括号内的舞台指示列表
+
+    Returns:
+        情感标签，或 None（无法判断）
+    """
+    if not narration:
+        return None
+
+    combined = " ".join(narration)
+
+    # 统计各情感类别的匹配数
+    emotion_scores: dict[str, int] = {}
+    for emotion, keywords in _EMOTION_STAGE_KEYWORDS.items():
+        score = sum(1 for kw in keywords if kw in combined)
+        if score > 0:
+            emotion_scores[emotion] = score
+
+    if not emotion_scores:
+        return None
+
+    # 返回得分最高的情感
+    return max(emotion_scores, key=emotion_scores.get)
+
+
 def infer_phase(scene: str, chapter: str) -> str:
     """基于章节名和场景关键词推断时间阶段
 

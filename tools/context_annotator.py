@@ -257,6 +257,120 @@ def annotate_archive_text(archive_text: str, index: int) -> dict:
 
 
 # ──────────────────────────────────────────────
+# 场景分类增强（升级新增）
+# ──────────────────────────────────────────────
+
+# 内容级场景关键词
+_CONTENT_SITUATION_KEYWORDS = {
+    "battle": ["战斗", "出击", "敌人", "进攻", "防守", "战场", "武器", "源石技艺"],
+    "intimate": ["休息", "夜晚", "安静", "星空", "月光", "独处", "私密"],
+    "farewell": ["告别", "再见", "离开", "永别", "最后一面", "送别"],
+    "confrontation": ["对峙", "质问", "背叛", "敌人", "对立", "冲突"],
+    "comfort": ["安慰", "别怕", "没事", "我在", "陪伴", "守护"],
+    "reflection": ["回忆", "过去", "曾经", "记忆", "往事", "思考"],
+}
+
+
+def classify_situation_v2(
+    title: str,
+    text: str,
+    interlocutor: str | None = None,
+) -> str:
+    """多信号场景分类
+
+    信号源：
+    1. 语音标题关键词（现有 VOICE_SITUATION_MAP）
+    2. 对话内容情感（新增）
+    3. 对话对象（新增）
+
+    使用多数投票融合多信号。
+
+    Args:
+        title: 语音标题
+        text: 对话文本
+        interlocutor: 对话对象
+
+    Returns:
+        场景类型字符串
+    """
+    signals: dict[str, str] = {}
+
+    # 信号 1：标题匹配（现有逻辑）
+    for key, sit_type in VOICE_SITUATION_MAP:
+        if key in title:
+            signals["title"] = sit_type
+            break
+
+    # 信号 2：内容关键词
+    content_scores: dict[str, int] = {}
+    for sit_type, keywords in _CONTENT_SITUATION_KEYWORDS.items():
+        score = sum(1 for kw in keywords if kw in text)
+        if score > 0:
+            content_scores[sit_type] = score
+
+    if content_scores:
+        best_content_sit = max(content_scores, key=content_scores.get)
+        signals["content"] = best_content_sit
+
+    # 信号 3：对话对象
+    if interlocutor:
+        if interlocutor in ["博士", "Doctor"]:
+            signals["interlocutor"] = "trust"  # 对博士通常是信任场景
+        elif interlocutor in ["敌人", "整合运动"]:
+            signals["interlocutor"] = "confrontation"
+
+    # 融合：多数投票
+    if signals:
+        from collections import Counter
+        vote_counts = Counter(signals.values())
+        # 标题信号权重更高
+        if "title" in signals:
+            return signals["title"]
+        return vote_counts.most_common(1)[0][0]
+
+    return "casual"
+
+
+# ──────────────────────────────────────────────
+# 对话对象内容推断（升级新增）
+# ──────────────────────────────────────────────
+
+def infer_interlocutor_from_content(
+    text: str,
+    known_characters: list[str] | None = None,
+) -> str | None:
+    """从对话内容推断说话对象
+
+    线索：
+    - 直接称呼："博士，你来了" → 对象是博士
+    - 第二人称 + 已知角色名
+
+    Args:
+        text: 对话文本
+        known_characters: 已知角色名列表
+
+    Returns:
+        推断的对话对象，或 None
+    """
+    if known_characters is None:
+        known_characters = ["博士", "Doctor", "凯尔希", "阿米娅", "W", "特雷西斯"]
+
+    for char in known_characters:
+        if char in text and len(char) >= 2:
+            # 检查是否是称呼而非提及
+            patterns = [
+                rf"^{char}[，,]",          # "博士，..."
+                rf"{char}[。！？]",         # "...博士。"
+                rf"(你|您).{{0,5}}{char}",  # "你就是博士"
+                rf"{char}[,，]\s*",         # "博士，"
+            ]
+            if any(re.search(p, text) for p in patterns):
+                return char
+
+    return None
+
+
+# ──────────────────────────────────────────────
 # 构建语境化数据
 # ──────────────────────────────────────────────
 

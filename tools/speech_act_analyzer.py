@@ -116,6 +116,224 @@ def classify_speech_acts(text: str) -> list[dict]:
 
 
 # ──────────────────────────────────────────────
+# 上下文感知分类（升级新增）
+# ──────────────────────────────────────────────
+
+def classify_with_context(
+    lines: list[dict],
+    window: int = 2,
+) -> list[list[dict]]:
+    """上下文感知的话语行为分类
+
+    考虑前 window 条台词的场景和对象，调整分类置信度。
+    例如：前一条是质问时，当前条的省略号更可能是回避而非克制。
+
+    Args:
+        lines: annotated_lines 列表（每条含 text 和 context）
+        window: 上下文窗口大小
+
+    Returns:
+        每条台词的话语行为分类结果列表
+    """
+    results: list[list[dict]] = []
+
+    for i, line in enumerate(lines):
+        text = line.get("text", "")
+        if not text or line.get("source") == "archive":
+            results.append([])
+            continue
+
+        acts = classify_speech_acts(text)
+
+        # 收集上下文中的行为类型
+        prev_act_types: set[str] = set()
+        for j in range(max(0, i - window), i):
+            if j < len(results):
+                for act in results[j]:
+                    prev_act_types.add(act["type"])
+
+        # 上下文调整规则
+        for act in acts:
+            # 规则1：前一条是质问 → 当前省略号更可能是回避
+            if "question" in prev_act_types and act["type"] == "evade":
+                act["confidence"] = min(act["confidence"] + 0.15, 1.0)
+                act["context_boost"] = "preceded_by_question"
+
+            # 规则2：前一条是宽慰 → 当前承诺更可能是回应性承诺
+            if "comfort" in prev_act_types and act["type"] == "commit":
+                act["confidence"] = min(act["confidence"] + 0.10, 1.0)
+                act["context_boost"] = "response_to_comfort"
+
+            # 规则3：前一条是回避 → 当前质问更可能是追问
+            if "evade" in prev_act_types and act["type"] == "question":
+                act["confidence"] = min(act["confidence"] + 0.12, 1.0)
+                act["context_boost"] = "follow_up_question"
+
+            # 规则4：前一条是存在表达 → 当前宽慰更可能是告别前的安慰
+            if "presence" in prev_act_types and act["type"] == "comfort":
+                act["confidence"] = min(act["confidence"] + 0.08, 1.0)
+                act["context_boost"] = "farewell_comfort"
+
+        results.append(acts)
+
+    return results
+
+
+# ──────────────────────────────────────────────
+# 行为链检测（升级新增）
+# ──────────────────────────────────────────────
+
+def detect_behavior_chains(
+    lines: list[dict],
+    min_chain_length: int = 3,
+    min_occurrences: int = 2,
+) -> list[dict]:
+    """检测重复出现的行为链模式
+
+    行为链是连续多条台词的话语行为序列，如：
+    质问 → 回避 → 宽慰 → 承诺（"接纳仪式"）
+    质问 → 质问 → 回避（"追问模式"）
+
+    Args:
+        lines: annotated_lines 列表
+        min_chain_length: 最小链长度
+        min_occurrences: 最小出现次数
+
+    Returns:
+        检测到的行为链模式列表
+    """
+    from collections import Counter
+
+    # 提取行为序列
+    act_sequence: list[str] = []
+    for line in lines:
+        if line.get("source") == "archive":
+            continue
+        acts = line.get("speech_acts", [])
+        if acts:
+            # 取置信度最高的行为
+            best_act = max(acts, key=lambda a: a.get("confidence", 0))
+            act_sequence.append(best_act["type"])
+
+    if len(act_sequence) < min_chain_length:
+        return []
+
+    # 提取所有 n-gram（n = min_chain_length 到 min_chain_length + 2）
+    chain_counter: Counter = Counter()
+    for n in range(min_chain_length, min(min_chain_length + 3, len(act_sequence) + 1)):
+        for i in range(len(act_sequence) - n + 1):
+            chain = tuple(act_sequence[i:i + n])
+            chain_counter[chain] += 1
+
+    # 筛选高频链
+    chains: list[dict] = []
+    for chain, count in chain_counter.most_common(20):
+        if count < min_occurrences:
+            break
+
+        # 生成自然语言描述
+        labels = [ACT_TYPE_LABELS.get(t, t) for t in chain]
+        chain_desc = " → ".join(labels)
+
+        # 解读行为链的含义
+        interpretation = _interpret_chain(chain)
+
+        chains.append({
+            "chain": list(chain),
+            "labels": labels,
+            "description": chain_desc,
+            "count": count,
+            "interpretation": interpretation,
+            "rule": f"存在重复行为链「{chain_desc}」（出现{count}次）——{interpretation}",
+        })
+
+    return chains
+
+
+def _interpret_chain(chain: tuple[str, ...]) -> str:
+    """解读行为链的含义"""
+    chain_str = "→".join(chain)
+
+    # 预定义的链解读
+    interpretations = {
+        "question→evade→comfort": "先追问立场，再回避自己的感受，最后宽慰对方——典型的'先确认再安抚'模式",
+        "question→evade→commit": "追问后回避，最终做出承诺——'被逼表态'模式",
+        "comfort→commit→presence": "宽慰后承诺，最后确认存在——'告别仪式'模式",
+        "evade→restrain→comfort": "先回避，再克制，最后宽慰——'自我压抑后转向关怀'模式",
+        "question→question→evade": "连续追问后回避——'追问到沉默'模式",
+        "invite→commit": "邀请后承诺——'共同行动'模式",
+        "comfort→comfort": "连续宽慰——'深度安抚'模式",
+    }
+
+    if chain_str in interpretations:
+        return interpretations[chain_str]
+
+    # 通用解读
+    if "question" in chain and "evade" in chain:
+        return "包含追问与回避的交互，体现角色在信息交换中的保留态度"
+    if "comfort" in chain and "commit" in chain:
+        return "包含宽慰与承诺，体现角色在情感支持中的坚定姿态"
+    if chain.count(chain[0]) == len(chain):
+        return f"连续重复{ACT_TYPE_LABELS.get(chain[0], chain[0])}行为，体现角色在此类场景中的持续性"
+
+    return "体现角色在特定场景中的固定行为序列"
+
+
+def detect_emotion_asymmetry(
+    profile: dict,
+) -> list[dict]:
+    """检测角色对不同对象的情感不对称
+
+    例如：对 A 宽慰但对 B 回避 → 角色对两人的信任度不同
+    """
+    by_interlocutor = profile.get("by_interlocutor", {})
+    asymmetries: list[dict] = []
+
+    persons = list(by_interlocutor.keys())
+    for i in range(len(persons)):
+        for j in range(i + 1, len(persons)):
+            p1, p2 = persons[i], persons[j]
+            if p1 == "unknown" or p2 == "unknown":
+                continue
+
+            acts1 = by_interlocutor[p1]
+            acts2 = by_interlocutor[p2]
+            total1 = sum(acts1.values()) or 1
+            total2 = sum(acts2.values()) or 1
+
+            # 找出差异最大的行为类型
+            all_types = set(acts1.keys()) | set(acts2.keys())
+            max_delta = 0
+            max_type = ""
+            for t in all_types:
+                pct1 = acts1.get(t, 0) / total1
+                pct2 = acts2.get(t, 0) / total2
+                delta = abs(pct1 - pct2)
+                if delta > max_delta:
+                    max_delta = delta
+                    max_type = t
+
+            if max_delta > 0.2 and max_type:
+                label = ACT_TYPE_LABELS.get(max_type, max_type)
+                pct1 = acts1.get(max_type, 0) / total1
+                pct2 = acts2.get(max_type, 0) / total2
+                more_to = p1 if pct1 > pct2 else p2
+                less_to = p2 if pct1 > pct2 else p1
+
+                asymmetries.append({
+                    "persons": [p1, p2],
+                    "act_type": max_type,
+                    "delta": round(max_delta, 3),
+                    "rule": (
+                        f"对{more_to}的{label}行为显著多于对{less_to}"
+                        f"（差异{max_delta:.0%}）——角色对两人的态度存在明显不对称"
+                    ),
+                })
+
+    return asymmetries
+
+
+# ──────────────────────────────────────────────
 # 画像构建
 # ──────────────────────────────────────────────
 
@@ -274,18 +492,45 @@ def main():
     with open(args.context_json, encoding='utf-8') as f:
         context = json.load(f)
 
-    # 分类话语行为
-    for line in context.get("annotated_lines", []):
+    # 分类话语行为（使用上下文感知分类）
+    annotated_lines = context.get("annotated_lines", [])
+    context_results = classify_with_context(annotated_lines)
+
+    for idx, line in enumerate(annotated_lines):
         if line.get("source") == "archive":
             continue
-        acts = classify_speech_acts(line["text"])
-        line["speech_acts"] = acts
+        if idx < len(context_results):
+            line["speech_acts"] = context_results[idx]
+        else:
+            line["speech_acts"] = classify_speech_acts(line["text"])
 
     # 构建画像
     profile = build_speech_act_profile(context["annotated_lines"])
 
     # 检测行为模式
     patterns = detect_behavioral_patterns(profile)
+
+    # 检测行为链（升级新增）
+    chains = detect_behavior_chains(context["annotated_lines"])
+    if chains:
+        for chain in chains:
+            patterns.append({
+                "pattern": f"chain_{'_'.join(chain['chain'])}",
+                "rule": chain["rule"],
+                "layer": 2,
+                "confidence": min(chain["count"] / 5, 0.9),
+            })
+
+    # 检测情感不对称（升级新增）
+    asymmetries = detect_emotion_asymmetry(profile)
+    if asymmetries:
+        for asym in asymmetries:
+            patterns.append({
+                "pattern": f"asymmetry_{asym['act_type']}",
+                "rule": asym["rule"],
+                "layer": 4,
+                "confidence": min(asym["delta"] * 2, 0.9),
+            })
 
     # 回写 context.json
     atomic_write_json(args.context_json, context)

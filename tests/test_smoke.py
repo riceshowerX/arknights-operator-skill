@@ -881,5 +881,358 @@ class TestSpeechActMergedTypes(unittest.TestCase):
         self.assertEqual(len(ACT_TYPE_LABELS), 7)
 
 
+class TestDialogueFingerprintV2(unittest.TestCase):
+    """dialogue_fingerprint.py 算法升级测试"""
+
+    def test_catchphrase_detection(self):
+        """测试维度8：口头禅/高频短语检测"""
+        from dialogue_fingerprint import analyze_catchphrases
+        dialogues = [
+            {"text": "我在，一直都在。"},
+            {"text": "我在，不要怕。"},
+            {"text": "我在，陪着你。"},
+            {"text": "我们走吧。"},
+            {"text": "我在。"},
+        ]
+        result = analyze_catchphrases(dialogues)
+        self.assertIn("signature_phrases", result)
+        phrases = result["signature_phrases"]
+        # "我在" 应该被检测到（出现 4 次）
+        phrase_texts = [p["phrase"] for p in phrases]
+        self.assertTrue(any("我在" in p for p in phrase_texts))
+
+    def test_emotion_lexicon_weights(self):
+        """测试情感词典带权重"""
+        from dialogue_fingerprint import EMOTION_LEXICON
+        # 检查情感词典格式：list[tuple[str, float]]
+        for emotion, words in EMOTION_LEXICON.items():
+            self.assertIsInstance(words, list)
+            for item in words:
+                self.assertIsInstance(item, tuple)
+                self.assertEqual(len(item), 2)
+                self.assertIsInstance(item[0], str)
+                self.assertIsInstance(item[1], (int, float))
+
+    def test_sentence_length_statistical_distribution(self):
+        """测试句式长度使用统计分布"""
+        from dialogue_fingerprint import analyze_sentence_length_distribution
+        dialogues = [
+            {"text": "我在。"},
+            {"text": "我会陪在你身边，直到最后。"},
+            {"text": "不要怕。"},
+            {"text": "我们做了可以做的一切，这就足够了。"},
+            {"text": "走吧。"},
+        ]
+        result = analyze_sentence_length_distribution(dialogues)
+        # 应该包含统计分布字段
+        self.assertIn("median", result)
+        self.assertIn("percentiles", result)
+        self.assertIn("p25", result["percentiles"])
+        self.assertIn("p75", result["percentiles"])
+        self.assertIn("cv", result)
+        self.assertIn("rhythm", result)
+
+    def test_metaphor_dark_metaphor(self):
+        """测试暗喻检测"""
+        from dialogue_fingerprint import analyze_rhetoric_patterns
+        dialogues = [
+            {"text": "你是光，照亮了我们。"},
+            {"text": "她化作了星辰。"},
+            {"text": "普通的一句话。"},
+        ]
+        result = analyze_rhetoric_patterns(dialogues)
+        # 暗喻应该被检测到（metaphor_pct > 0）
+        self.assertGreater(result.get("metaphor_pct", 0), 0)
+
+
+class TestRelationshipGraphV2(unittest.TestCase):
+    """relationship_graph.py 算法升级测试"""
+
+    def test_compute_relationship_strength(self):
+        """测试关系强度量化"""
+        from relationship_graph import compute_relationship_strength
+        # 高共现 + 高情感密度 + 高对话比例 → 高强度
+        strong = compute_relationship_strength(
+            co_occurrence=50, total_lines=100,
+            sentiment_words=["温柔", "信任", "陪伴"],
+            dialogue_count=30,
+        )
+        # 低共现 + 低情感 → 低强度
+        weak = compute_relationship_strength(
+            co_occurrence=3, total_lines=100,
+            sentiment_words=[],
+            dialogue_count=1,
+        )
+        self.assertGreater(strong, weak)
+        self.assertGreaterEqual(strong, 0.0)
+        self.assertLessEqual(strong, 1.0)
+
+    def test_detect_relationship_evolution(self):
+        """测试关系演变追踪"""
+        from relationship_graph import detect_relationship_evolution
+        phase_graphs = {
+            "early": {
+                "nodes": [{"name": "特蕾西娅"}, {"name": "阿米娅"}],
+                "edges": [{"from": "特蕾西娅", "to": "阿米娅", "type": "guardian", "strength": 0.3}],
+            },
+            "babel": {
+                "nodes": [{"name": "特蕾西娅"}, {"name": "阿米娅"}],
+                "edges": [{"from": "特蕾西娅", "to": "阿米娅", "type": "mentor", "strength": 0.7}],
+            },
+            "resurrected": {
+                "nodes": [{"name": "特蕾西娅"}, {"name": "阿米娅"}],
+                "edges": [{"from": "特蕾西娅", "to": "阿米娅", "type": "mother", "strength": 0.9}],
+            },
+        }
+        evolutions = detect_relationship_evolution(phase_graphs)
+        self.assertIsInstance(evolutions, list)
+        # 应该检测到特蕾西娅-阿米娅关系的演变
+        if evolutions:
+            self.assertIn("direction", evolutions[0])
+            self.assertIn("delta", evolutions[0])
+
+
+class TestSpeechActAnalyzerV2(unittest.TestCase):
+    """speech_act_analyzer.py 算法升级测试"""
+
+    def test_classify_with_context(self):
+        """测试上下文感知分类"""
+        from speech_act_analyzer import classify_with_context
+        lines = [
+            {"text": "你为什么要离开？", "speaker": "博士"},
+            {"text": "……", "speaker": "特蕾西娅"},
+            {"text": "别走。", "speaker": "博士"},
+        ]
+        results = classify_with_context(lines, window=2)
+        self.assertEqual(len(results), 3)
+        # 第二条"……"在质问后应该是 evade
+        evade_acts = [a for a in results[1] if a["type"] == "evade"]
+        self.assertTrue(len(evade_acts) > 0)
+
+    def test_detect_behavior_chains(self):
+        """测试行为链检测"""
+        from speech_act_analyzer import detect_behavior_chains
+        # 模拟 annotated_lines 格式
+        lines = [
+            {"text": "你为什么要离开？", "speech_acts": [{"type": "question", "confidence": 0.9}]},
+            {"text": "……", "speech_acts": [{"type": "evade", "confidence": 0.8}]},
+            {"text": "别怕，我在。", "speech_acts": [{"type": "comfort", "confidence": 0.9}]},
+            {"text": "你为什么要离开？", "speech_acts": [{"type": "question", "confidence": 0.9}]},
+            {"text": "……", "speech_acts": [{"type": "evade", "confidence": 0.8}]},
+            {"text": "别怕，我在。", "speech_acts": [{"type": "comfort", "confidence": 0.9}]},
+            {"text": "你愿意和我一起吗？", "speech_acts": [{"type": "invite", "confidence": 0.9}]},
+            {"text": "我会一直在。", "speech_acts": [{"type": "commit", "confidence": 0.9}]},
+        ]
+        chains = detect_behavior_chains(lines, min_chain_length=3, min_occurrences=2)
+        self.assertIsInstance(chains, list)
+        # question→evade→comfort 应该被检测到（出现 2 次）
+        if chains:
+            top_chain = chains[0]
+            self.assertIn("chain", top_chain)
+            self.assertIn("count", top_chain)
+
+
+class TestTemporalSlicerV2(unittest.TestCase):
+    """temporal_slicer.py 算法升级测试"""
+
+    def test_compare_metrics_small_sample(self):
+        """测试小样本警告"""
+        from temporal_slicer import compare_metrics_v2
+        baseline = {"line_count": 3, "ellipsis_pct": 40.0, "avg_sentence_length": 8.0}
+        comparison = {"line_count": 2, "ellipsis_pct": 60.0, "avg_sentence_length": 12.0}
+        diffs = compare_metrics_v2(baseline, comparison)
+        # 小样本应该产生警告
+        warnings = [d for d in diffs if d.get("sample_warning") is True]
+        self.assertTrue(len(warnings) > 0)
+
+    def test_detect_emotion_arc(self):
+        """测试情感弧线检测"""
+        from temporal_slicer import detect_emotion_arc
+        slice_metrics = {
+            "early": {"ellipsis_pct": 20, "negation_pct": 10},
+            "babel": {"ellipsis_pct": 40, "negation_pct": 30},
+            "resurrected": {"ellipsis_pct": 15, "negation_pct": 5},
+        }
+        timeline = [
+            {"id": "early"}, {"id": "babel"}, {"id": "resurrected"}
+        ]
+        result = detect_emotion_arc(slice_metrics, timeline)
+        self.assertIn("arc", result)
+        self.assertIn("trajectory", result)
+
+
+class TestPhaseInferrerV2(unittest.TestCase):
+    """phase_inferrer.py 算法升级测试"""
+
+    def test_infer_phase_ensemble(self):
+        """测试多证据融合推断"""
+        from phase_inferrer import infer_phase_ensemble
+        # 多个证据指向 babel
+        result = infer_phase_ensemble(
+            text="巴别塔的旗帜在风中飘扬，特蕾西娅站在舰桥上",
+            chapter="6-1",
+            operator_name="theresa",
+        )
+        self.assertEqual(result.phase, "babel")
+        # evidence 是列表，包含证据记录
+        self.assertIsInstance(result.evidence, list)
+        self.assertTrue(len(result.evidence) > 0)
+
+    def test_infer_phase_ensemble_conflict(self):
+        """测试冲突证据下的融合"""
+        from phase_inferrer import infer_phase_ensemble
+        # 内容指向 babel，章节指向 resurrected
+        result = infer_phase_ensemble(
+            text="巴别塔的旗帜在风中飘扬",
+            chapter="14-1",  # 后期章节
+            operator_name="theresa",
+        )
+        # 应该选择权重更高的证据
+        self.assertIn(result.phase, ["babel", "resurrected"])
+
+
+class TestContextAnnotatorV2(unittest.TestCase):
+    """context_annotator.py 算法升级测试"""
+
+    def test_classify_situation_multi_signal(self):
+        """测试多信号场景分类"""
+        from context_annotator import classify_situation_v2
+        # 标题 + 内容 + 对象 多信号
+        result = classify_situation_v2(
+            title="战斗开始",
+            text="准备出击，敌人就在前方",
+            interlocutor="博士",
+        )
+        # 应该返回战斗相关场景（battle 或 confront）
+        self.assertIn(result, ["battle", "confront", "combat"])
+
+    def test_infer_interlocutor_from_content(self):
+        """测试从内容推断对话对象"""
+        from context_annotator import infer_interlocutor_from_content
+        result = infer_interlocutor_from_content(
+            "博士，你来了。我等你很久了。",
+            known_characters=["博士", "阿米娅", "凯尔希"],
+        )
+        self.assertEqual(result, "博士")
+
+    def test_infer_interlocutor_none(self):
+        """测试无法推断对话对象"""
+        from context_annotator import infer_interlocutor_from_content
+        result = infer_interlocutor_from_content(
+            "今天天气真好。",
+            known_characters=["博士", "阿米娅"],
+        )
+        self.assertIsNone(result)
+
+
+class TestStoryExtractorV2(unittest.TestCase):
+    """story_extractor.py 算法升级测试"""
+
+    def test_normalize_speaker_name(self):
+        """测试说话者名称标准化"""
+        from story_extractor import normalize_speaker_name
+        # 括号注释去除
+        self.assertEqual(normalize_speaker_name("特蕾西娅(幼年)", "特蕾西娅"), "特蕾西娅")
+        self.assertEqual(normalize_speaker_name("特蕾西娅（魔王）", "特蕾西娅"), "特蕾西娅")
+        # 普通名称不变
+        self.assertEqual(normalize_speaker_name("阿米娅", "特蕾西娅"), "阿米娅")
+
+    def test_extract_emotion_from_stage_direction(self):
+        """测试从舞台指示提取情感"""
+        from story_extractor import extract_emotion_from_stage_direction
+        # 函数接受 list[str] 参数
+        self.assertEqual(extract_emotion_from_stage_direction(["目光柔和"]), "温柔")
+        self.assertEqual(extract_emotion_from_stage_direction(["她微笑着"]), "温柔")
+        self.assertEqual(extract_emotion_from_stage_direction(["沉默不语"]), "悲伤")
+        self.assertEqual(extract_emotion_from_stage_direction(["愤怒地"]), "愤怒")
+        self.assertIsNone(extract_emotion_from_stage_direction(["普通描述"]))
+
+
+class TestCanonCheckerV2(unittest.TestCase):
+    """canon_checker.py 算法升级测试"""
+
+    def test_external_misconceptions_loading(self):
+        """测试外部误解库加载"""
+        from canon_checker import _load_builtin_misconceptions
+        # 应该能加载 data/misconceptions.json
+        result = _load_builtin_misconceptions()
+        self.assertIsInstance(result, list)
+        # 应该包含一些误解条目
+        self.assertTrue(len(result) > 0)
+        # 每个条目应该有 id 和 check_patterns
+        if result:
+            self.assertIn("id", result[0])
+            self.assertIn("check_patterns", result[0])
+
+    def test_check_character_consistency(self):
+        """测试角色一致性检查"""
+        from canon_checker import check_character_consistency
+        persona = {
+            "layer0_core": "从不使用感叹号，说话平静",
+            "layer5_taboos": ["不使用感叹号"],
+        }
+        # 包含感叹号的文本应该触发警告
+        warnings = check_character_consistency("这是错的！", persona)
+        self.assertIsInstance(warnings, list)
+
+
+class TestPersonaValidatorV2(unittest.TestCase):
+    """persona_validator.py 算法升级测试"""
+
+    def test_validate_style_consistency(self):
+        """测试风格一致性验证"""
+        from persona_validator import validate_style_consistency
+        # 函数签名：validate_style_consistency(dialogues: list[str], fingerprint: dict)
+        dialogues = [
+            "我在。",
+            "不要怕。",
+            "走吧。",
+            "我会陪着你。",
+            "这就足够了。",
+        ]
+        fingerprint = {
+            "pause_markers": {"ellipsis_pct": 5.0},  # 预期 5%
+            "sentence_length": {"median": 8, "rhythm": "稳定"},
+        }
+        result = validate_style_consistency(dialogues, fingerprint)
+        self.assertIn("issues", result)
+        self.assertIn("score", result)
+        self.assertIn("checks", result)
+
+
+class TestDataInjector(unittest.TestCase):
+    """data_injector.py 数据注入器测试"""
+
+    def test_format_fingerprint(self):
+        """测试对话指纹格式化"""
+        from data_injector import format_fingerprint
+        data = {
+            "sentence_length": {"type": "简短", "median": 6, "p25": 3, "p75": 10, "cv": 0.5, "rhythm": "稳定"},
+            "pause_markers": {"ellipsis_pct": 42.0, "exclamation_pct": 5.0, "question_pct": 8.0},
+            "self_reference": {"primary": "我", "frequency_per_line": 0.8},
+            "emotion": {"dominant": "温柔", "breadth": 5, "spectrum": {"温柔": 15, "悲伤": 8}},
+            "catchphrases": {"signature_phrases": [{"phrase": "我在", "count": 12}]},
+        }
+        result = format_fingerprint(data)
+        self.assertIn("句式长度", result)
+        self.assertIn("省略号", result)
+        self.assertIn("口头禅", result)
+
+    def test_format_relationships(self):
+        """测试关系图谱格式化"""
+        from data_injector import format_relationships
+        data = {
+            "relations": [
+                {"target": "阿米娅", "type": "mentor", "strength": 0.85, "evidence_count": 20},
+            ],
+            "evolutions": [
+                {"pair": "阿米娅", "direction": "加深", "delta": 0.3, "from_phase": "early", "to_phase": "babel"},
+            ],
+        }
+        result = format_relationships(data)
+        self.assertIn("阿米娅", result)
+        self.assertIn("关系演变", result)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

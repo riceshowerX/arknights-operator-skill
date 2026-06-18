@@ -2,7 +2,7 @@
 name: create-operator
 description: "Distill an Arknights operator into an AI Skill. Generate Knowledge + Persona with 5-layer structure, evolution support. | 将明日方舟角色蒸馏成AI Skill，生成知识库+5层人格，支持持续进化。"
 argument-hint: "[operator-name-or-slug]"
-version: "3.0.0"
+version: "3.1.0"
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
 ---
@@ -46,6 +46,7 @@ allowed-tools: Read, Write, Edit, Bash
 | 验证 Persona 一致性 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/persona_validator.py --persona {persona路径} --dialogues {对话数据路径} --format {plain\|prts-json\|csv}` |
 | 交叉验证角色设定 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/canon_checker.py --sources {来源1} {来源2} ... [--misconceptions {自定义误解库}]` |
 | 写入/更新 Skill 文件 | `Write` / `Edit` 工具 |
+| 注入量化数据到 Prompt | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/data_injector.py --fingerprint {fingerprint.json} --relationships {graph.json} --slices {slices.json} --output injected_prompts/` |
 | 版本管理 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/version_manager.py` |
 | 列出已有 Skill | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/skill_writer.py --action list` |
 
@@ -54,14 +55,15 @@ allowed-tools: Read, Write, Edit, Bash
 ### 工具详情
 
 #### dialogue_fingerprint.py — 对话指纹分析器
-从角色语音/对话文本中自动提取 7 个维度的量化语言特征：
-1. **句式长度分布** — 长句/短句/碎片比例
+从角色语音/对话文本中自动提取 8 个维度的量化语言特征：
+1. **句式长度分布** — 统计分布分析（百分位数 + 变异系数 + 节奏稳定性判断）
 2. **停顿标记** — 省略号、破折号的使用频率与模式
 3. **自称模式** — "我"/"吾"/省略自称的频率
-4. **情感词汇** — 8 类情感（温柔/悲伤/愤怒/坚定/恐惧/希望/孤独/信任）的词汇密度
-5. **修辞模式** — 反问、排比、隐喻、设问的使用频率
+4. **情感词汇** — 12 类情感（含嘲讽/绝望/好奇/戏谑）的加权词汇密度（权重 0.5-1.5）
+5. **修辞模式** — 反问、排比、明喻、暗喻、设问的使用频率（支持暗喻检测如"你是光"）
 6. **称呼模式** — 对不同人的差异化称呼
 7. **自然意象偏好** — 花朵/星空/大地等意象的出现频率
+8. **口头禅/标志性短语** — n-gram 频率分析，自动发现角色特有的高频短语
 
 支持**语境化模式**（`--context-json`）：按场景/对象/时期分片分析，输出各分片指纹及与全局的差异（shifts），直接写入 Persona Layer 2-4。
 
@@ -71,11 +73,15 @@ allowed-tools: Read, Write, Edit, Bash
 - 检测 12 种关系类型（亲属/战友/对抗/信任/背叛/师徒/情感等）
 - 改进的方向判断（语法模式 + 关键词距离 + 语序综合判断）
 - 计算关系可信度（基于出现频率和多来源交叉）
+- **关系强度量化**（0.0-1.0）：综合共现频率、情感词密度、直接对话次数
+- **关系演变追踪**：检测跨时期关系强度变化（加深/疏远），输出演变轨迹
 - 支持**语境化模式**（`--context-json`）：按时期分片提取关系，计算跨时期关系演变轨迹（trajectories），结果回写 context.json 的 annotated_relations
 
 #### speech_act_analyzer.py — 话语行为分析器
 从角色对话中分类话语行为（邀请/回避/质问/承诺/宽慰/克制/存在确认等）：
-- 基于规则的话语行为分类（10+ 种类型）
+- 基于规则的话语行为分类（7 种核心类型）
+- **上下文感知分类**：考虑前后文调整分类置信度（如质问后的省略号更可能是回避）
+- **行为链检测**：识别角色的典型行为序列（如 question→evade→comfort 接纳仪式）
 - 按场景/对象/时期的行为分布统计
 - 自动检测行为模式并生成可执行规则（如"高回避倾向""选择性邀请""克制型情感表达"）
 - 输出 speech_act_profile.json，回写 context.json 的 speech_acts 字段
@@ -83,6 +89,8 @@ allowed-tools: Read, Write, Edit, Bash
 #### temporal_slicer.py — 时序切片器
 按 timeline 的 period 切片分析角色语言，检测跨期演变：
 - 按 period 分组计算切片级指标（句式长度/省略号/否定句/话语行为/自称等）
+- **统计显著性检验**：小样本警告（<5 条时标记为不可靠）+ 效应量计算
+- **情感弧线检测**：识别跨时期情感趋势（U型/下降/平稳/波动）
 - 相邻时期比较，检测显著偏移
 - 对象维度：同一时期内对不同人的表达差异
 - 生成可写入 Persona Layer 2/4 的时序演变规则
@@ -90,12 +98,16 @@ allowed-tools: Read, Write, Edit, Bash
 #### context_annotator.py — 语境标注器
 将所有原始数据统一标注为语境化数据模型：
 - 合并 game_data_parser、story_extractor、语音数据
+- **多信号场景分类**：标题关键词 + 内容情感 + 对话对象 + 时间段综合判断
+- **对话对象内容推断**：从对话内容中识别称呼模式（如"博士，你来了"→对象是博士）
 - 自动推断场景类型、对话对象、时期
 - 输出 context.json（统一数据中间层，下游所有工具的消费源）
 
 #### story_extractor.py — 剧情对话提取器
 从 PRTS Wiki 剧情页面提取角色对话：
 - 自动识别目标角色的台词
+- **说话者名称标准化**：处理括号注释（如"特蕾西娅(幼年)"→"特蕾西娅"）和别名映射
+- **舞台指示情感标注**：从括号内描述提取情感（如"目光柔和"→温柔）
 - 推断场景和时期
 - 提取旁白/舞台指示
 - 输出结构化 JSON
@@ -105,15 +117,25 @@ allowed-tools: Read, Write, Edit, Bash
 - **Layer 0 验证**：检测对话是否违反核心性格规则（如"从不用感叹号"→检测感叹号）
 - **Layer 2 验证**：检查口头禅出现频率、高频词是否确实高频、自称模式是否一致
 - **Layer 5 验证**：检测对话是否触碰禁忌
+- **风格一致性验证**：对比 Persona 描述与 fingerprint 量化数据（句式/停顿/情感/修辞）
 - 综合评分 A-D 等级，标注具体违反示例
 
 #### canon_checker.py — 设定交叉验证器
 从多个来源交叉验证角色设定，标注矛盾和可信度：
 - 自动提取设定声明（种族、阵营、身份、MBTI）
 - 多来源一致性比对（一致→confirmed / 不一致→conflicted / 单一来源→unverified）
-- 内置明日方舟常见误解检测（如"特蕾西娅是维多利亚统治者"等），支持排除模式和上下文验证减少误报
+- **外置误解库**：从 `data/misconceptions.json` 加载，支持按角色扩展
+- **通用模式检测**：阵营混淆、关系误判、时间线错乱等通用误解模式
+- **角色一致性检查**：基于 persona.md 的 Layer 0 规则和 Layer 5 禁忌验证文本
 - 支持 `--misconceptions` 加载自定义误解库 JSON
 - 来源可信度评级（官方/Wiki > 社区考据 > 同人）
+
+#### data_injector.py — 数据注入器
+将工具链的量化分析结果注入到 Prompt 模板的占位符中：
+- 格式化对话指纹数据（句式/停顿/情感/修辞/口头禅）
+- 格式化关系图谱数据（关系类型 + 强度 + 演变）
+- 格式化时序切片数据（弧线 + 偏移）
+- 输出注入后的 Prompt 模板，确保 LLM 生成时参考真实数据而非空白模板
 
 ---
 
@@ -239,9 +261,18 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
      --output operators/{slug}/temporal_slices.json
    ```
 
-6. **注入 Persona/Knowledge**：
-   - 按照 `persona_builder.md` 的"语境化数据注入"规则，将分析结果注入 Persona 各层
-   - 按照 `knowledge_builder.md` 的"语境化数据注入"规则，将时间线/关系注入 Knowledge
+6. **数据注入到 Prompt**：
+   ```bash
+   python3 ${OPERATOR_SKILL_DIR}/tools/data_injector.py \
+     --fingerprint operators/{slug}/fingerprint.json \
+     --relationships operators/{slug}/context.json \
+     --slices operators/{slug}/temporal_slices.json \
+     --output operators/{slug}/injected_prompts/
+   ```
+
+7. **注入 Persona/Knowledge**：
+   - 按照 `persona_builder.md` 的"数据驱动约束"规则，将分析结果注入 Persona 各层
+   - 按照 `knowledge_builder.md` 的"数据驱动约束"规则，将时间线/关系注入 Knowledge
 
 ### Step 4：生成并预览
 

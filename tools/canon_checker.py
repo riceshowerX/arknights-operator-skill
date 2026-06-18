@@ -80,77 +80,99 @@ def _validate_regex_safety(pattern: str, source_id: str = "") -> None:
 
 
 # ──────────────────────────────────────────────
-# 已知常见误解库（明日方舟特化）
+# 误解库加载与通用检测模式
 # ──────────────────────────────────────────────
 
-BUILTIN_MISCONCEPTIONS = [
+# 内置误解库（作为 fallback，优先从 data/misconceptions.json 加载）
+BUILTIN_MISCONCEPTIONS: list[dict] = []
+
+# 通用误解检测模式（适用于所有角色）
+GENERIC_MISCONCEPTION_PATTERNS = [
     {
-        "id": "M001",
-        "wrong": "特蕾西娅是维多利亚的实际统治者",
-        "correct": "特蕾西娅是卡兹戴尔正统萨卡兹魔王，维多利亚摄政王是特雷西斯",
+        "id": "G001",
+        "category": "阵营混淆",
+        "description": "检测角色是否被错误地归入不相关的阵营",
         "check_patterns": [
             {
-                "pattern": r"特蕾西娅.*维多利亚.*(统治|摄政|女王|掌权)",
-                "warning": "可能混淆了特蕾西娅与特雷西斯的身份",
+                "pattern": r"(整合运动|深池|莱茵生命|喀兰贸易).{0,10}(创始人|领袖|首领|核心成员)",
+                "warning": "请确认该角色是否确实属于此阵营",
+            },
+        ],
+        "exclude_patterns": [],
+    },
+    {
+        "id": "G002",
+        "category": "关系误判",
+        "description": "检测角色关系是否被过度简化或错误描述",
+        "check_patterns": [
+            {
+                "pattern": r"(纯粹|完全|绝对是).{0,5}(恶人|坏人|反派|敌人)",
+                "warning": "角色关系可能被过度简化",
+            },
+            {
+                "pattern": r"(恋人|情侣|夫妻|爱人).{0,5}(但|然而|其实)",
+                "warning": "可能存在关系误判或同人创作混淆",
             },
         ],
         "exclude_patterns": [
-            r"特雷西斯.*维多利亚.*(摄政|统治)",
-            r"维多利亚.*摄政.*特雷西斯",
-            r"特蕾西娅[^，。]*不是.*维多利亚",
+            r"并非.{0,5}(纯粹|完全)",
+            r"不是.{0,5}(恶人|坏人|反派)",
         ],
     },
     {
-        "id": "M002",
-        "wrong": "特蕾西娅属于整合运动",
-        "correct": "特蕾西娅创立的是巴别塔（罗德岛前身），整合运动是塔露拉领导的独立组织",
+        "id": "G003",
+        "category": "时间线错乱",
+        "description": "检测事件时间顺序是否被混淆",
         "check_patterns": [
             {
-                "pattern": r"特蕾西娅.*整合运动",
-                "warning": "特蕾西娅不属于整合运动",
+                "pattern": r"(巴别塔|罗德岛).{0,10}(之前|以前|成立前).{0,10}(整合运动|深池)",
+                "warning": "组织时间线可能被混淆",
             },
         ],
-        "exclude_patterns": [
-            r"特蕾西娅[^，。]*不属于?整合运动",
-            r"特蕾西娅[^，。]*不是.*整合运动",
-        ],
-    },
-    {
-        "id": "M003",
-        "wrong": "「让所有人为我而死，这便是慈悲」是特蕾西娅的理念",
-        "correct": "这不是她的理念或原话，她主张和平重建、尽量减少牺牲",
-        "check_patterns": [
-            {
-                "pattern": r"为我而死.*慈悲|慈悲.*为我而死",
-                "warning": "这不是特蕾西娅的理念",
-            },
-            {
-                "pattern": r"让所有人.*死.*慈悲",
-                "warning": "错误归因——这不是特蕾西娅的原话",
-            },
-        ],
-        "exclude_patterns": [
-            r"不是.{0,5}(特蕾西娅|她)的理念",
-            r"错误归因.{0,5}(特蕾西娅|她)",
-            r"(特蕾西娅|她).{0,10}(不是|并非).{0,10}(理念|原话)",
-        ],
-    },
-    {
-        "id": "M004",
-        "wrong": "特雷西斯是纯粹的恶人",
-        "correct": "特雷西斯理念与特蕾西娅对立但并非单纯恶人，曾主动放弃魔王之位为胞妹加冕",
-        "check_patterns": [
-            {
-                "pattern": r"特雷西斯.*(纯粹|完全|绝对是).*恶|邪恶",
-                "warning": "过度简化了特雷西斯的角色",
-            },
-        ],
-        "exclude_patterns": [
-            r"特雷西斯[^，。]*(不是|并非).*(纯粹|完全|绝对).*恶",
-            r"并非单纯.*恶人",
-        ],
+        "exclude_patterns": [],
     },
 ]
+
+
+def _load_builtin_misconceptions() -> list[dict]:
+    """从 data/misconceptions.json 加载内置误解库，失败则返回空列表"""
+    data_dir = Path(__file__).parent.parent / "data"
+    json_path = data_dir / "misconceptions.json"
+
+    if not json_path.exists():
+        return []
+
+    try:
+        raw = json.loads(json_path.read_text(encoding="utf-8"))
+        if not isinstance(raw, list):
+            return []
+
+        # 归一化格式
+        result = []
+        for item in raw:
+            if not isinstance(item, dict) or "id" not in item:
+                continue
+            patterns = item.get("check_patterns", [])
+            norm_patterns = []
+            for p in patterns:
+                if isinstance(p, str):
+                    norm_patterns.append({"pattern": p, "warning": f"匹配到误解模式: {p}"})
+                elif isinstance(p, dict) and "pattern" in p:
+                    norm_patterns.append(p)
+            result.append({
+                "id": item["id"],
+                "wrong": item.get("wrong", ""),
+                "correct": item.get("correct", ""),
+                "check_patterns": norm_patterns,
+                "exclude_patterns": item.get("exclude_patterns", []),
+            })
+        return result
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return []
+
+
+# 初始化时加载
+BUILTIN_MISCONCEPTIONS = _load_builtin_misconceptions()
 
 
 def load_misconceptions(filepath: Optional[str] = None) -> list[dict]:
@@ -373,6 +395,158 @@ def check_misconceptions(
     return warnings
 
 
+def check_generic_misconceptions(
+    text: str,
+    source_label: str,
+    patterns: Optional[list[dict]] = None,
+) -> list[dict]:
+    """
+    通用误解检测 —— 适用于所有角色的通用模式检测
+
+    检测类型：
+    - 阵营混淆：角色被错误归入不相关阵营
+    - 关系误判：角色关系被过度简化或错误描述
+    - 时间线错乱：事件时间顺序被混淆
+
+    返回: [{"pattern_id": "G001", "category": "阵营混淆", "warning": "...", "source": "xxx"}, ...]
+    """
+    if patterns is None:
+        patterns = GENERIC_MISCONCEPTION_PATTERNS
+
+    warnings = []
+
+    for p in patterns:
+        for cp in p.get("check_patterns", []):
+            pattern = cp["pattern"] if isinstance(cp, dict) else cp
+            warning_text = cp.get("warning", "") if isinstance(cp, dict) else f"匹配到通用模式: {pattern}"
+
+            match = re.search(pattern, text)
+            if not match:
+                continue
+
+            # 检查排除模式
+            excluded = False
+            ctx_start = max(0, match.start() - 200)
+            ctx_end = min(len(text), match.end() + 200)
+            surrounding_text = text[ctx_start:ctx_end]
+
+            for exc_pat in p.get("exclude_patterns", []):
+                if re.search(exc_pat, surrounding_text):
+                    excluded = True
+                    break
+
+            if excluded:
+                continue
+
+            # 否定词检测
+            start = max(0, match.start() - 40)
+            end = min(len(text), match.end() + 40)
+            surrounding = text[start:end]
+            negation_cues = ["不是", "并非", "并不", "没有", "错误", "误解"]
+            if any(cue in surrounding for cue in negation_cues):
+                continue
+
+            warnings.append({
+                "pattern_id": p["id"],
+                "category": p.get("category", "通用检测"),
+                "description": p.get("description", ""),
+                "matched_text": match.group(0),
+                "warning": warning_text,
+                "source": source_label,
+            })
+
+    return warnings
+
+
+def check_character_consistency(
+    text: str,
+    persona: Optional[dict] = None,
+) -> list[dict]:
+    """
+    角色一致性检查 —— 检测文本是否与角色设定一致
+
+    基于 persona.md 中的 Layer 0 规则和 Layer 5 禁忌进行语义级检查：
+    - 禁忌规则：如"不使用感叹号"、"不说粗话"
+    - 情感一致性：如"从不表现出冷漠"
+
+    Args:
+        text: 待检查文本
+        persona: 角色 persona 数据（从 persona.md 解析）
+
+    返回: [{"type": "taboo_violation", "detail": "...", "severity": "warning"}, ...]
+    """
+    issues = []
+
+    if not persona:
+        return issues
+
+    # 检查 Layer 5 禁忌
+    taboos = persona.get("layer5_taboos", [])
+    if isinstance(taboos, list):
+        for taboo in taboos:
+            if not isinstance(taboo, str):
+                continue
+
+            # 将禁忌规则转化为检测模式
+            taboo_lower = taboo.lower()
+
+            # 感叹号禁忌
+            if "感叹号" in taboo or "！" in taboo:
+                excl_count = text.count("！") + text.count("!")
+                if excl_count > 0:
+                    issues.append({
+                        "type": "taboo_violation",
+                        "rule": taboo,
+                        "detail": f"文本包含 {excl_count} 个感叹号，违反禁忌",
+                        "severity": "error",
+                    })
+
+            # 粗话禁忌
+            if "粗话" in taboo or "脏话" in taboo:
+                profanity_words = ["他妈", "操", "妈的", "靠", "卧槽", "草"]
+                found = [w for w in profanity_words if w in text]
+                if found:
+                    issues.append({
+                        "type": "taboo_violation",
+                        "rule": taboo,
+                        "detail": f"文本包含疑似粗话: {', '.join(found)}",
+                        "severity": "error",
+                    })
+
+            # 冷漠禁忌
+            if "冷漠" in taboo or "冷淡" in taboo:
+                cold_words = ["无所谓", "随便", "不关我事", "与我无关", "懒得管"]
+                found = [w for w in cold_words if w in text]
+                if found:
+                    issues.append({
+                        "type": "consistency_warning",
+                        "rule": taboo,
+                        "detail": f"文本可能表现出冷漠: {', '.join(found)}",
+                        "severity": "warning",
+                    })
+
+    # 检查 Layer 0 核心规则
+    core_rules = persona.get("layer0_core", [])
+    if isinstance(core_rules, list):
+        for rule in core_rules:
+            if not isinstance(rule, str):
+                continue
+
+            # 检测与核心规则明显矛盾的表达
+            if "温柔" in rule or "慈悲" in rule:
+                harsh_words = ["去死", "滚", "废物", "垃圾", "杀了你"]
+                found = [w for w in harsh_words if w in text]
+                if found:
+                    issues.append({
+                        "type": "core_violation",
+                        "rule": rule,
+                        "detail": f"文本包含与核心规则矛盾的表达: {', '.join(found)}",
+                        "severity": "error",
+                    })
+
+    return issues
+
+
 # ──────────────────────────────────────────────
 # 交叉验证
 # ──────────────────────────────────────────────
@@ -517,6 +691,7 @@ def main():
     # 提取所有声明
     all_claims = []
     all_warnings = []
+    all_generic_warnings = []
 
     for content, source_label in sources:
         claims = extract_canon_claims(content, source_label)
@@ -524,6 +699,10 @@ def main():
 
         warnings = check_misconceptions(content, source_label, misconceptions)
         all_warnings.extend(warnings)
+
+        # 通用误解检测
+        generic_warnings = check_generic_misconceptions(content, source_label)
+        all_generic_warnings.extend(generic_warnings)
 
     # 交叉验证
     validated = cross_validate(all_claims)
@@ -541,9 +720,11 @@ def main():
             "conflicted": conflicted,
             "unverified": unverified,
             "misconception_warnings": len(all_warnings),
+            "generic_warnings": len(all_generic_warnings),
         },
         "validated_fields": validated,
         "misconception_warnings": all_warnings,
+        "generic_pattern_warnings": all_generic_warnings,
         "source_reliability": {
             label: rate_source_reliability(label) for _, label in sources
         },

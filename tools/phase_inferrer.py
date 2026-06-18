@@ -336,6 +336,133 @@ def infer_phase(
     return PhaseInferenceResult("unknown", "所有推断方法均失败", "low")
 
 
+# ──────────────────────────────────────────────
+# 多证据融合推断（升级新增）
+# ──────────────────────────────────────────────
+
+# 各证据层级的权重
+_EVIDENCE_WEIGHTS = {
+    "content_regex": 3.0,      # 正则匹配：最精确
+    "content_keyword": 2.0,    # 关键词匹配：较精确
+    "activity_meta": 2.0,      # 活动元数据：可靠
+    "operator_category": 1.5,  # 分类标签：中等可靠
+    "chapter_code": 1.0,       # 章节代码：快速但可能粗糙
+    "content_cluster": 0.5,    # 内容聚类：统计推断
+}
+
+
+def infer_phase_ensemble(
+    text: str,
+    chapter: str = "",
+    operator_name: str = "",
+    all_texts: list[str] | None = None,
+) -> PhaseInferenceResult:
+    """多证据融合时期推断
+
+    收集所有层级的推断结果，加权投票选出最可能的时期。
+    当多证据一致时，置信度更高。
+
+    权重分配：
+    - 正则匹配：3.0（最精确）
+    - 关键词匹配：2.0
+    - 活动元数据：2.0
+    - 分类标签：1.5
+    - 章节代码：1.0
+    - 内容聚类：0.5
+
+    Args:
+        text: 单条对话文本
+        chapter: 章节/页面名
+        operator_name: 干员页面名
+        all_texts: 所有对话文本列表
+
+    Returns:
+        PhaseInferenceResult（附带投票详情）
+    """
+    votes: dict[str, float] = {}  # phase → weighted_score
+    evidence: list[dict] = []  # 所有证据记录
+
+    # 证据1：内容正则/关键词匹配
+    content_result = infer_phase_from_content(text)
+    if content_result:
+        weight_key = "content_regex" if "正则" in content_result.source else "content_keyword"
+        weight = _EVIDENCE_WEIGHTS[weight_key]
+        votes[content_result.phase] = votes.get(content_result.phase, 0) + weight
+        evidence.append({
+            "source": weight_key,
+            "phase": content_result.phase,
+            "detail": content_result.source,
+            "weight": weight,
+        })
+
+    # 证据2：章节代码映射
+    if chapter:
+        chapter_result = infer_phase_from_chapter_code(chapter)
+        if chapter_result:
+            weight = _EVIDENCE_WEIGHTS["chapter_code"]
+            votes[chapter_result.phase] = votes.get(chapter_result.phase, 0) + weight
+            evidence.append({
+                "source": "chapter_code",
+                "phase": chapter_result.phase,
+                "detail": chapter_result.source,
+                "weight": weight,
+            })
+
+    # 证据3：活动元数据（跳过网络请求，仅用缓存）
+    if chapter:
+        for activity, phase in ACTIVITY_PHASE_MAP.items():
+            if activity in chapter:
+                weight = _EVIDENCE_WEIGHTS["activity_meta"]
+                votes[phase] = votes.get(phase, 0) + weight
+                evidence.append({
+                    "source": "activity_meta",
+                    "phase": phase,
+                    "detail": f"活动名称映射: {activity}",
+                    "weight": weight,
+                })
+                break
+
+    # 证据4：内容聚类
+    if all_texts:
+        cluster_result = infer_phase_from_content_cluster(all_texts)
+        if cluster_result:
+            weight = _EVIDENCE_WEIGHTS["content_cluster"]
+            votes[cluster_result.phase] = votes.get(cluster_result.phase, 0) + weight
+            evidence.append({
+                "source": "content_cluster",
+                "phase": cluster_result.phase,
+                "detail": cluster_result.source,
+                "weight": weight,
+            })
+
+    # 加权投票
+    if not votes:
+        return PhaseInferenceResult("unknown", "无证据", "low")
+
+    best_phase = max(votes, key=votes.get)
+    total_weight = sum(votes.values())
+    best_weight = votes[best_phase]
+    ratio = best_weight / total_weight if total_weight > 0 else 0
+
+    # 置信度判断
+    if ratio >= 0.6 and best_weight >= 3.0:
+        confidence = "high"
+    elif ratio >= 0.4 and best_weight >= 2.0:
+        confidence = "medium"
+    else:
+        confidence = "low"
+
+    # 构建来源描述
+    vote_summary = ", ".join(f"{p}:{w:.1f}" for p, w in sorted(votes.items(), key=lambda x: -x[1]))
+    source_desc = f"多证据融合 [{vote_summary}] → {best_phase}"
+
+    result = PhaseInferenceResult(best_phase, source_desc, confidence)
+    result.evidence = evidence  # 附加证据详情
+    result.votes = votes  # 附加投票详情
+
+    return result
+
+
 def infer_default_phase_for_operator(
     operator_name: str,
     operator_data: dict | None = None,

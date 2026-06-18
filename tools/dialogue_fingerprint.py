@@ -27,6 +27,7 @@
 import argparse
 import json
 import re
+import statistics
 import sys
 from collections import Counter
 from pathlib import Path
@@ -36,16 +37,77 @@ from pathlib import Path
 # 中文情感词典（精简版，覆盖明日方舟角色常见情感表达）
 # ──────────────────────────────────────────────
 
-EMOTION_LEXICON = {
-    "温柔": ["温柔", "轻声", "微笑", "柔和", "温暖", "关怀", "呵护", "怜惜"],
-    "悲伤": ["悲伤", "哀伤", "沉默", "叹息", "泪水", "遗憾", "失去", "怀念", "痛"],
-    "愤怒": ["愤怒", "不可饶恕", "绝不允许", "休想", "愚蠢", "可恶", "不可原谅"],
-    "坚定": ["坚定", "决不", "一定", "必须", "绝不", "无论如何", "必然", "必将"],
-    "恐惧": ["恐惧", "害怕", "可怕", "战栗", "颤抖", "不安", "危险"],
-    "希望": ["希望", "未来", "黎明", "明天", "一定会", "终将"],
-    "孤独": ["孤独", "独自", "一个人", "无人", "寂寞", "空旷", "遥远"],
-    "信任": ["信任", "相信", "托付", "交付", "依靠", "在一起", "同行"],
+# 情感词典（中文）— 带权重版本
+# 每个词条为 (词, 权重) 元组，权重范围 0.5~1.5
+# 权重反映情感强度：高权重 = 强烈情感，低权重 = 轻微暗示
+EMOTION_LEXICON: dict[str, list[tuple[str, float]]] = {
+    "温柔": [
+        ("温柔", 1.0), ("轻声", 0.8), ("微笑", 0.9), ("柔和", 0.7),
+        ("温暖", 0.8), ("关怀", 1.0), ("呵护", 1.2), ("怜惜", 1.1),
+        ("注视", 0.5), ("轻抚", 1.0), ("低声", 0.6), ("柔声", 0.9),
+        ("安抚", 1.0), ("慈爱", 1.2),
+    ],
+    "悲伤": [
+        ("悲伤", 1.2), ("哀伤", 1.2), ("沉默", 0.6), ("叹息", 0.9),
+        ("泪水", 1.0), ("遗憾", 0.8), ("失去", 1.0), ("怀念", 0.9),
+        ("痛", 1.0), ("消逝", 1.0), ("陨落", 1.3), ("永别", 1.5),
+        ("哀悼", 1.2), ("沉痛", 1.3),
+    ],
+    "愤怒": [
+        ("愤怒", 1.2), ("不可饶恕", 1.5), ("绝不允许", 1.4), ("休想", 1.0),
+        ("愚蠢", 0.8), ("可恶", 1.0), ("不可原谅", 1.5), ("暴怒", 1.4),
+        ("愤慨", 1.2), ("痛恨", 1.4), ("怒斥", 1.3),
+    ],
+    "坚定": [
+        ("坚定", 1.0), ("决不", 1.1), ("一定", 0.7), ("必须", 0.7),
+        ("绝不", 1.1), ("无论如何", 1.0), ("必然", 0.9), ("必将", 1.0),
+        ("誓言", 1.2), ("誓约", 1.3), ("不动摇", 1.2), ("义无反顾", 1.3),
+        ("矢志", 1.4),
+    ],
+    "恐惧": [
+        ("恐惧", 1.2), ("害怕", 1.0), ("可怕", 0.9), ("战栗", 1.3),
+        ("颤抖", 1.0), ("不安", 0.8), ("危险", 0.7), ("惊惧", 1.2),
+        ("惶恐", 1.1),
+    ],
+    "希望": [
+        ("希望", 1.0), ("未来", 0.7), ("黎明", 0.9), ("明天", 0.6),
+        ("一定会", 1.0), ("终将", 0.9), ("曙光", 1.2), ("期盼", 1.0),
+        ("憧憬", 0.9), ("祈愿", 1.1), ("信念", 1.1), ("勇气", 1.0),
+    ],
+    "孤独": [
+        ("孤独", 1.2), ("独自", 0.8), ("一个人", 0.7), ("无人", 0.7),
+        ("寂寞", 1.0), ("空旷", 0.6), ("遥远", 0.5), ("漂泊", 0.9),
+        ("流浪", 0.9), ("形单影只", 1.3), ("孑然", 1.2),
+    ],
+    "信任": [
+        ("信任", 1.0), ("相信", 0.9), ("托付", 1.2), ("交付", 0.9),
+        ("依靠", 0.8), ("在一起", 0.7), ("同行", 0.8), ("深信", 1.2),
+        ("依赖", 0.8), ("无条件", 1.0),
+    ],
+    # ── 新增类别 ──
+    "嘲讽": [
+        ("呵", 0.8), ("可笑", 1.0), ("有趣", 0.6), ("愚蠢", 1.2),
+        ("天真", 0.9), ("不自量力", 1.3), ("滑稽", 1.0), ("嗤笑", 1.2),
+        ("嘲讽", 1.2), ("讥讽", 1.2), ("轻蔑", 1.1),
+    ],
+    "绝望": [
+        ("无望", 1.5), ("徒劳", 1.2), ("终焉", 1.3), ("末日", 1.3),
+        ("注定", 0.9), ("无法改变", 1.2), ("深渊", 1.1), ("绝望", 1.5),
+        ("万劫不复", 1.5),
+    ],
+    "自豪": [
+        ("骄傲", 1.0), ("荣耀", 1.1), ("自豪", 1.2), ("无愧", 0.9),
+        ("辉煌", 1.0), ("伟大", 0.8), ("传承", 0.7), ("使命", 0.8),
+    ],
+    "眷恋": [
+        ("眷恋", 1.2), ("不舍", 1.0), ("留恋", 1.0), ("牵挂", 0.9),
+        ("思念", 1.0), ("故乡", 0.7), ("家园", 0.8), ("归处", 1.0),
+        ("依恋", 1.1), ("难舍", 1.2),
+    ],
 }
+
+# 通用中文字频基线（用于口头禅检测的显著性对比）
+_CN_CHAR_FREQ_BASELINE = 0.003  # 约 0.3%
 
 # 中文第一人称代词
 FIRST_PERSON = ["我", "吾", "本王", "吾辈", "在下", "朕", "本人", "咱"]
@@ -135,11 +197,12 @@ def split_sentences(text: str) -> list[str]:
 
 def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
     """
-    维度 1：句式长度分布
+    维度 1：句式长度分布（统计分布升级版）
 
-    分析角色对话的句子长度模式，量化"短句型/长句型/混合型"
+    分析角色对话的句子长度模式，使用统计分布而非硬阈值。
+    输出百分位数、变异系数（CV）、节奏稳定性等指标。
     """
-    lengths = []
+    lengths: list[int] = []
     for d in dialogues:
         text = d.get("text", "")
         # 按中文标点分句
@@ -150,25 +213,46 @@ def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
         return {"type": "unknown", "avg": 0, "distribution": {}}
 
     avg_len = sum(lengths) / len(lengths)
-
-    # 按长度区间统计
-    short = sum(1 for l in lengths if l <= 5)    # 短句 ≤5字
-    medium = sum(1 for l in lengths if 5 < l <= 15)  # 中句 6-15字
-    long = sum(1 for l in lengths if l > 15)       # 长句 >15字
     total = len(lengths)
 
+    # ── 统计分布指标 ──
+    median_len = statistics.median(lengths)
+    stdev_len = statistics.stdev(lengths) if total > 1 else 0
+    cv = stdev_len / median_len if median_len > 0 else 0  # 变异系数
+
+    # 百分位数（使用 statistics.quantiles）
+    if total >= 4:
+        q1, q2, q3 = statistics.quantiles(lengths, n=4)
+    else:
+        q1 = min(lengths)
+        q2 = median_len
+        q3 = max(lengths)
+
+    # 自适应分界（基于百分位数而非硬编码阈值）
+    short = sum(1 for l in lengths if l <= q1)
+    medium = sum(1 for l in lengths if q1 < l <= q3)
+    long = sum(1 for l in lengths if l > q3)
+
     distribution = {
-        "short_le5": round(short / total * 100, 1),
-        "medium_6_15": round(medium / total * 100, 1),
-        "long_gt15": round(long / total * 100, 1),
+        "short_pct": round(short / total * 100, 1),
+        "medium_pct": round(medium / total * 100, 1),
+        "long_pct": round(long / total * 100, 1),
     }
 
-    # 判断类型
-    if distribution["short_le5"] > 50:
+    # 节奏稳定性判断（基于 CV）
+    if cv < 0.4:
+        rhythm = "稳定"
+    elif cv < 0.7:
+        rhythm = "多变"
+    else:
+        rhythm = "极端交替"
+
+    # 类型判断（结合分布和 CV）
+    if distribution["short_pct"] > 50:
         stype = "短句型"
-    elif distribution["long_gt15"] > 40:
+    elif distribution["long_pct"] > 40:
         stype = "长句型"
-    elif distribution["short_le5"] > 25 and distribution["long_gt15"] > 25:
+    elif distribution["short_pct"] > 25 and distribution["long_pct"] > 25:
         stype = "长短交替型"
     else:
         stype = "中句型"
@@ -176,6 +260,11 @@ def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
     return {
         "type": stype,
         "avg_length": round(avg_len, 1),
+        "median": round(median_len, 1),
+        "stdev": round(stdev_len, 1),
+        "cv": round(cv, 2),
+        "rhythm": rhythm,
+        "percentiles": {"p25": round(q1, 1), "p50": round(q2, 1), "p75": round(q3, 1)},
         "min": min(lengths),
         "max": max(lengths),
         "distribution_pct": distribution,
@@ -300,18 +389,19 @@ def analyze_emotion_vocabulary(dialogues: list[dict]) -> dict:
 
     量化角色的情感表达范围和偏好
     """
-    emotion_counts = Counter()
+    emotion_counts: Counter = Counter()
     total_emotion_words = 0
-    emotion_examples = {}
+    emotion_examples: dict[str, list[str]] = {}
 
     for d in dialogues:
         text = d.get("text", "")
-        for emotion, words in EMOTION_LEXICON.items():
-            for word in words:
+        for emotion, word_entries in EMOTION_LEXICON.items():
+            for word, weight in word_entries:
                 count = text.count(word)
                 if count > 0:
-                    emotion_counts[emotion] += count
-                    total_emotion_words += count
+                    weighted = count * weight
+                    emotion_counts[emotion] += weighted
+                    total_emotion_words += weighted
                     if emotion not in emotion_examples:
                         emotion_examples[emotion] = []
                     if len(emotion_examples[emotion]) < 3:
@@ -320,7 +410,7 @@ def analyze_emotion_vocabulary(dialogues: list[dict]) -> dict:
     if total_emotion_words == 0:
         return {"dominant": "unknown", "spectrum": {}, "interpretation": "未检测到明显情感词汇"}
 
-    # 按频率排序
+    # 按加权频率排序
     sorted_emotions = emotion_counts.most_common()
     dominant = sorted_emotions[0][0] if sorted_emotions else "unknown"
 
@@ -369,8 +459,18 @@ def analyze_rhetoric_patterns(dialogues: list[dict]) -> dict:
         if has_question and has_rhetorical:
             rhetorical_question += 1
 
-        # 比喻检测
-        if any(w in text for w in ["像", "如同", "仿佛", "似", "宛如", "犹如", "好比"]):
+        # 比喻检测（扩展版：明喻 + 暗喻 + 借喻）
+        # 明喻：像/如同/仿佛/似/宛如/犹如/好比
+        # 暗喻：是/成了/化作/变为 + 自然意象
+        # 转化式：化作/变成/融为
+        metaphor_keywords = ["像", "如同", "仿佛", "似", "宛如", "犹如", "好比"]
+        dark_metaphor_patterns = [
+            r"(?:是|成了|化作|变为|变成).{1,8}(?:光|影|风|花|火|星|梦|尘|灰|夜|雨|雪|霜|露)",
+            r"(?:化作|变成|融为|化为).{0,6}(?:一|的)",
+        ]
+        if any(w in text for w in metaphor_keywords) or any(
+            re.search(pat, text) for pat in dark_metaphor_patterns
+        ):
             metaphor += 1
 
         # 排比检测：重复的逗号分隔短语
@@ -540,6 +640,97 @@ def _top_category(counter: Counter) -> str:
 
 
 # ──────────────────────────────────────────────
+# 维度 8：口头禅与标志性短语检测
+# ──────────────────────────────────────────────
+
+def analyze_catchphrases(dialogues: list[dict], min_count: int = 3) -> dict:
+    """
+    维度 8：口头禅与标志性短语
+
+    使用 n-gram 频率分析，找出角色特有的高频短语。
+    与基线频率对比，筛选出显著高于基线的短语。
+
+    Args:
+        dialogues: 对话列表
+        min_count: 最小出现次数阈值（默认 3 次）
+    """
+    if not dialogues:
+        return {"signature_phrases": [], "interpretation": "无对话数据"}
+
+    ngram_counter: Counter = Counter()
+    total_chars = 0
+
+    for d in dialogues:
+        text = d.get("text", "")
+        total_chars += len(text)
+        # 提取 2~5 gram
+        for n in range(2, 6):
+            for i in range(len(text) - n + 1):
+                gram = text[i:i + n]
+                # 过滤纯标点、纯空格、纯数字
+                if re.match(r'^[\s\d。！？…，、；：\u201c\u201d\u2018\u2019（）\u002d\u3000]+$', gram):
+                    continue
+                # 过滤以标点开头或结尾的 n-gram
+                if gram[0] in "。！？…，、；：" or gram[-1] in "。！？…，、；：":
+                    continue
+                ngram_counter[gram] += 1
+
+    total_lines = len(dialogues)
+    signature_phrases: list[dict] = []
+
+    for gram, count in ngram_counter.most_common(100):
+        if count < min_count:
+            break
+        # 计算频率（每句出现次数）
+        freq = count / total_lines
+        # 显著性：频率 / 基线
+        significance = freq / _CN_CHAR_FREQ_BASELINE if _CN_CHAR_FREQ_BASELINE > 0 else 0
+
+        if significance > 2.0:  # 至少是基线的 2 倍
+            signature_phrases.append({
+                "phrase": gram,
+                "count": count,
+                "frequency_per_line": round(freq, 3),
+                "significance": round(significance, 1),
+            })
+
+        # 最多保留 20 个
+        if len(signature_phrases) >= 20:
+            break
+
+    # 去重：如果 "ABC" 和 "AB" 都出现，且 "AB" 的频率与 "ABC" 相近，保留更长的
+    filtered: list[dict] = []
+    seen_prefixes: set[str] = set()
+    for sp in sorted(signature_phrases, key=lambda x: -len(x["phrase"])):
+        phrase = sp["phrase"]
+        # 检查是否是已保留短语的子串
+        is_sub = False
+        for prefix in seen_prefixes:
+            if phrase in prefix:
+                is_sub = True
+                break
+        if not is_sub:
+            filtered.append(sp)
+            seen_prefixes.add(phrase)
+
+    # 按频率排序
+    filtered.sort(key=lambda x: -x["count"])
+    top_phrases = filtered[:15]
+
+    if top_phrases:
+        top3 = "、".join(f'"{p["phrase"]}"({p["count"]}次)' for p in top_phrases[:3])
+        interp = f"标志性短语：{top3}"
+    else:
+        interp = "未检测到显著口头禅"
+
+    return {
+        "signature_phrases": top_phrases,
+        "total_unique_ngrams": len(ngram_counter),
+        "interpretation": interp,
+    }
+
+
+# ──────────────────────────────────────────────
 # 单次遍历收集器（性能优化：将 7 次遍历合并为 1 次）
 # ──────────────────────────────────────────────
 
@@ -558,6 +749,11 @@ _NEGATION_PATTERNS = [
 # 预编译修辞关键词
 _RHETORICAL_WORDS = ["难道", "岂", "何不", "又怎么", "又如何", "不是吗"]
 _METAPHOR_WORDS = ["像", "如同", "仿佛", "似", "宛如", "犹如", "好比"]
+# 暗喻检测正则（扩展版）
+_DARK_METAPHOR_PATTERNS = [
+    re.compile(r"(?:是|成了|化作|变为|变成).{1,8}(?:光|影|风|花|火|星|梦|尘|灰|夜|雨|雪|霜|露)"),
+    re.compile(r"(?:化作|变成|融为|化为).{0,6}(?:一|的)"),
+]
 
 # 称呼词
 _HONORIFIC = ["大人", "阁下", "殿下", "陛下", "先生", "小姐", "长官", "指挥官"]
@@ -643,13 +839,14 @@ def _collect_all_metrics(dialogues: list[dict]) -> dict:
                 pronoun_counter[pronoun] += count
                 total_first_person += count
 
-        # ── 维度 4: 情感词汇 ──
-        for emotion, words in EMOTION_LEXICON.items():
-            for word in words:
+        # ── 维度 4: 情感词汇（带权重） ──
+        for emotion, word_entries in EMOTION_LEXICON.items():
+            for word, weight in word_entries:
                 count = text.count(word)
                 if count > 0:
-                    emotion_counts[emotion] += count
-                    total_emotion_words += count
+                    weighted = count * weight
+                    emotion_counts[emotion] += weighted
+                    total_emotion_words += weighted
                     if emotion not in emotion_examples:
                         emotion_examples[emotion] = []
                     if len(emotion_examples[emotion]) < 3:
@@ -661,7 +858,9 @@ def _collect_all_metrics(dialogues: list[dict]) -> dict:
         if has_question and has_rhetorical:
             rhetorical_question += 1
 
-        if any(w in text for w in _METAPHOR_WORDS):
+        if any(w in text for w in _METAPHOR_WORDS) or any(
+            pat.search(text) for pat in _DARK_METAPHOR_PATTERNS
+        ):
             metaphor += 1
 
         comma_phrases = re.split(r"[，、；]", text)
@@ -732,28 +931,50 @@ def _collect_all_metrics(dialogues: list[dict]) -> dict:
 
 
 def _result_sentence_length(m: dict) -> dict:
-    """从收集器数据生成维度 1 结果"""
+    """从收集器数据生成维度 1 结果（统计分布升级版）"""
     lengths = m["sentence_lengths"]
     if not lengths:
         return {"type": "unknown", "avg": 0, "distribution": {}}
 
     avg_len = sum(lengths) / len(lengths)
-    short = sum(1 for l in lengths if l <= 5)
-    medium = sum(1 for l in lengths if 5 < l <= 15)
-    long = sum(1 for l in lengths if l > 15)
     total = len(lengths)
 
+    # 统计分布指标
+    median_len = statistics.median(lengths)
+    stdev_len = statistics.stdev(lengths) if total > 1 else 0
+    cv = stdev_len / median_len if median_len > 0 else 0
+
+    if total >= 4:
+        q1, q2, q3 = statistics.quantiles(lengths, n=4)
+    else:
+        q1 = min(lengths)
+        q2 = median_len
+        q3 = max(lengths)
+
+    # 自适应分界
+    short = sum(1 for l in lengths if l <= q1)
+    medium = sum(1 for l in lengths if q1 < l <= q3)
+    long = sum(1 for l in lengths if l > q3)
+
     distribution = {
-        "short_le5": round(short / total * 100, 1),
-        "medium_6_15": round(medium / total * 100, 1),
-        "long_gt15": round(long / total * 100, 1),
+        "short_pct": round(short / total * 100, 1),
+        "medium_pct": round(medium / total * 100, 1),
+        "long_pct": round(long / total * 100, 1),
     }
 
-    if distribution["short_le5"] > 50:
+    # 节奏稳定性
+    if cv < 0.4:
+        rhythm = "稳定"
+    elif cv < 0.7:
+        rhythm = "多变"
+    else:
+        rhythm = "极端交替"
+
+    if distribution["short_pct"] > 50:
         stype = "短句型"
-    elif distribution["long_gt15"] > 40:
+    elif distribution["long_pct"] > 40:
         stype = "长句型"
-    elif distribution["short_le5"] > 25 and distribution["long_gt15"] > 25:
+    elif distribution["short_pct"] > 25 and distribution["long_pct"] > 25:
         stype = "长短交替型"
     else:
         stype = "中句型"
@@ -761,6 +982,11 @@ def _result_sentence_length(m: dict) -> dict:
     return {
         "type": stype,
         "avg_length": round(avg_len, 1),
+        "median": round(median_len, 1),
+        "stdev": round(stdev_len, 1),
+        "cv": round(cv, 2),
+        "rhythm": rhythm,
+        "percentiles": {"p25": round(q1, 1), "p50": round(q2, 1), "p75": round(q3, 1)},
         "min": min(lengths),
         "max": max(lengths),
         "distribution_pct": distribution,
@@ -933,7 +1159,7 @@ def _result_natural_imagery(m: dict) -> dict:
 
 def generate_fingerprint(dialogues: list[dict], operator_name: str = "unknown") -> dict:
     """
-    生成完整的语言指纹报告（单次遍历优化版）
+    生成完整的语言指纹报告（单次遍历优化版 + 维度8口头禅）
     """
     metrics = _collect_all_metrics(dialogues)
 
@@ -948,6 +1174,7 @@ def generate_fingerprint(dialogues: list[dict], operator_name: str = "unknown") 
             "5_rhetoric_patterns": _result_rhetoric_patterns(metrics),
             "6_address_pattern": _result_address_pattern(metrics),
             "7_natural_imagery": _result_natural_imagery(metrics),
+            "8_catchphrases": analyze_catchphrases(dialogues),
         },
     }
 
@@ -959,12 +1186,13 @@ def generate_fingerprint(dialogues: list[dict], operator_name: str = "unknown") 
 
 def _generate_summary(dimensions: dict) -> str:
     """
-    从 7 个维度生成一段自然语言的角色语言画像摘要
+    从 8 个维度生成一段自然语言的角色语言画像摘要
     """
     parts = []
 
     d1 = dimensions["1_sentence_length"]
-    parts.append(f"句式{d1.get('type', '未知')}，平均{d1.get('avg_length', 0)}字")
+    rhythm_note = f"，节奏{d1['rhythm']}" if d1.get("rhythm") else ""
+    parts.append(f"句式{d1.get('type', '未知')}，平均{d1.get('avg_length', 0)}字{rhythm_note}")
 
     d2 = dimensions["2_pause_markers"]
     parts.append(d2.get("interpretation", ""))
@@ -980,6 +1208,10 @@ def _generate_summary(dimensions: dict) -> str:
 
     d7 = dimensions["7_natural_imagery"]
     parts.append(d7.get("interpretation", ""))
+
+    d8 = dimensions.get("8_catchphrases", {})
+    if d8.get("signature_phrases"):
+        parts.append(d8.get("interpretation", ""))
 
     return "；".join(p for p in parts if p)
 
