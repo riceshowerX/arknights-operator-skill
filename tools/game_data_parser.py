@@ -21,22 +21,40 @@ import argparse
 import json
 import re
 import sys
+import time
 from pathlib import Path
-from typing import Optional
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, quote
-from urllib.request import Request
+from typing import Optional, TypedDict
+from urllib.parse import quote
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from constants import PRTS_API_URL, PRTS_USER_AGENT, SLUG_RE
-from prts_client import rate_limited_urlopen
+from constants import SLUG_RE
+from prts_client import prts_api_get, fetch_page_wikitext as _prts_fetch_wikitext
 from shared_utils import setup_logging
 
 logger = setup_logging("game_data_parser")
+
+
+class OperatorData(TypedDict, total=False):
+    """角色数据结构类型定义"""
+    name_zh: str
+    name_en: str
+    slug: str
+    race: str
+    faction: str
+    identity: str
+    mbti: str
+    personality_type: str
+    core_traits: list[str]
+    speech_style: str
+    archives: list[dict]
+    voice_lines: list[dict]
+    tags: list[str]
+    page_type: str
+    source_url: str
 
 
 # ──────────────────────────────────────────────
@@ -71,53 +89,28 @@ OPERATOR_SCHEMA = {
 # PRTS API 请求（委托给 prts_client）
 # ──────────────────────────────────────────────
 
-def _prts_api_request(params: dict) -> dict:
-    """向 PRTS Wiki MediaWiki API 发送 GET 请求（含速率限制）
-
-    Args:
-        params: API 查询参数
-
-    Returns:
-        解析后的 JSON 响应
-
-    Raises:
-        RuntimeError: 请求失败或 API 返回错误
-    """
-    params["format"] = "json"
-    query_string = urlencode(params)
-    url = f"{PRTS_API_URL}?{query_string}"
-
-    req = Request(url, headers={"User-Agent": PRTS_USER_AGENT})
-
-    try:
-        with rate_limited_urlopen(req) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except HTTPError as e:
-        raise RuntimeError(f"PRTS API HTTP 错误: {e.code} {e.reason}") from e
-    except URLError as e:
-        raise RuntimeError(f"无法连接 PRTS Wiki: {e.reason}") from e
-    except json.JSONDecodeError as e:
-        raise RuntimeError(f"PRTS API 返回了无效的 JSON: {e}") from e
-
-
 def _get_page_wikitext(title: str) -> Optional[str]:
-    """
-    通过 PRTS API 获取页面 wikitext 内容
+    """通过 prts_client 获取页面 wikitext 内容
 
     Args:
         title: 页面标题（如 "阿米娅"、"魔王"）
 
     Returns:
-        Wikitext 字符串，页面不存在时返回 None
+        Wikitext 字符串，页面不存在或获取失败时返回 None
     """
-    data = _prts_api_request({
+    # 优先使用 prts_client 的 parse API（自动跟随 redirect）
+    wikitext = _prts_fetch_wikitext(title, follow_redirects=True)
+    if wikitext:
+        return wikitext
+
+    # fallback: 通过 revisions API 检查页面是否存在
+    data = prts_api_get({
         "action": "query",
         "titles": title,
         "prop": "revisions",
         "rvprop": "content",
         "rvlimit": "1",
     })
-
     pages = data.get("query", {}).get("pages", {})
     for page_id, page in pages.items():
         if "missing" in page:
@@ -162,6 +155,7 @@ def _extract_template_body(wikitext: str, template_name: str) -> Optional[str]:
     pos = start_match.end()  # 跳过 {{TemplateName\n 或 {{TemplateName|
     depth = 1  # 已经进入了第一层 {{
     body_start = pos
+    max_depth = 50  # 防止恶意嵌套导致长时间运行
 
     while pos < len(wikitext) and depth > 0:
         # 查找下一个 {{ 或 }}
@@ -175,6 +169,9 @@ def _extract_template_body(wikitext: str, template_name: str) -> Optional[str]:
         if next_open != -1 and next_open < next_close:
             # 先遇到 {{
             depth += 1
+            if depth > max_depth:
+                logger.warning("模板嵌套深度超过 %d，可能为异常数据", max_depth)
+                break
             pos = next_open + 2
         else:
             # 先遇到 }}
@@ -506,7 +503,7 @@ def _extract_attribute_fields(wikitext: str) -> dict:
 # PRTS Wiki 解析 — 主入口
 # ──────────────────────────────────────────────
 
-def fetch_and_parse_prts(name: str, lang: str = "zh") -> dict:
+def fetch_and_parse_prts(name: str, lang: str = "zh") -> OperatorData:
     """
     从 PRTS Wiki 获取并解析角色数据
 
@@ -530,7 +527,7 @@ def fetch_and_parse_prts(name: str, lang: str = "zh") -> dict:
     }
 
     # Step 1: 获取主页面 wikitext
-    print(f"正在从 PRTS Wiki 获取「{name}」...", file=sys.stderr)
+    logger.info("正在从 PRTS Wiki 获取「%s」...", name)
     wikitext = _get_page_wikitext(name)
 
     if wikitext is None:
@@ -611,11 +608,16 @@ def fetch_and_parse_prts(name: str, lang: str = "zh") -> dict:
 
 
 def _detect_page_type(wikitext: str) -> str:
-    """检测 PRTS 页面类型"""
-    if re.search(r"\{\{CharinfoV?2?\b", wikitext):
+    """检测 PRTS 页面类型
+
+    使用精确枚举匹配模板名，避免脆弱的可选字符正则。
+    """
+    # 精确匹配 CharinfoV2 或 Charinfo 模板（模板名后必须紧跟换行或 |）
+    if re.search(r"\{\{(?:CharinfoV2|Charinfo)(?:\s*\n|\s*\|)", wikitext):
         return "operator"
     if re.search(r"\{\{敌人信息/", wikitext):
         return "enemy"
+    # fallback: 检查是否有干员档案区域
     if re.search(r"==\s*干员档案\s*==", wikitext):
         return "operator"
     return "unknown"
@@ -721,35 +723,12 @@ def parse_local_file(filepath: str) -> dict:
 # 中文转拼音 slug
 # ──────────────────────────────────────────────
 
-# 常见角色名拼音映射表
-# 完整映射建议使用 pypinyin 库，此处仅覆盖明日方舟常见角色
-PINYIN_MAP = {
-    "特蕾西娅": "te-lei-xi-ya",
-    "特雷西斯": "te-lei-xi-si",
-    "阿米娅": "a-mi-ya",
-    "凯尔希": "kai-er-xi",
-    "博士": "bo-shi",
-    "塔露拉": "ta-lu-la",
-    "银灰": "yin-hui",
-    "陈": "chen",
-    "星熊": "xing-xiong",
-    "W": "w",
-    "可露希尔": "ke-lu-xi-er",
-    "华法琳": "hua-fa-lin",
-    "伊芙利特": "yi-fu-li-te",
-    "塞雷娅": "sai-lei-ya",
-    "推进之王": "tui-jin-zhi-wang",
-    "煌": "huang",
-    "史尔特尔": "shi-er-te-er",
-    "浊心斯卡蒂": "zhuo-xin-si-ka-di",
-    "玛恩纳": "ma-en-na",
-    "令": "ling",
-    "耀骑士临光": "yao-qi-shi-lin-guang",
-    "异客": "yi-ke",
-    "爱布拉娜": "ai-bu-la-na",
-    "维什戴尔": "wei-shi-dai-er",
-    "魔王": "mo-wang",
-}
+# 角色名拼音映射表（从外部配置文件加载）
+_PINYIN_MAP_PATH = Path(__file__).parent.parent / "data" / "pinyin_map.json"
+PINYIN_MAP: dict[str, str] = {}
+if _PINYIN_MAP_PATH.exists():
+    with open(_PINYIN_MAP_PATH, encoding="utf-8") as _f:
+        PINYIN_MAP = json.load(_f)
 
 
 def to_slug(name: str) -> str:
@@ -795,11 +774,11 @@ def to_slug(name: str) -> str:
         safe_slug = re.sub(r"\s+", "-", safe_slug).strip("-")
         if not safe_slug:
             safe_slug = f"op-{hash(name) % 10000:04d}"
-        print(
-            f"警告：角色名 '{name}' 无法自动转为 URL-safe slug，"
-            f"已使用 fallback '{safe_slug}'，"
+        logger.warning(
+            "角色名 '%s' 无法自动转为 URL-safe slug，"
+            "已使用 fallback '%s'，"
             "建议手动指定英文 slug 或 pip install pypinyin",
-            file=sys.stderr,
+            name, safe_slug,
         )
         return safe_slug
     return slug

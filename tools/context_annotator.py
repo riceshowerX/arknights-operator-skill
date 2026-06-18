@@ -44,7 +44,7 @@ from constants import (
     OPERATOR_DEFAULT_PHASE,
     TIMELINE_RE,
 )
-from shared_utils import validate_path, validate_slug, setup_logging
+from shared_utils import validate_path, validate_slug, setup_logging, atomic_write_json
 
 logger = setup_logging("context_annotator")
 
@@ -61,8 +61,8 @@ try:
 except ImportError:
     HAS_PHASE_INFERRER = False
 
-# 自动推断缓存（运行时填充，避免重复查询 PRTS）
-_auto_inferred_phases: dict = {}
+# 自动推断缓存（使用 lru_cache 限制大小，避免重复查询 PRTS）
+from functools import lru_cache as _lru_cache
 
 
 # ──────────────────────────────────────────────
@@ -260,31 +260,36 @@ def annotate_archive_text(archive_text: str, index: int) -> dict:
 # 构建语境化数据
 # ──────────────────────────────────────────────
 
+@_lru_cache(maxsize=128)
+def _infer_phase_cached(operator_name: str) -> str:
+    """通过 phase_inferrer 推断干员默认时期（带 LRU 缓存）
+
+    仅缓存 operator_name → phase 字符串，避免存储完整 PhaseInferenceResult。
+    缓存上限 128 条，超出时淘汰最久未使用的条目。
+    """
+    if not HAS_PHASE_INFERRER:
+        return "unknown"
+    result = infer_default_phase_for_operator(operator_name)
+    if result.phase != "unknown":
+        OPERATOR_DEFAULT_PHASE[operator_name] = result.phase
+        logger.info("自动推断: %s → %s (来源: %s, 置信度: %s)",
+                     operator_name, result.phase, result.source, result.confidence)
+    return result.phase
+
+
 def _get_default_phase(operator_name: str, operator_data: dict = None) -> str:
     """获取干员的默认时期
 
     推断优先级：
     1. OPERATOR_DEFAULT_PHASE 缓存（快速路径，离线可用）
-    2. phase_inferrer 自动推断（PRTS 分类标签 + 阵营信息 + 内容聚类）
+    2. phase_inferrer 自动推断（PRTS 分类标签 + 阵营信息 + 内容聚类，带 lru_cache）
     """
     # 快速路径：已有缓存
     if operator_name in OPERATOR_DEFAULT_PHASE:
         return OPERATOR_DEFAULT_PHASE[operator_name]
 
-    # 自动推断
-    if HAS_PHASE_INFERRER:
-        if operator_name not in _auto_inferred_phases:
-            result = infer_default_phase_for_operator(operator_name, operator_data)
-            _auto_inferred_phases[operator_name] = result
-            # 缓存到 OPERATOR_DEFAULT_PHASE 供后续使用
-            if result.phase != "unknown":
-                OPERATOR_DEFAULT_PHASE[operator_name] = result.phase
-                print(f"[context_annotator] 自动推断: {operator_name} → {result.phase} "
-                      f"(来源: {result.source}, 置信度: {result.confidence})",
-                      file=sys.stderr)
-        return _auto_inferred_phases[operator_name].phase
-
-    return "unknown"
+    # 自动推断（带 lru_cache，上限 128 条）
+    return _infer_phase_cached(operator_name)
 
 
 def build_context_json(
@@ -406,9 +411,7 @@ def main():
         line.pop("_inference_source", None)
         line.pop("_inference_confidence", None)
 
-    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, 'w', encoding='utf-8') as f:
-        json.dump(context, f, ensure_ascii=False, indent=2)
+    atomic_write_json(args.output, context)
 
     output_summary = {
         "success": True,

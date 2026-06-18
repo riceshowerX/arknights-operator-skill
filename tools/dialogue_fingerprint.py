@@ -540,24 +540,414 @@ def _top_category(counter: Counter) -> str:
 
 
 # ──────────────────────────────────────────────
+# 单次遍历收集器（性能优化：将 7 次遍历合并为 1 次）
+# ──────────────────────────────────────────────
+
+# 预编译否定句正则（避免每次循环重复编译）
+_NEGATION_PATTERNS = [
+    re.compile(r"(不|未|莫|别)\s*[是能为会有在到想需该]"),
+    re.compile(r"(不|未|莫|别)\s*[让叫使把给向对]"),
+    re.compile(r"没有"),
+    re.compile(r"无法"),
+    re.compile(r"并非"),
+    re.compile(r"从不"),
+    re.compile(r"绝不|决不"),
+    re.compile(r"无人|无物|无端|无从"),
+]
+
+# 预编译修辞关键词
+_RHETORICAL_WORDS = ["难道", "岂", "何不", "又怎么", "又如何", "不是吗"]
+_METAPHOR_WORDS = ["像", "如同", "仿佛", "似", "宛如", "犹如", "好比"]
+
+# 称呼词
+_HONORIFIC = ["大人", "阁下", "殿下", "陛下", "先生", "小姐", "长官", "指挥官"]
+_INTIMATE = ["亲爱的", "小家伙", "小可爱", "老朋友", "阿米娅", "姐姐", "哥哥", "妹妹", "弟弟", "姐", "哥"]
+
+# 自然意象词典
+_NATURE_WORDS = {
+    "植物": ["花朵", "花瓣", "花开", "花落", "草木", "树叶", "枝头", "藤蔓", "森林", "丛林", "花草"],
+    "天文": ["星空", "星辰", "月光", "阳光", "光影", "天空", "云霞", "彩虹", "星光", "夜空", "日光"],
+    "气象": ["风雨", "风声", "微风", "暴风", "雨幕", "雪花", "霜降", "雾气", "雷鸣", "露水", "晨露"],
+    "大地": ["山河", "大海", "大地", "土地", "岩石", "沙漠", "泉水", "山峦", "河川", "海洋", "山巅"],
+    "时间": ["清晨", "日暮", "夜晚", "白昼", "春天", "夏日", "秋色", "冬雪", "黄昏", "黎明", "破晓"],
+}
+
+
+def _collect_all_metrics(dialogues: list[dict]) -> dict:
+    """
+    单次遍历收集所有 7 个维度的原始指标数据。
+
+    返回一个 dict，包含各维度所需的原始计数/列表，
+    后续由各维度的结果函数分别处理。
+    """
+    # 维度 1: 句式长度
+    sentence_lengths: list[int] = []
+
+    # 维度 2: 停顿标记
+    ellipsis_count = 0
+    ellipsis_start = 0
+    dash_count = 0
+    exclamation_count = 0
+    question_count = 0
+
+    # 维度 3: 自称
+    pronoun_counter: Counter = Counter()
+    total_first_person = 0
+
+    # 维度 4: 情感词汇
+    emotion_counts: Counter = Counter()
+    total_emotion_words = 0
+    emotion_examples: dict[str, list[str]] = {}
+
+    # 维度 5: 修辞
+    rhetorical_question = 0
+    metaphor = 0
+    parallelism = 0
+    negation = 0
+
+    # 维度 6: 称呼
+    honorific_count = 0
+    intimate_count = 0
+    address_examples: dict[str, list[str]] = {"honorific": [], "intimate": []}
+
+    # 维度 7: 自然意象
+    nature_category_counts: Counter = Counter()
+    total_nature = 0
+    nature_top_words: Counter = Counter()
+
+    total_lines = len(dialogues)
+
+    for d in dialogues:
+        text = d.get("text", "")
+
+        # ── 维度 1: 句式长度 ──
+        for s in split_sentences(text):
+            sentence_lengths.append(len(s))
+
+        # ── 维度 2: 停顿标记 ──
+        if "…" in text or "..." in text:
+            ellipsis_count += 1
+        if text.startswith("…") or text.startswith("...") or text.startswith("……"):
+            ellipsis_start += 1
+        if "——" in text or "—" in text:
+            dash_count += 1
+        if any(e in text for e in EXCLAMATION):
+            exclamation_count += 1
+        if any(q in text for q in QUESTION):
+            question_count += 1
+
+        # ── 维度 3: 自称 ──
+        for pronoun in FIRST_PERSON:
+            count = text.count(pronoun)
+            if count > 0:
+                pronoun_counter[pronoun] += count
+                total_first_person += count
+
+        # ── 维度 4: 情感词汇 ──
+        for emotion, words in EMOTION_LEXICON.items():
+            for word in words:
+                count = text.count(word)
+                if count > 0:
+                    emotion_counts[emotion] += count
+                    total_emotion_words += count
+                    if emotion not in emotion_examples:
+                        emotion_examples[emotion] = []
+                    if len(emotion_examples[emotion]) < 3:
+                        emotion_examples[emotion].append(word)
+
+        # ── 维度 5: 修辞 ──
+        has_question = any(q in text for q in QUESTION)
+        has_rhetorical = any(w in text for w in _RHETORICAL_WORDS)
+        if has_question and has_rhetorical:
+            rhetorical_question += 1
+
+        if any(w in text for w in _METAPHOR_WORDS):
+            metaphor += 1
+
+        comma_phrases = re.split(r"[，、；]", text)
+        if len(comma_phrases) >= 3:
+            starts = [p.strip()[:2] for p in comma_phrases if len(p.strip()) >= 2]
+            if len(starts) >= 3:
+                start_counter = Counter(starts)
+                if start_counter.most_common(1)[0][1] >= 3:
+                    parallelism += 1
+
+        if any(pat.search(text) for pat in _NEGATION_PATTERNS):
+            negation += 1
+
+        # ── 维度 6: 称呼 ──
+        for h in _HONORIFIC:
+            if h in text:
+                honorific_count += 1
+                if len(address_examples["honorific"]) < 5:
+                    address_examples["honorific"].append(text[:50])
+                break
+        for i in _INTIMATE:
+            if i in text:
+                intimate_count += 1
+                if len(address_examples["intimate"]) < 5:
+                    address_examples["intimate"].append(text[:50])
+                break
+
+        # ── 维度 7: 自然意象 ──
+        for category, words in _NATURE_WORDS.items():
+            for word in words:
+                count = text.count(word)
+                if count > 0:
+                    nature_category_counts[category] += count
+                    total_nature += count
+                    nature_top_words[word] += count
+
+    return {
+        "total_lines": total_lines,
+        # 维度 1
+        "sentence_lengths": sentence_lengths,
+        # 维度 2
+        "ellipsis_count": ellipsis_count,
+        "ellipsis_start": ellipsis_start,
+        "dash_count": dash_count,
+        "exclamation_count": exclamation_count,
+        "question_count": question_count,
+        # 维度 3
+        "pronoun_counter": pronoun_counter,
+        "total_first_person": total_first_person,
+        # 维度 4
+        "emotion_counts": emotion_counts,
+        "total_emotion_words": total_emotion_words,
+        "emotion_examples": emotion_examples,
+        # 维度 5
+        "rhetorical_question": rhetorical_question,
+        "metaphor": metaphor,
+        "parallelism": parallelism,
+        "negation": negation,
+        # 维度 6
+        "honorific_count": honorific_count,
+        "intimate_count": intimate_count,
+        "address_examples": address_examples,
+        # 维度 7
+        "nature_category_counts": nature_category_counts,
+        "total_nature": total_nature,
+        "nature_top_words": nature_top_words,
+    }
+
+
+def _result_sentence_length(m: dict) -> dict:
+    """从收集器数据生成维度 1 结果"""
+    lengths = m["sentence_lengths"]
+    if not lengths:
+        return {"type": "unknown", "avg": 0, "distribution": {}}
+
+    avg_len = sum(lengths) / len(lengths)
+    short = sum(1 for l in lengths if l <= 5)
+    medium = sum(1 for l in lengths if 5 < l <= 15)
+    long = sum(1 for l in lengths if l > 15)
+    total = len(lengths)
+
+    distribution = {
+        "short_le5": round(short / total * 100, 1),
+        "medium_6_15": round(medium / total * 100, 1),
+        "long_gt15": round(long / total * 100, 1),
+    }
+
+    if distribution["short_le5"] > 50:
+        stype = "短句型"
+    elif distribution["long_gt15"] > 40:
+        stype = "长句型"
+    elif distribution["short_le5"] > 25 and distribution["long_gt15"] > 25:
+        stype = "长短交替型"
+    else:
+        stype = "中句型"
+
+    return {
+        "type": stype,
+        "avg_length": round(avg_len, 1),
+        "min": min(lengths),
+        "max": max(lengths),
+        "distribution_pct": distribution,
+        "sample_count": total,
+    }
+
+
+def _result_pause_markers(m: dict) -> dict:
+    """从收集器数据生成维度 2 结果"""
+    total = m["total_lines"]
+    if total == 0:
+        return {"ellipsis_freq": 0, "exclamation_freq": 0}
+
+    return {
+        "ellipsis_pct": round(m["ellipsis_count"] / total * 100, 1),
+        "ellipsis_start_pct": round(m["ellipsis_start"] / total * 100, 1),
+        "dash_pct": round(m["dash_count"] / total * 100, 1),
+        "exclamation_pct": round(m["exclamation_count"] / total * 100, 1),
+        "question_pct": round(m["question_count"] / total * 100, 1),
+        "interpretation": _interpret_pause(
+            m["ellipsis_count"] / total,
+            m["exclamation_count"] / total,
+            m["ellipsis_start"] / total,
+        ),
+    }
+
+
+def _result_self_reference(m: dict) -> dict:
+    """从收集器数据生成维度 3 结果"""
+    counter = m["pronoun_counter"]
+    total_fp = m["total_first_person"]
+    total_lines = m["total_lines"]
+
+    if total_fp == 0:
+        return {
+            "primary": "省略自称",
+            "frequency_per_line": 0,
+            "distribution": {},
+            "interpretation": "极少使用第一人称，倾向省略主语或使用'我们'",
+        }
+
+    primary = counter.most_common(1)[0][0]
+    freq = round(total_fp / total_lines, 2) if total_lines > 0 else 0
+    distribution = {k: round(v / total_fp * 100, 1) for k, v in counter.most_common()}
+
+    if freq < 0.3:
+        interp = "极少自称，倾向省略主语"
+    elif primary == "我":
+        interp = "常用'我'，表达直接"
+    elif primary in ["吾", "本王", "朕"]:
+        interp = f"使用'{primary}'自称，体现特殊身份地位"
+    else:
+        interp = f"自称'{primary}'，有独特表达习惯"
+
+    return {
+        "primary": primary,
+        "frequency_per_line": freq,
+        "distribution_pct": distribution,
+        "interpretation": interp,
+    }
+
+
+def _result_emotion_vocabulary(m: dict) -> dict:
+    """从收集器数据生成维度 4 结果"""
+    emotion_counts = m["emotion_counts"]
+    total_ew = m["total_emotion_words"]
+    emotion_examples = m["emotion_examples"]
+
+    if total_ew == 0:
+        return {"dominant": "unknown", "spectrum": {}, "interpretation": "未检测到明显情感词汇"}
+
+    sorted_emotions = emotion_counts.most_common()
+    dominant = sorted_emotions[0][0] if sorted_emotions else "unknown"
+    spectrum = {k: round(v / total_ew * 100, 1) for k, v in sorted_emotions}
+
+    active_emotions = sum(1 for k, v in sorted_emotions if v >= 2)
+    if active_emotions >= 5:
+        breadth = "宽谱"
+    elif active_emotions >= 3:
+        breadth = "中谱"
+    else:
+        breadth = "窄谱"
+
+    return {
+        "dominant": dominant,
+        "breadth": breadth,
+        "active_emotion_count": active_emotions,
+        "spectrum_pct": spectrum,
+        "examples": emotion_examples,
+        "interpretation": f"主导情感为'{dominant}'，情感谱系{breadth}（活跃情感{active_emotions}种）",
+    }
+
+
+def _result_rhetoric_patterns(m: dict) -> dict:
+    """从收集器数据生成维度 5 结果"""
+    total = m["total_lines"]
+    if total == 0:
+        return {"rhetorical_question_freq": 0}
+
+    return {
+        "rhetorical_question_pct": round(m["rhetorical_question"] / total * 100, 1),
+        "metaphor_pct": round(m["metaphor"] / total * 100, 1),
+        "parallelism_pct": round(m["parallelism"] / total * 100, 1),
+        "negation_pct": round(m["negation"] / total * 100, 1),
+        "interpretation": _interpret_rhetoric(
+            m["rhetorical_question"] / total,
+            m["metaphor"] / total,
+            m["negation"] / total,
+        ),
+    }
+
+
+def _result_address_pattern(m: dict) -> dict:
+    """从收集器数据生成维度 6 结果"""
+    total = m["total_lines"]
+    hc = m["honorific_count"]
+    ic = m["intimate_count"]
+
+    if total == 0:
+        return {"pattern": "unknown"}
+
+    if hc > ic * 2:
+        pattern = "尊称型"
+    elif ic > hc * 2:
+        pattern = "亲昵型"
+    elif hc > 0 and ic > 0:
+        pattern = "切换型"
+    else:
+        pattern = "省略称呼型"
+
+    return {
+        "pattern": pattern,
+        "honorific_pct": round(hc / total * 100, 1),
+        "intimate_pct": round(ic / total * 100, 1),
+        "examples": m["address_examples"],
+    }
+
+
+def _result_natural_imagery(m: dict) -> dict:
+    """从收集器数据生成维度 7 结果"""
+    total_nature = m["total_nature"]
+    if total_nature == 0:
+        return {"density": 0, "interpretation": "极少使用自然意象"}
+
+    total_lines = m["total_lines"]
+    density = round(total_nature / total_lines, 2) if total_lines > 0 else 0
+
+    if density > 3:
+        density_level = "高频"
+    elif density > 1:
+        density_level = "中频"
+    else:
+        density_level = "低频"
+
+    return {
+        "density_per_line": density,
+        "density_level": density_level,
+        "category_distribution": {
+            k: round(v / total_nature * 100, 1)
+            for k, v in m["nature_category_counts"].most_common()
+        },
+        "top_5_words": dict(m["nature_top_words"].most_common(5)),
+        "interpretation": f"自然意象密度{density_level}（{density}个/句），偏好{_top_category(m['nature_category_counts'])}意象",
+    }
+
+
+# ──────────────────────────────────────────────
 # 主分析流程
 # ──────────────────────────────────────────────
 
 def generate_fingerprint(dialogues: list[dict], operator_name: str = "unknown") -> dict:
     """
-    生成完整的语言指纹报告
+    生成完整的语言指纹报告（单次遍历优化版）
     """
+    metrics = _collect_all_metrics(dialogues)
+
     report = {
         "operator": operator_name,
         "dialogue_count": len(dialogues),
         "dimensions": {
-            "1_sentence_length": analyze_sentence_length_distribution(dialogues),
-            "2_pause_markers": analyze_pause_markers(dialogues),
-            "3_self_reference": analyze_self_reference(dialogues),
-            "4_emotion_vocabulary": analyze_emotion_vocabulary(dialogues),
-            "5_rhetoric_patterns": analyze_rhetoric_patterns(dialogues),
-            "6_address_pattern": analyze_address_pattern(dialogues),
-            "7_natural_imagery": analyze_natural_imagery(dialogues),
+            "1_sentence_length": _result_sentence_length(metrics),
+            "2_pause_markers": _result_pause_markers(metrics),
+            "3_self_reference": _result_self_reference(metrics),
+            "4_emotion_vocabulary": _result_emotion_vocabulary(metrics),
+            "5_rhetoric_patterns": _result_rhetoric_patterns(metrics),
+            "6_address_pattern": _result_address_pattern(metrics),
+            "7_natural_imagery": _result_natural_imagery(metrics),
         },
     }
 

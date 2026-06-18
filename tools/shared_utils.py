@@ -148,6 +148,69 @@ def setup_logging(name: str = "arknights-operator-skill", level: int = logging.I
 
 
 # ──────────────────────────────────────────────
+# 原子写入
+# ──────────────────────────────────────────────
+
+
+def atomic_write_json(filepath: str | Path, data: dict, indent: int = 2) -> None:
+    """原子写入 JSON 文件
+
+    先写入临时文件，再原子性重命名，防止写入中断导致文件损坏。
+
+    Args:
+        filepath: 目标文件路径
+        data: 要写入的数据
+        indent: JSON 缩进
+    """
+    import json
+    import os
+    import tempfile
+
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+
+    # 写入临时文件，再原子性重命名
+    fd, tmp_path = tempfile.mkstemp(
+        dir=filepath.parent,
+        prefix=f".{filepath.name}.",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=indent)
+            f.write("\n")
+        os.replace(tmp_path, filepath)
+    except BaseException:
+        # 写入失败时清理临时文件
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def load_json_safe(filepath: str | Path) -> dict | None:
+    """安全加载 JSON 文件，文件不存在或格式错误时返回 None
+
+    Args:
+        filepath: JSON 文件路径
+
+    Returns:
+        解析后的数据，或 None
+    """
+    import json
+
+    filepath = Path(filepath)
+    if not filepath.exists():
+        return None
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+# ──────────────────────────────────────────────
 # 正则安全工具
 # ──────────────────────────────────────────────
 

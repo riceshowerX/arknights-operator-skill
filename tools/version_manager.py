@@ -10,19 +10,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# slug 格式验证：仅允许小写字母、数字和连字符
-_SLUG_RE = re.compile(r'^[a-z0-9][-a-z0-9]*$')
-
-
-def _validate_slug(slug: str) -> str:
-    """验证 slug 格式，防止路径遍历和非法字符"""
-    slug = slug.strip()
-    if not _SLUG_RE.match(slug):
-        raise ValueError(
-            f"非法 slug: '{slug}'。slug 只能包含小写字母、数字和连字符，"
-            f"且不能以连字符开头。示例: te-lei-xi-ya"
-        )
-    return slug
+try:
+    from shared_utils import validate_slug
+except ImportError:
+    from tools.shared_utils import validate_slug
 
 
 def _normalize_version(version: str) -> str:
@@ -98,7 +89,7 @@ def backup_version(slug: str, base_dir: str = "./operators") -> dict:
     """
     备份当前版本到 versions 目录
     """
-    slug = _validate_slug(slug)
+    slug = validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     
@@ -145,7 +136,7 @@ def rollback_version(slug: str, version: str, base_dir: str = "./operators", bac
         backup_before: 回滚前是否备份当前版本（默认 False，避免版本号跳跃）。
             如需保留回滚前状态，请显式设为 True。
     """
-    slug = _validate_slug(slug)
+    slug = validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     # 规范化版本号格式
@@ -202,7 +193,7 @@ def list_versions(slug: str, base_dir: str = "./operators") -> dict:
     """
     列出所有版本
     """
-    slug = _validate_slug(slug)
+    slug = validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     

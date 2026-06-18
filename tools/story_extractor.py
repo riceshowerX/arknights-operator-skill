@@ -51,8 +51,8 @@ from constants import (
     PRTS_API_URL,
     PRTS_USER_AGENT,
 )
-from prts_client import rate_limited_urlopen, prts_api_get
-from shared_utils import setup_logging, validate_slug
+from prts_client import rate_limited_urlopen
+from shared_utils import setup_logging
 
 logger = setup_logging("story_extractor")
 
@@ -66,9 +66,6 @@ try:
     HAS_PHASE_INFERRER = True
 except ImportError:
     HAS_PHASE_INFERRER = False
-
-# 剧情模拟器脚本对话行正则：[name="角色名"]对话内容
-SCRIPT_DIALOGUE_RE = re.compile(r'\[name="([^"]+)"\]([\s\S]*?)(?=\[name=|\[dialog\]|\[Decision\]|\[HEADER\]|\[Blocker\]|\[stopmusic\]|\[playMusic\]|$)')
 
 # 剧情模拟器脚本中的叙述行（不带 name= 的纯文本行）
 # 格式：直接在 [dialog] 或 [Delay] 之间出现的中文文本
@@ -112,10 +109,7 @@ SCRIPT_NOISE_RE = re.compile(
 def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
     """获取剧情页面的 wikitext 原文，自动跟随 redirect"""
     if _depth > 3:
-        print(json.dumps({
-            "error": f"重定向链太深: '{chapter}'",
-            "chapter": chapter
-        }, ensure_ascii=False), file=sys.stderr)
+        logger.error("重定向链太深: '%s'", chapter)
         return ""
     # 先尝试用 action=parse（自动跟随 redirect）
     params = urlencode({
@@ -132,10 +126,7 @@ def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
         with rate_limited_urlopen(req) as resp:
             data = json.loads(resp.read().decode('utf-8'))
     except (HTTPError, URLError) as e:
-        print(json.dumps({
-            "error": f"无法获取剧情页面 '{chapter}': {e}",
-            "chapter": chapter
-        }, ensure_ascii=False), file=sys.stderr)
+        logger.error("无法获取剧情页面 '%s': %s", chapter, e)
         return ""
 
     wikitext = data.get('parse', {}).get('wikitext', {}).get('*', '')
@@ -145,10 +136,7 @@ def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
         redirect_match = re.search(r'\[\[([^\]]+)\]\]', wikitext)
         if redirect_match:
             target = redirect_match.group(1)
-            print(json.dumps({
-                "info": f"跟随重定向: '{chapter}' → '{target}'",
-                "chapter": chapter
-            }, ensure_ascii=False), file=sys.stderr)
+            logger.info("跟随重定向: '%s' → '%s'", chapter, target)
             return fetch_chapter_wikitext(target, _depth=_depth + 1)
 
     # 如果内容为空，尝试查找 /NBT 子页面
@@ -157,16 +145,10 @@ def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
         nbt_page = f"{chapter}/NBT"
         nbt_wikitext = _fetch_raw_wikitext(nbt_page)
         if nbt_wikitext:
-            print(json.dumps({
-                "info": f"自动切换到 NBT 子页面: '{nbt_page}'",
-                "chapter": chapter
-            }, ensure_ascii=False), file=sys.stderr)
+            logger.info("自动切换到 NBT 子页面: '%s'", nbt_page)
             return nbt_wikitext
 
-        print(json.dumps({
-            "warning": f"页面 '{chapter}' 内容为空或不存在（也尝试了 /NBT 子页面）",
-            "chapter": chapter
-        }, ensure_ascii=False), file=sys.stderr)
+        logger.warning("页面 '%s' 内容为空或不存在（也尝试了 /NBT 子页面）", chapter)
 
     return wikitext
 
@@ -440,11 +422,7 @@ def main():
         target_count = sum(1 for d in dialogues if d["is_target"])
         all_dialogues.extend(dialogues)
 
-        print(json.dumps({
-            "chapter": chapter,
-            "target_lines": target_count,
-            "total_lines": len(dialogues),
-        }, ensure_ascii=False), file=sys.stderr)
+        logger.info("章节 '%s': %d 目标台词 / %d 总台词", chapter, target_count, len(dialogues))
 
     # 统计各时期分布
     phase_dist = {}

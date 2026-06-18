@@ -35,7 +35,7 @@ from constants import (
     FACTION_CATEGORY_PHASE,
     CLUSTER_KEYWORDS,
 )
-from prts_client import prts_api_get, fetch_page_categories as _fetch_page_categories
+from prts_client import fetch_page_categories as _fetch_page_categories
 from shared_utils import setup_logging
 
 logger = setup_logging("phase_inferrer")
@@ -44,64 +44,12 @@ logger = setup_logging("phase_inferrer")
 def fetch_page_categories(page_title: str) -> list[str]:
     """获取 PRTS 页面的分类标签（委托给 prts_client）"""
     return _fetch_page_categories(page_title)
-    data = prts_api_get({
-        "action": "query",
-        "titles": page_title,
-        "prop": "categories",
-        "cllimit": "50",
-    })
-    categories = []
-    for page in data.get("query", {}).get("pages", {}).values():
-        for cat in page.get("categories", []):
-            title = cat.get("title", "")
-            # 去掉 "分类:" 前缀
-            if title.startswith("分类:"):
-                title = title[3:]
-            categories.append(title)
-    return categories
 
 
 def fetch_activity_info(page_title: str) -> dict:
-    """从 PRTS 活动页面提取 {{活动信息}} 模板数据"""
-    # 先获取 wikitext
-    data = prts_api_get({
-        "action": "query",
-        "titles": page_title,
-        "prop": "revisions",
-        "rvprop": "content",
-        "rvlimit": "1",
-    })
-    pages = data.get("query", {}).get("pages", {})
-    if not pages:
-        return {}
-    page = next(iter(pages.values()))
-    revisions = page.get("revisions", [])
-    if not revisions:
-        return {}
-    wikitext = revisions[0].get("*", "")
-
-    # 解析 {{活动信息|...}} 模板
-    info = {}
-    in_template = False
-    depth = 0
-    for line in wikitext.split("\n"):
-        if "活动信息" in line and "{{" in line:
-            in_template = True
-            depth = line.count("{{") - line.count("}}")
-        if in_template:
-            # 解析 |key=value
-            for segment in line.split("|"):
-                if "=" in segment:
-                    key, _, value = segment.partition("=")
-                    key = key.strip()
-                    value = value.strip()
-                    if key and value and not key.startswith("{"):
-                        info[key] = value
-            depth += line.count("{{") - line.count("}}")
-            if depth <= 0:
-                break
-
-    return info
+    """从 PRTS 活动页面提取 {{活动信息}} 模板数据（委托给 prts_client）"""
+    from prts_client import fetch_activity_info as _prts_fetch_activity_info
+    return _prts_fetch_activity_info(page_title)
 
 
 # ──────────────────────────────────────────────

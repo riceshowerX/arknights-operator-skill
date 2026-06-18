@@ -333,7 +333,7 @@ class TestSpeechActAnalyzer(unittest.TestCase):
         from speech_act_analyzer import classify_speech_acts
         acts = classify_speech_acts("我在")
         act_types = [a["type"] for a in acts]
-        self.assertIn("affirm_presence", act_types)
+        self.assertIn("presence", act_types)
 
     def test_act_type_labels_consistency(self):
         from speech_act_analyzer import ACT_TYPE_LABELS, SPEECH_ACT_RULES
@@ -673,6 +673,212 @@ class TestPipelineFileIO(unittest.TestCase):
             self.assertIn(layer, content, f"persona.md 缺少 {layer}")
         # 验证 Correction 层
         self.assertIn("Correction", content, "persona.md 缺少 Correction 记录区域")
+
+
+# ──────────────────────────────────────────────
+# 核心业务逻辑测试（#19 新增）
+# ──────────────────────────────────────────────
+
+
+class TestGameDataParserCore(unittest.TestCase):
+    """game_data_parser.py 核心函数测试"""
+
+    def test_detect_page_type_operator_charinfo(self):
+        """测试干员页面类型识别 - Charinfo 模板"""
+        from game_data_parser import _detect_page_type
+        wikitext = "{{Charinfo\n|name=阿米娅\n|职业=术师\n}}"
+        self.assertEqual(_detect_page_type(wikitext), "operator")
+
+    def test_detect_page_type_operator_charinfov2(self):
+        """测试干员页面类型识别 - CharinfoV2 模板"""
+        from game_data_parser import _detect_page_type
+        wikitext = "{{CharinfoV2\n|name=阿米娅\n|职业=术师\n}}"
+        self.assertEqual(_detect_page_type(wikitext), "operator")
+
+    def test_detect_page_type_operator_fallback(self):
+        """测试干员页面类型识别 - fallback 检测"""
+        from game_data_parser import _detect_page_type
+        wikitext = "== 干员档案 ==\n一些内容"
+        self.assertEqual(_detect_page_type(wikitext), "operator")
+
+    def test_detect_page_type_enemy(self):
+        """测试敌人页面类型识别"""
+        from game_data_parser import _detect_page_type
+        wikitext = "{{敌人信息/header\n|名称=整合运动士兵\n}}"
+        self.assertEqual(_detect_page_type(wikitext), "enemy")
+
+    def test_detect_page_type_unknown(self):
+        """测试未知页面类型"""
+        from game_data_parser import _detect_page_type
+        wikitext = "一些普通内容"
+        self.assertEqual(_detect_page_type(wikitext), "unknown")
+
+    def test_extract_template_body_simple(self):
+        """测试简单模板提取"""
+        from game_data_parser import _extract_template_body
+        wikitext = "{{Charinfo\n|name=阿米娅\n|class=术师\n}}\n其他内容"
+        result = _extract_template_body(wikitext, "Charinfo")
+        self.assertIsNotNone(result)
+        self.assertIn("name=阿米娅", result)
+
+    def test_extract_template_body_not_found(self):
+        """测试模板不存在时返回 None"""
+        from game_data_parser import _extract_template_body
+        wikitext = "一些普通内容"
+        result = _extract_template_body(wikitext, "Charinfo")
+        self.assertIsNone(result)
+
+    def test_extract_template_body_depth_limit(self):
+        """测试模板深度限制防止恶意嵌套"""
+        from game_data_parser import _extract_template_body
+        # 构造深度超过 50 的嵌套模板
+        wikitext = "{{" * 60 + "Charinfo" + "}}" * 60
+        result = _extract_template_body(wikitext, "Charinfo")
+        # 应该返回 None 或有限结果，不会无限循环
+        # 这里主要验证不会崩溃
+
+
+class TestDialogueFingerprintCore(unittest.TestCase):
+    """dialogue_fingerprint.py 核心函数测试"""
+
+    def test_collect_all_metrics_single_pass(self):
+        """测试单次遍历收集器"""
+        from dialogue_fingerprint import _collect_all_metrics
+        dialogues = [
+            {"label": "test1", "text": "我会保护大家的。"},
+            {"label": "test2", "text": "……我不确定。"},
+            {"label": "test3", "text": "像风一样自由！"},
+        ]
+        metrics = _collect_all_metrics(dialogues)
+        self.assertEqual(metrics["total_lines"], 3)
+        self.assertIsInstance(metrics["sentence_lengths"], list)
+        self.assertGreater(len(metrics["sentence_lengths"]), 0)
+
+    def test_generate_fingerprint_empty(self):
+        """测试空对话列表"""
+        from dialogue_fingerprint import generate_fingerprint
+        result = generate_fingerprint([], "test")
+        self.assertEqual(result["dialogue_count"], 0)
+        self.assertIn("dimensions", result)
+
+    def test_generate_fingerprint_with_data(self):
+        """测试有数据的指纹生成"""
+        from dialogue_fingerprint import generate_fingerprint
+        dialogues = [
+            {"label": "test1", "text": "我会保护大家的。"},
+            {"label": "test2", "text": "……我不确定。"},
+        ]
+        result = generate_fingerprint(dialogues, "test")
+        self.assertEqual(result["dialogue_count"], 2)
+        self.assertIn("1_sentence_length", result["dimensions"])
+        self.assertIn("2_pause_markers", result["dimensions"])
+
+
+class TestSharedUtilsCore(unittest.TestCase):
+    """shared_utils.py 核心函数测试"""
+
+    def test_atomic_write_json(self):
+        """测试原子写入 JSON"""
+        from shared_utils import atomic_write_json
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "test.json"
+            data = {"key": "value", "number": 42}
+            atomic_write_json(str(filepath), data)
+            self.assertTrue(filepath.exists())
+            loaded = json.loads(filepath.read_text(encoding="utf-8"))
+            self.assertEqual(loaded, data)
+
+    def test_atomic_write_json_nested_dir(self):
+        """测试原子写入到不存在的目录"""
+        from shared_utils import atomic_write_json
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "subdir" / "test.json"
+            data = {"key": "value"}
+            atomic_write_json(str(filepath), data)
+            self.assertTrue(filepath.exists())
+
+    def test_load_json_safe_exists(self):
+        """测试安全加载存在的 JSON 文件"""
+        from shared_utils import load_json_safe
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "test.json"
+            filepath.write_text('{"key": "value"}', encoding="utf-8")
+            result = load_json_safe(str(filepath))
+            self.assertEqual(result, {"key": "value"})
+
+    def test_load_json_safe_not_exists(self):
+        """测试安全加载不存在的文件"""
+        from shared_utils import load_json_safe
+        result = load_json_safe("/nonexistent/path.json")
+        self.assertIsNone(result)
+
+    def test_load_json_safe_invalid(self):
+        """测试安全加载无效 JSON"""
+        from shared_utils import load_json_safe
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "test.json"
+            filepath.write_text("not valid json", encoding="utf-8")
+            result = load_json_safe(str(filepath))
+            self.assertIsNone(result)
+
+
+class TestAhoCorasickMatcher(unittest.TestCase):
+    """relationship_graph.py Aho-Corasick 多模式匹配测试"""
+
+    def test_basic_matching(self):
+        """测试基本匹配功能"""
+        from relationship_graph import AhoCorasickMatcher
+        matcher = AhoCorasickMatcher()
+        matcher.add_pattern("阿米娅", "阿米娅")
+        matcher.add_pattern("博士", "博士")
+        matcher.add_pattern("凯尔希", "凯尔希")
+        matcher.build()
+        matches = matcher.search("阿米娅和博士在罗德岛")
+        self.assertIn("阿米娅", matches)
+        self.assertIn("博士", matches)
+        self.assertNotIn("凯尔希", matches)
+
+    def test_empty_patterns(self):
+        """测试空模式列表"""
+        from relationship_graph import AhoCorasickMatcher
+        matcher = AhoCorasickMatcher()
+        matcher.build()
+        matches = matcher.search("一些文本")
+        self.assertEqual(matches, set())
+
+    def test_no_matches(self):
+        """测试无匹配情况"""
+        from relationship_graph import AhoCorasickMatcher
+        matcher = AhoCorasickMatcher()
+        matcher.add_pattern("阿米娅", "阿米娅")
+        matcher.add_pattern("博士", "博士")
+        matcher.build()
+        matches = matcher.search("一些无关文本")
+        self.assertEqual(matches, set())
+
+
+class TestSpeechActMergedTypes(unittest.TestCase):
+    """speech_act_analyzer.py 合并后的话语行为类型测试"""
+
+    def test_presence_type(self):
+        """测试 presence 类型（原 affirm_presence）"""
+        from speech_act_analyzer import classify_speech_acts
+        results = classify_speech_acts("我在")
+        self.assertTrue(len(results) > 0)
+        self.assertEqual(results[0]["type"], "presence")
+
+    def test_comfort_type(self):
+        """测试 comfort 类型（原 console/soothe）"""
+        from speech_act_analyzer import classify_speech_acts
+        results = classify_speech_acts("别怕，没事的")
+        self.assertTrue(len(results) > 0)
+        self.assertEqual(results[0]["type"], "comfort")
+
+    def test_act_type_labels_count(self):
+        """测试行为类型标签数量"""
+        from speech_act_analyzer import ACT_TYPE_LABELS
+        # 合并后应该有 7 种类型
+        self.assertEqual(len(ACT_TYPE_LABELS), 7)
 
 
 if __name__ == "__main__":

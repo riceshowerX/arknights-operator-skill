@@ -27,8 +27,8 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from constants import ACT_TYPE_LABELS
-from shared_utils import setup_logging
+from constants import ACT_TYPE_LABELS, ACT_TYPE_ALIASES
+from shared_utils import setup_logging, atomic_write_json
 
 logger = setup_logging("speech_act_analyzer")
 
@@ -63,29 +63,25 @@ SPEECH_ACT_RULES = [
     (r"(一定|必定|绝对).{1,15}", "commit", 0.8, "承诺"),
     (r"请(相信|放心).{0,10}", "commit", 0.75, "承诺"),
 
-    # 宽慰：减轻对方负担
-    (r"不是你的错", "console", 0.9, "宽慰"),
-    (r"你不必.{1,15}", "console", 0.85, "宽慰"),
-    (r"(已经足够|不要紧)", "console", 0.85, "宽慰"),
-    (r"没关系(?!.{0,5}[。…])", "console", 0.8, "宽慰"),   # "没关系"后无句号/省略号 → 宽慰
-    (r"我(理解|明白|知道你的).{0,10}", "console", 0.75, "宽慰"),
+    # 宽慰：减轻对方负担（合并原 console + soothe）
+    (r"不是你的错", "comfort", 0.9, "宽慰"),
+    (r"你不必.{1,15}", "comfort", 0.85, "宽慰"),
+    (r"(已经足够|不要紧)", "comfort", 0.85, "宽慰"),
+    (r"没关系(?!.{0,5}[。…])", "comfort", 0.8, "宽慰"),   # "没关系"后无句号/省略号 → 宽慰
+    (r"我(理解|明白|知道你的).{0,10}", "comfort", 0.75, "宽慰"),
+    (r"(好了|没事|别担心)", "comfort", 0.7, "安抚"),
+    (r"(睡吧|休息吧)", "comfort", 0.75, "安抚"),
 
     # 克制：压抑情感
     (r"[悲伤痛苦遗憾].{0,5}[………]", "restrain", 0.8, "克制"),
     (r"我(知道|明白).{0,8}$", "restrain", 0.7, "克制"),
     (r"没关系.{0,5}[。…]", "restrain", 0.7, "克制"),   # "没关系。" → 克制（语气收敛）
 
-    # 存在确认（明日方舟特色）
-    (r"我在", "affirm_presence", 0.9, "存在确认"),
-    (r"我会记住", "promise_remember", 0.85, "记忆承诺"),
-
-    # 告别
-    (r"再(见|会)[。…]?", "farewell", 0.8, "告别"),
-    (r"保重", "farewell", 0.75, "告别"),
-
-    # 安抚（比宽慰更轻）
-    (r"(好了|没事|别担心)", "soothe", 0.7, "安抚"),
-    (r"(睡吧|休息吧)", "soothe", 0.75, "安抚"),
+    # 存在表达（合并原 affirm_presence + promise_remember + farewell）
+    (r"我在", "presence", 0.9, "存在确认"),
+    (r"我会记住", "presence", 0.85, "记忆承诺"),
+    (r"再(见|会)[。…]?", "presence", 0.8, "告别"),
+    (r"保重", "presence", 0.75, "告别"),
 ]
 
 # 编译正则
@@ -149,7 +145,7 @@ def build_speech_act_profile(annotated_lines: list[dict]) -> dict:
         phase = ctx.get("phase", "unknown")
 
         for act in acts:
-            act_type = act["type"]
+            act_type = ACT_TYPE_ALIASES.get(act["type"], act["type"])
             global_dist[act_type] += 1
             by_situation[situation][act_type] += 1
             by_interlocutor[interlocutor][act_type] += 1
@@ -208,13 +204,13 @@ def detect_behavioral_patterns(profile: dict) -> list[dict]:
 
     # 模式3：克制型情感表达
     restrain_ratio = global_dist.get("restrain", 0)
-    console_ratio = global_dist.get("console", 0)
-    if restrain_ratio > 0.08 and console_ratio > 0.08:
+    comfort_ratio = global_dist.get("comfort", 0)
+    if restrain_ratio > 0.08 and comfort_ratio > 0.08:
         patterns.append({
             "pattern": "restrained_consolation",
             "rule": "安慰他人时倾向用克制的表达（先说'我明白'，再轻描淡写地宽慰），而不是热情的鼓励",
             "layer": 2,
-            "confidence": min((restrain_ratio + console_ratio) * 2, 1.0),
+            "confidence": min((restrain_ratio + comfort_ratio) * 2, 1.0),
         })
 
     # 模式4：对象差异化
@@ -292,15 +288,12 @@ def main():
     patterns = detect_behavioral_patterns(profile)
 
     # 回写 context.json
-    with open(args.context_json, 'w', encoding='utf-8') as f:
-        json.dump(context, f, ensure_ascii=False, indent=2)
+    atomic_write_json(args.context_json, context)
 
     # 输出画像
     profile["behavioral_patterns"] = patterns
     if args.output_profile:
-        Path(args.output_profile).parent.mkdir(parents=True, exist_ok=True)
-        with open(args.output_profile, 'w', encoding='utf-8') as f:
-            json.dump(profile, f, ensure_ascii=False, indent=2)
+        atomic_write_json(args.output_profile, profile)
 
     print(json.dumps({
         "success": True,

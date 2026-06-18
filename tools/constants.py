@@ -145,12 +145,18 @@ ACT_TYPE_LABELS: dict[str, str] = {
     "evade": "回避/转移",
     "question": "提问/反问",
     "commit": "承诺/表态",
-    "console": "安慰/共情",
+    "comfort": "宽慰/安抚",
     "restrain": "克制/隐忍",
-    "affirm_presence": "存在确认",
-    "promise_remember": "记忆承诺",
-    "farewell": "告别/嘱托",
-    "soothe": "安抚/劝解",
+    "presence": "存在表达",
+}
+
+# 旧类型到新类型的映射（向后兼容）
+ACT_TYPE_ALIASES: dict[str, str] = {
+    "console": "comfort",
+    "soothe": "comfort",
+    "affirm_presence": "presence",
+    "promise_remember": "presence",
+    "farewell": "presence",
 }
 
 # ──────────────────────────────────────────────
@@ -199,7 +205,7 @@ WIKITEXT_DIALOGUE_RE: re.Pattern = re.compile(
 
 # 剧情模拟器脚本格式正则：[name="角色名"]对话内容
 SCRIPT_DIALOGUE_RE: re.Pattern = re.compile(
-    r'\[name="([^"]+)"\](.*?)(?=\[name="|\[决策|\[选项|$)',
+    r'\[name="([^"]+)"\]([\s\S]*?)(?=\[name=|\[dialog\]|\[Decision\]|\[HEADER\]|\[Blocker\]|\[stopmusic\]|\[playMusic\]|$)',
     re.DOTALL,
 )
 

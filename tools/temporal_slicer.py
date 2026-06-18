@@ -27,7 +27,7 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import ACT_TYPE_LABELS
-from shared_utils import split_sentences, setup_logging
+from shared_utils import split_sentences, setup_logging, atomic_write_json
 
 logger = setup_logging("temporal_slicer")
 
@@ -324,9 +324,7 @@ def main():
     }
 
     if args.output:
-        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        with open(args.output, 'w', encoding='utf-8') as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
+        atomic_write_json(args.output, result)
 
     print(json.dumps({
         "success": True,

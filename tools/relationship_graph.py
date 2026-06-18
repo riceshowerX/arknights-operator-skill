@@ -37,7 +37,7 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import PHASE_ORDER
-from shared_utils import setup_logging
+from shared_utils import setup_logging, atomic_write_json
 
 logger = setup_logging("relationship_graph")
 
@@ -251,18 +251,119 @@ def _is_name_in_text(name: str, text: str) -> bool:
         return False
 
 
+class _AhoCorasick:
+    """轻量级 Aho-Corasick 多模式匹配自动机
+
+    用于在单次遍历中检测文本中是否包含多个模式字符串，
+    替代逐个遍历的 O(n×m) 方案。
+    """
+
+    __slots__ = ("_goto", "_fail", "_output", "_built")
+
+    def __init__(self) -> None:
+        self._goto: list[dict[str, int]] = [{}]
+        self._fail: list[int] = [0]
+        self._output: list[list[str]] = [[]]
+        self._built = False
+
+    def add_pattern(self, pattern: str, label: str) -> None:
+        """添加一个模式字符串及其关联标签"""
+        state = 0
+        for ch in pattern:
+            if ch not in self._goto[state]:
+                self._goto[state][ch] = len(self._goto)
+                self._goto.append({})
+                self._fail.append(0)
+                self._output.append([])
+            state = self._goto[state][ch]
+        self._output[state].append(label)
+        self._built = False
+
+    def build(self) -> None:
+        """构建失败链接（BFS）"""
+        from collections import deque
+        queue: deque[int] = deque()
+        for ch, s in self._goto[0].items():
+            self._fail[s] = 0
+            queue.append(s)
+        while queue:
+            r = queue.popleft()
+            for ch, s in self._goto[r].items():
+                queue.append(s)
+                state = self._fail[r]
+                while state != 0 and ch not in self._goto[state]:
+                    state = self._fail[state]
+                self._fail[s] = self._goto[state].get(ch, 0)
+                if self._fail[s] == s:
+                    self._fail[s] = 0
+                self._output[s] = self._output[s] + self._output[self._fail[s]]
+        self._built = True
+
+    def search(self, text: str) -> set[str]:
+        """在文本中搜索所有匹配的模式标签"""
+        if not self._built:
+            self.build()
+        found: set[str] = set()
+        state = 0
+        for ch in text:
+            while state != 0 and ch not in self._goto[state]:
+                state = self._fail[state]
+            state = self._goto[state].get(ch, 0)
+            for label in self._output[state]:
+                found.add(label)
+        return found
+
+
+# 公共别名（供测试和外部使用）
+AhoCorasickMatcher = _AhoCorasick
+
+# 全局 Aho-Corasick 自动机缓存（按 operator_db + alias_map 的 key 集合构建）
+_ac_cache: dict[frozenset, _AhoCorasick] = {}
+
+
+def _build_ac_automaton(db: dict, aliases: dict) -> _AhoCorasick:
+    """构建或获取缓存的 Aho-Corasick 自动机"""
+    cache_key = frozenset(db.keys()) | frozenset(aliases.keys())
+    if cache_key not in _ac_cache:
+        ac = _AhoCorasick()
+        for name in db:
+            ac.add_pattern(name, name)
+        for alias in aliases:
+            ac.add_pattern(alias, f"alias:{alias}")
+        ac.build()
+        _ac_cache[cache_key] = ac
+    return _ac_cache[cache_key]
+
+
 def extract_entities(text: str, operator_db: Optional[dict] = None, alias_map: Optional[dict] = None) -> list[str]:
-    """从文本中提取出现的角色名"""
+    """从文本中提取出现的角色名
+
+    使用 Aho-Corasick 多模式匹配，单次遍历文本即可检测所有角色名，
+    时间复杂度从 O(n×m) 降为 O(n + m + 匹配数)。
+    匹配后仍应用边界检查（CJK/英文边界）过滤误匹配。
+    """
     db = operator_db or OPERATOR_DB
     aliases = alias_map or ALIAS_MAP
 
-    found = []
-    for name in db:
-        if _is_name_in_text(name, text):
-            found.append(name)
-    for alias, cn_name in aliases.items():
-        if cn_name not in found and _is_name_in_text(alias, text):
-            found.append(cn_name)
+    ac = _build_ac_automaton(db, aliases)
+    candidates = ac.search(text)
+
+    found: list[str] = []
+    seen: set[str] = set()
+
+    for candidate in candidates:
+        if candidate.startswith("alias:"):
+            alias = candidate[6:]
+            cn_name = aliases[alias]
+            if cn_name not in seen and _is_name_in_text(alias, text):
+                found.append(cn_name)
+                seen.add(cn_name)
+        else:
+            name = candidate
+            if name not in seen and _is_name_in_text(name, text):
+                found.append(name)
+                seen.add(name)
+
     return found
 
 
@@ -774,8 +875,7 @@ def main():
 
         # 回写 annotated_relations 到 context.json
         context["annotated_relations"] = result["annotated_relations"]
-        with open(args.context_json, 'w', encoding='utf-8') as f:
-            json.dump(context, f, ensure_ascii=False, indent=2)
+        atomic_write_json(args.context_json, context)
 
         report = {
             "mode": "contextual",

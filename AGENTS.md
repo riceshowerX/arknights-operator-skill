@@ -57,6 +57,44 @@ prts_client.py  ←── game_data_parser, story_extractor, phase_inferrer
 shared_utils.py  ←── 所有工具
 ```
 
+### Prompt 模板与工具调用关系
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        AI Agent 调用层                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  prompts/intake.md ──→ AI Agent 调用 game_data_parser.py            │
+│                          + story_extractor.py                       │
+│                          → 产出 operator_data.json + story.json     │
+│                                                                     │
+│  prompts/knowledge_analyzer.md ──→ AI Agent 分析原始数据            │
+│                                      → 产出知识要点                 │
+│                                                                     │
+│  prompts/knowledge_builder.md ──→ AI Agent 生成 knowledge.md        │
+│                                                                     │
+│  prompts/persona_analyzer.md ──→ AI Agent 调用分析工具链:           │
+│                                    speech_act_analyzer.py           │
+│                                    dialogue_fingerprint.py          │
+│                                    relationship_graph.py            │
+│                                    temporal_slicer.py               │
+│                                    persona_validator.py             │
+│                                    → 产出分析画像                   │
+│                                                                     │
+│  prompts/persona_builder.md ──→ AI Agent 生成 persona.md            │
+│                                  + skill_writer.py 写入文件         │
+│                                                                     │
+│  prompts/correction_handler.md ──→ AI Agent 处理用户纠正            │
+│                                      → 更新 persona.md              │
+│                                                                     │
+│  prompts/merger.md ──→ AI Agent 合并多源数据                        │
+│                         → 产出最终 SKILL.md                         │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**数据流向**: Prompt 指导 AI Agent → Agent 调用工具 → 工具产出 JSON/MD → 下一轮 Prompt 消费产出
+
 ## 工具链
 
 | 工具 | 用途 | 关键参数 |

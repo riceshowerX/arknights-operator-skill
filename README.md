@@ -170,9 +170,9 @@ Correction 序号越大越新，越新越优先
 | 工具 | 功能 |
 |------|------|
 | `context_annotator.py` | 统一标注：场景/时期/对话对象 → `context.json` |
-| `speech_act_analyzer.py` | 话语行为分类（邀请/回避/承诺/克制等 10 种） |
-| `dialogue_fingerprint.py` | 7 维度量化语言指纹（句式/停顿/自称/情感/修辞/称呼/意象） |
-| `relationship_graph.py` | 12 种关系类型识别 + 时序轨迹 + 可信度评级 |
+| `speech_act_analyzer.py` | 话语行为分类（邀请/回避/承诺/克制等 7 种核心类型） |
+| `dialogue_fingerprint.py` | 7 维度量化语言指纹（单次遍历优化） |
+| `relationship_graph.py` | 12 种关系类型识别 + Aho-Corasick 多模式匹配 + 可信度评级 |
 | `temporal_slicer.py` | 跨期行为演变检测 → Persona Layer 2 规则 |
 
 ### 验证与生成
@@ -189,9 +189,9 @@ Correction 序号越大越新，越新越优先
 | 模块 | 职责 |
 |------|------|
 | `constants.py` | 领域知识常量（时期映射、关系类型、角色别名等） |
-| `prts_client.py` | 统一 PRTS API 调用 + 速率限制 |
-| `shared_utils.py` | 通用工具（路径验证、slug 验证、分句等） |
-| `pipeline.py` | 一键编排：`python pipeline.py --full --slug {slug}` |
+| `prts_client.py` | 统一 PRTS API 调用 + 速率限制 + 指数退避重试 |
+| `shared_utils.py` | 通用工具（路径验证、slug 验证、原子写入、分句等） |
+| `pipeline.py` | 一键编排：`python pipeline.py --full --slug {slug}`（支持 `--resume` 断点续传） |
 
 ---
 
@@ -202,7 +202,7 @@ arknights-operator-skill/
 ├── SKILL.md                       # AI Agent 入口（触发条件、主流程、工具调用规则）
 ├── README.md                      # 本文件
 ├── pyproject.toml                 # 项目配置（ruff / mypy / pytest）
-├── AGENTS.md                      # 开发者规范
+├── AGENTS.md                      # 开发者规范（含数据流图）
 ├── prompts/                       # Prompt 模板（蒸馏管线核心逻辑）
 │   ├── intake.md                  #   Step 1：3 问信息录入
 │   ├── knowledge_analyzer.md      #   Step 3A：知识库分析维度
@@ -213,33 +213,35 @@ arknights-operator-skill/
 │   └── correction_handler.md      #   进化：对话纠正处理
 ├── tools/                         # Python 工具链
 │   ├── constants.py               #   领域知识常量
-│   ├── prts_client.py             #   PRTS API 客户端
-│   ├── shared_utils.py            #   通用工具函数
-│   ├── pipeline.py                #   一键编排器
+│   ├── prts_client.py             #   PRTS API 客户端（重试 + 线程安全）
+│   ├── shared_utils.py            #   通用工具函数（含原子写入）
+│   ├── pipeline.py                #   一键编排器（支持断点续传）
 │   ├── context_annotator.py       #   语境标注器
-│   ├── speech_act_analyzer.py     #   话语行为分析
+│   ├── speech_act_analyzer.py     #   话语行为分析（7 种核心类型）
 │   ├── temporal_slicer.py         #   时序切片分析
-│   ├── dialogue_fingerprint.py    #   对话指纹分析
-│   ├── relationship_graph.py      #   关系图谱构建
+│   ├── dialogue_fingerprint.py    #   对话指纹分析（单次遍历）
+│   ├── relationship_graph.py      #   关系图谱构建（Aho-Corasick）
 │   ├── persona_validator.py       #   Persona 验证器
 │   ├── canon_checker.py           #   设定交叉验证
 │   ├── game_data_parser.py        #   游戏资料解析
 │   ├── story_extractor.py         #   剧情提取器
 │   ├── skill_writer.py            #   Skill 文件管理
 │   └── version_manager.py         #   版本存档与回滚
+├── data/                          # 配置文件
+│   └── pinyin_map.json            #   拼音映射（可用户扩展）
 ├── operators/                     # 生成的角色 Skill
 │   └── te-lei-xi-ya/              #   特蕾西娅示例
 │       ├── knowledge.md           #     Part A — 知识库
 │       ├── persona.md             #     Part B — 人格（5 层 + Correction）
 │       ├── meta.json              #     元数据 + 常见误解
 │       ├── SKILL.md               #     Skill 入口 + 核心规则
-│       ├── context.json           #     语境化数据中间层
+│       ├── context.json           #     语境化数据中间层（原子写入）
 │       ├── speech_act_profile.json
 │       ├── fingerprint.json
 │       ├── temporal_slices.json
 │       └── versions/              #     版本快照
 ├── tests/
-│   └── test_smoke.py              # 冒烟测试（54 个用例）
+│   └── test_smoke.py              # 冒烟测试（76 个用例）
 ├── requirements.txt               # 核心依赖（仅标准库）
 ├── requirements-optional.txt      # 可选依赖（pypinyin）
 ├── .gitignore

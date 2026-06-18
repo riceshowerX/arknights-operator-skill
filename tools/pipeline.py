@@ -87,6 +87,27 @@ def run_tool(tool_name: str, args: list[str], description: str = "") -> bool:
     return True
 
 
+# 每个步骤的中间产物文件（用于 --resume 检测）
+_STEP_ARTIFACTS: dict[str, list[str]] = {
+    "fetch": ["operator_data.json"],
+    "annotate": ["context.json"],
+    "analyze": ["context.json"],  # analyze 会更新 context.json，但依赖它存在
+    "validate": [],  # validate 无特定产物
+    "write": ["SKILL.md"],
+}
+
+
+def _step_completed(output_dir: str, step_name: str) -> bool:
+    """检查步骤的中间产物是否已存在（用于 --resume）"""
+    artifacts = _STEP_ARTIFACTS.get(step_name, [])
+    if not artifacts:
+        return False
+    return all(
+        (Path(output_dir) / f).exists() and (Path(output_dir) / f).stat().st_size > 0
+        for f in artifacts
+    )
+
+
 def step_fetch(name: str, output_dir: str, skip_fetch: bool = False) -> bool:
     """步骤 1: 获取原始数据"""
     if skip_fetch:
@@ -198,6 +219,10 @@ def main():
     )
     parser.add_argument("--output-dir", help="输出目录（默认 operators/<slug>）")
     parser.add_argument("--skip-fetch", action="store_true", help="跳过 PRTS 数据获取")
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="断点续传：检测已有中间产物，跳过已完成的步骤",
+    )
     parser.add_argument("--dry-run", action="store_true", help="仅打印计划，不执行")
 
     args = parser.parse_args()
@@ -243,6 +268,9 @@ def main():
 
     if args.step == "full":
         for step_name in step_order:
+            if args.resume and _step_completed(output_dir, step_name):
+                logger.info("跳过已完成的步骤: %s（--resume）", step_name)
+                continue
             if not steps[step_name]():
                 logger.error("流水线在 '%s' 步骤失败", step_name)
                 sys.exit(1)

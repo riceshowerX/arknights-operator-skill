@@ -4,24 +4,14 @@ Skill 文件管理器 - 用于列出和管理已创建的角色 Skill
 """
 
 import json
-import re
 import sys
 from pathlib import Path
 from datetime import datetime
 
-# slug 格式验证：仅允许小写字母、数字和连字符
-_SLUG_RE = re.compile(r'^[a-z0-9][-a-z0-9]*$')
-
-
-def _validate_slug(slug: str) -> str:
-    """验证 slug 格式，防止路径遍历和非法字符"""
-    slug = slug.strip()
-    if not _SLUG_RE.match(slug):
-        raise ValueError(
-            f"非法 slug: '{slug}'。slug 只能包含小写字母、数字和连字符，"
-            f"且不能以连字符开头。示例: te-lei-xi-ya"
-        )
-    return slug
+try:
+    from shared_utils import validate_slug
+except ImportError:
+    from tools.shared_utils import validate_slug
 
 
 def list_skills(base_dir: str = "./operators") -> dict:
@@ -101,7 +91,7 @@ def delete_skill(slug: str, base_dir: str = "./operators", force: bool = False) 
     """
     import shutil
 
-    slug = _validate_slug(slug)
+    slug = validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     
     if not skill_dir.exists():
@@ -134,7 +124,7 @@ def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str 
     """
     创建默认的 Skill 目录结构
     """
-    slug = _validate_slug(slug)
+    slug = validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     
