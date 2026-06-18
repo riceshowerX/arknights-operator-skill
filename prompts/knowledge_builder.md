@@ -1,5 +1,7 @@
 # Knowledge 生成模板
 
+> **版本**: 2.0.0 | **兼容工具版本**: >=2.0.0
+
 ## 任务
 
 根据 knowledge_analyzer.md 的分析结果，生成 `knowledge.md` 文件内容。

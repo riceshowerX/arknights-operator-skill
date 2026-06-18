@@ -31,11 +31,30 @@ import argparse
 import json
 import re
 import sys
-import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+# 确保 tools 目录在 import 路径中
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from constants import (
+    CHAPTER_PHASE_MAP,
+    ACTIVITY_PHASE_MAP,
+    SITUATION_KEYWORDS,
+    SCENE_HEADER_RE,
+    WIKITEXT_DIALOGUE_RE,
+    SCRIPT_DIALOGUE_RE,
+    PRTS_API_URL,
+    PRTS_USER_AGENT,
+)
+from prts_client import rate_limited_urlopen, prts_api_get
+from shared_utils import setup_logging, validate_slug
+
+logger = setup_logging("story_extractor")
 
 # 导入自动推断引擎
 try:
@@ -43,89 +62,10 @@ try:
         infer_phase as _infer_phase_auto,
         infer_phase_from_chapter_code,
         infer_phase_from_activity_meta,
-        CHAPTER_PHASE_MAP,
-        ACTIVITY_PHASE_MAP,
     )
     HAS_PHASE_INFERRER = True
 except ImportError:
     HAS_PHASE_INFERRER = False
-
-
-# ──────────────────────────────────────────────
-# 常量
-# ──────────────────────────────────────────────
-
-PRTS_API_URL = "https://prts.wiki/api.php"
-PRTS_USER_AGENT = "arknights-operator-skill/2.0"
-REQUEST_TIMEOUT = 20
-
-# 速率限制
-_last_request_time = 0.0
-_REQUEST_INTERVAL = 0.5  # 最小请求间隔（秒）
-
-# 章节名 → 时间阶段映射
-# 优先从 phase_inferrer import，本地定义仅作离线 fallback
-if not HAS_PHASE_INFERRER:
-    CHAPTER_PHASE_MAP = {
-        "第0章": "early",
-        "第1章": "early",
-        "第2章": "early",
-        "第3章": "early",
-        "第4章": "early",
-        "第5章": "early",
-        "第6章": "early",
-        "第7章": "early",       # 苦难摇篮：切尔诺伯格/整合运动
-        "第8章": "babel",       # 怒号光明：巴别塔回忆
-        "第9章": "babel",       # 风暴瞭望：巴别塔末期
-        "第10章": "resurrected", # 碎鳞：复活后
-        "第11章": "resurrected",
-        "第12章": "resurrected",
-        "第13章": "resurrected",
-        "第14章": "resurrected", # 慈悲灯塔
-        # 巴别塔活动（BB 系列）
-        "BB-": "babel",
-        # 伦蒂尼姆/第 10-14 章相关
-        "LT-": "resurrected",
-        "H10-": "resurrected",
-        "H11-": "resurrected",
-        "H12-": "resurrected",
-        "H14-": "resurrected",
-        # 生于黑夜（W 的活动，切尔诺伯格/早期回忆）
-        "DM-": "early",
-        # 遗尘漫步（凯尔希回忆，跨越多时期，归为 early）
-        "WD-": "early",
-        # 危机合约等
-        "CC-": "unknown",
-    }
-
-# 活动关键词 → 时期
-# 优先从 phase_inferrer import，本地定义仅作离线 fallback
-if not HAS_PHASE_INFERRER:
-    ACTIVITY_PHASE_MAP = {
-        "巴别塔": "babel",
-        "慈悲灯塔": "resurrected",
-        "伦蒂尼姆": "resurrected",
-        "生于黑夜": "early",
-        "切尔诺伯格": "early",
-        "遗尘漫步": "early",
-    }
-
-# 场景类型关键词
-SITUATION_KEYWORDS = {
-    "confront": ["战斗", "敌", "进攻", "撤退", "交战", "对峙", "冲突", "攻击", "防线"],
-    "comfort": ["安慰", "不必", "没关系", "不是你的错", "不要紧", "已经足够"],
-    "decide": ["决定", "必须", "只能如此", "没有选择", "别无选择", "这是我的选择"],
-    "reminisce": ["回忆", "过去", "曾经", "记得", "那时候", "还记得", "从前"],
-    "command": ["命令", "执行", "立刻", "全员", "出发", "集合"],
-}
-
-# 场景标题正则（wikitext 中 === 标题 === 或 == 标题 ==）
-SCENE_HEADER_RE = re.compile(r'^={2,4}\s*(.+?)\s*={2,4}', re.MULTILINE)
-
-# Wikitext 对话行正则（'''角色名'''：台词）
-WIKITEXT_DIALOGUE_RE = re.compile(
-    r"""[''\u2018\u2019]{2,3}(.+?)[''\u2018\u2019]{2,3}[：:]\s*(.+?)(?:\n|$)"""
-)
 
 # 剧情模拟器脚本对话行正则：[name="角色名"]对话内容
 SCRIPT_DIALOGUE_RE = re.compile(r'\[name="([^"]+)"\]([\s\S]*?)(?=\[name=|\[dialog\]|\[Decision\]|\[HEADER\]|\[Blocker\]|\[stopmusic\]|\[playMusic\]|$)')
@@ -166,18 +106,8 @@ SCRIPT_NOISE_RE = re.compile(
 
 
 # ──────────────────────────────────────────────
-# PRTS API（含速率限制）
+# PRTS API（直接使用 prts_client 统一客户端）
 # ──────────────────────────────────────────────
-
-def _rate_limited_urlopen(req, timeout=None):
-    """带速率限制的 urlopen 调用"""
-    global _last_request_time
-    elapsed = time.time() - _last_request_time
-    if elapsed < _REQUEST_INTERVAL:
-        time.sleep(_REQUEST_INTERVAL - elapsed)
-    result = urlopen(req, timeout=timeout or REQUEST_TIMEOUT)
-    _last_request_time = time.time()
-    return result
 
 def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
     """获取剧情页面的 wikitext 原文，自动跟随 redirect"""
@@ -199,7 +129,7 @@ def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
     req = Request(url, headers={'User-Agent': PRTS_USER_AGENT})
 
     try:
-        with _rate_limited_urlopen(req) as resp:
+        with rate_limited_urlopen(req) as resp:
             data = json.loads(resp.read().decode('utf-8'))
     except (HTTPError, URLError) as e:
         print(json.dumps({
@@ -254,7 +184,7 @@ def _fetch_raw_wikitext(page: str) -> str:
     req = Request(url, headers={'User-Agent': PRTS_USER_AGENT})
 
     try:
-        with _rate_limited_urlopen(req) as resp:
+        with rate_limited_urlopen(req) as resp:
             data = json.loads(resp.read().decode('utf-8'))
     except (HTTPError, URLError):
         return ""

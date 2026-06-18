@@ -223,7 +223,7 @@ class TestContextAnnotator(unittest.TestCase):
         self.assertEqual(result["context"]["interlocutor"], "博士")
 
     def test_operator_default_phase(self):
-        from context_annotator import OPERATOR_DEFAULT_PHASE
+        from constants import OPERATOR_DEFAULT_PHASE
         self.assertEqual(OPERATOR_DEFAULT_PHASE.get("魔王"), "resurrected")
         self.assertEqual(OPERATOR_DEFAULT_PHASE.get("W"), "early")
 

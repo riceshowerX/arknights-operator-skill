@@ -21,25 +21,15 @@ import re
 import sys
 from pathlib import Path
 
-# 从 speech_act_analyzer 引入共享的话语行为标签映射
-try:
-    from speech_act_analyzer import ACT_TYPE_LABELS
-except ImportError:
-    # 降级：直接定义（保持与 speech_act_analyzer 同步）
-    ACT_TYPE_LABELS = {
-        "invite": "邀请", "evade": "回避", "question": "质问",
-        "commit": "承诺", "console": "宽慰", "restrain": "克制",
-        "affirm_presence": "存在确认", "promise_remember": "记忆承诺",
-        "farewell": "告别", "soothe": "安抚",
-    }
+# 确保 tools 目录在 import 路径中
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
 
-# 从 dialogue_fingerprint 引入共享的分句函数
-try:
-    from dialogue_fingerprint import split_sentences
-except ImportError:
-    def split_sentences(text: str) -> list[str]:
-        sentences = re.split(r"[。！？；…—]+", text)
-        return [s.strip() for s in sentences if s.strip()]
+from constants import ACT_TYPE_LABELS
+from shared_utils import split_sentences, setup_logging
+
+logger = setup_logging("temporal_slicer")
 
 
 # ──────────────────────────────────────────────

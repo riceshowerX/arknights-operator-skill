@@ -10,6 +10,20 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# slug 格式验证：仅允许小写字母、数字和连字符
+_SLUG_RE = re.compile(r'^[a-z0-9][-a-z0-9]*$')
+
+
+def _validate_slug(slug: str) -> str:
+    """验证 slug 格式，防止路径遍历和非法字符"""
+    slug = slug.strip()
+    if not _SLUG_RE.match(slug):
+        raise ValueError(
+            f"非法 slug: '{slug}'。slug 只能包含小写字母、数字和连字符，"
+            f"且不能以连字符开头。示例: te-lei-xi-ya"
+        )
+    return slug
+
 
 def _normalize_version(version: str) -> str:
     """
@@ -36,30 +50,36 @@ def _normalize_version(version: str) -> str:
     return f"v{version}" if not version.startswith("v") else version
 
 
-def _get_next_version(versions_dir: Path) -> str:
+def _get_next_version(versions_dir: Path, major: int | None = None) -> str:
     """
     确定下一个版本号
 
     规则：使用 v{大版本}.{小版本} 格式
     - 首次备份 → v1.0
     - 后续备份 → 小版本 +1
+    - 如果指定了 --major，则在指定大版本下递增
     - 如果目录名不规范（如旧格式 v1, v2），兼容处理
     """
     existing = list(versions_dir.glob("v*"))
-    max_major = 1
+    if major is not None:
+        max_major = major
+    else:
+        max_major = 1
     max_minor = -1  # -1 表示还没有任何版本
 
     for v in existing:
         # 支持 v1.0, v1.1 格式
         m = re.match(r"v(\d+)\.(\d+)", v.name)
         if m:
-            major = int(m.group(1))
-            minor = int(m.group(2))
-            if major == max_major and minor > max_minor:
-                max_minor = minor
-            elif major > max_major:
-                max_major = major
-                max_minor = minor
+            v_major = int(m.group(1))
+            v_minor = int(m.group(2))
+            if major is not None and v_major != major:
+                continue
+            if v_major == max_major and v_minor > max_minor:
+                max_minor = v_minor
+            elif v_major > max_major and major is None:
+                max_major = v_major
+                max_minor = v_minor
             continue
 
         # 兼容旧格式 v1, v2 等 → 视为 v1.1, v1.2
@@ -70,7 +90,7 @@ def _get_next_version(versions_dir: Path) -> str:
                 max_minor = num
 
     if max_minor < 0:
-        return "v1.0"
+        return f"v{max_major}.0"
     return f"v{max_major}.{max_minor + 1}"
 
 
@@ -78,6 +98,7 @@ def backup_version(slug: str, base_dir: str = "./operators") -> dict:
     """
     备份当前版本到 versions 目录
     """
+    slug = _validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     
@@ -124,6 +145,7 @@ def rollback_version(slug: str, version: str, base_dir: str = "./operators", bac
         backup_before: 回滚前是否备份当前版本（默认 False，避免版本号跳跃）。
             如需保留回滚前状态，请显式设为 True。
     """
+    slug = _validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     # 规范化版本号格式
@@ -180,6 +202,7 @@ def list_versions(slug: str, base_dir: str = "./operators") -> dict:
     """
     列出所有版本
     """
+    slug = _validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     

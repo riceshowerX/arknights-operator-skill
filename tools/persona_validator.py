@@ -19,6 +19,15 @@ import re
 import sys
 from pathlib import Path
 
+# 确保 tools 目录在 import 路径中
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from shared_utils import setup_logging
+
+logger = setup_logging("persona_validator")
+
 
 # ──────────────────────────────────────────────
 # Persona 解析

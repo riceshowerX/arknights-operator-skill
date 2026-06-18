@@ -22,14 +22,15 @@ import re
 import sys
 from pathlib import Path
 
+# 确保 tools 目录在 import 路径中
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
 
-# 话语行为类型 → 中文标签（单一来源，供所有下游工具引用）
-ACT_TYPE_LABELS = {
-    "invite": "邀请", "evade": "回避", "question": "质问",
-    "commit": "承诺", "console": "宽慰", "restrain": "克制",
-    "affirm_presence": "存在确认", "promise_remember": "记忆承诺",
-    "farewell": "告别", "soothe": "安抚",
-}
+from constants import ACT_TYPE_LABELS
+from shared_utils import setup_logging
+
+logger = setup_logging("speech_act_analyzer")
 
 
 # ──────────────────────────────────────────────

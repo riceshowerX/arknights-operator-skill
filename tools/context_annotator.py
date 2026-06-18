@@ -31,6 +31,23 @@ import re
 import sys
 from pathlib import Path
 
+# 确保 tools 目录在 import 路径中
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from constants import (
+    VOICE_INTERLOCUTOR_MAP,
+    VOICE_SITUATION_MAP,
+    PHASE_KEYWORDS,
+    PHASE_PATTERNS,
+    OPERATOR_DEFAULT_PHASE,
+    TIMELINE_RE,
+)
+from shared_utils import validate_path, validate_slug, setup_logging
+
+logger = setup_logging("context_annotator")
+
 # 导入自动推断引擎
 try:
     from phase_inferrer import (
@@ -44,93 +61,18 @@ try:
 except ImportError:
     HAS_PHASE_INFERRER = False
 
-
-# ──────────────────────────────────────────────
-# 语音行对话对象推断
-# ──────────────────────────────────────────────
-
-VOICE_INTERLOCUTOR_MAP = {
-    "信赖触摸": "博士",
-    "晋升后交谈1": "博士",
-    "晋升后交谈2": "博士",
-    "精二晋升后交谈": "博士",
-    "任命助理": "博士",
-    "4星结束": None,
-    "3星结束": None,
-}
-
-# 语音标题 → 场景类型
-# 注意：按特异性从高到低排列，首次匹配即停止
-# 例如 "晋升后交谈1" 应匹配 "晋升"→casual 而非 "交谈"→casual
-VOICE_SITUATION_MAP = [
-    ("信赖触摸", "comfort"),
-    ("信赖", "comfort"),
-    ("战斗开始", "confront"),
-    ("战斗失败", "confront"),
-    ("精二晋升后交谈", "casual"),   # 必须在"晋升后交谈"之前，否则"精二晋升后交谈1"被误匹配
-    ("晋升后交谈", "casual"),
-    ("晋升", "casual"),
-    ("助理", "casual"),
-    ("交谈", "casual"),
-    ("进驻", "casual"),
-    ("编入", "casual"),
-    ("精英化", "casual"),
-]
-
-# 语音内容 → 时期推断关键词
-# 注意：使用更精确的词组避免误匹配（"和平"→"和平协议"，"魔王"→需同时含卡兹戴尔语境）
-# 优先从 phase_inferrer import，本地定义仅作离线 fallback
-if HAS_PHASE_INFERRER:
-    from phase_inferrer import PHASE_KEYWORDS, PHASE_PATTERNS
-else:
-    PHASE_KEYWORDS = {
-        "babel": ["巴别塔", "内战", "卡兹戴尔重建", "和平协议", "卡兹戴尔的和平"],
-        "resurrected": ["黑冠", "赦罪师", "巫术"],
-    }
-
-    PHASE_PATTERNS = [
-        (re.compile(r"魔王.{0,10}(?:卡兹戴尔|回归|归来)"), "babel"),
-        (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
-    ]
-
-# 干员页面名 → 语音行默认时期（快速路径 / 离线缓存）
-# 优先使用 phase_inferrer 自动推断；此表仅作为离线 fallback 和已知结果的缓存
-# 新增角色时无需手动添加 — phase_inferrer 会从 PRTS 分类标签自动推断
-OPERATOR_DEFAULT_PHASE = {
-    "魔王": "resurrected",    # Civilight Eterna = 复活后特蕾西娅
-    "W": "early",            # W 的语音行默认为早期（切尔诺伯格/整合运动时期）
-}
-
 # 自动推断缓存（运行时填充，避免重复查询 PRTS）
 _auto_inferred_phases: dict = {}
 
-# 时间线正则（从 knowledge.md 提取）
-TIMELINE_RE = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
-
 
 # ──────────────────────────────────────────────
-# 安全工具
+# 安全工具（委托给 shared_utils）
 # ──────────────────────────────────────────────
-
-# 允许读取的目录前缀（白名单）
-_ALLOWED_PATH_PREFIXES = [
-    str(Path.cwd()),
-    str(Path.home()),
-    "/tmp",
-]
 
 
 def _validate_path(path: str) -> str:
     """验证文件路径是否在允许范围内，防止路径遍历攻击"""
-    resolved = Path(path).resolve()
-    # 检查路径是否在允许的目录内
-    for prefix in _ALLOWED_PATH_PREFIXES:
-        if str(resolved).startswith(prefix):
-            return str(resolved)
-    raise ValueError(
-        f"安全限制：路径 '{path}' 不在允许的目录内。"
-        f"允许的目录: {', '.join(_ALLOWED_PATH_PREFIXES)}"
-    )
+    return validate_path(path)
 
 
 # ──────────────────────────────────────────────

@@ -21,25 +21,22 @@ import argparse
 import json
 import re
 import sys
-import time
 from pathlib import Path
 from typing import Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, quote
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
+# 确保 tools 目录在 import 路径中
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
 
-# ──────────────────────────────────────────────
-# 常量
-# ──────────────────────────────────────────────
+from constants import PRTS_API_URL, PRTS_USER_AGENT, SLUG_RE
+from prts_client import rate_limited_urlopen
+from shared_utils import setup_logging
 
-PRTS_API_URL = "https://prts.wiki/api.php"
-PRTS_USER_AGENT = "arknights-operator-skill/2.0"
-REQUEST_TIMEOUT = 15  # 秒
-
-# 速率限制
-_last_request_time = 0.0
-_REQUEST_INTERVAL = 0.5  # 最小请求间隔（秒）
+logger = setup_logging("game_data_parser")
 
 
 # ──────────────────────────────────────────────
@@ -71,7 +68,7 @@ OPERATOR_SCHEMA = {
 
 
 # ──────────────────────────────────────────────
-# PRTS API 请求
+# PRTS API 请求（委托给 prts_client）
 # ──────────────────────────────────────────────
 
 def _prts_api_request(params: dict) -> dict:
@@ -86,32 +83,20 @@ def _prts_api_request(params: dict) -> dict:
     Raises:
         RuntimeError: 请求失败或 API 返回错误
     """
-    global _last_request_time
-
-    # 速率限制：确保两次请求间隔 >= _REQUEST_INTERVAL
-    elapsed = time.time() - _last_request_time
-    if elapsed < _REQUEST_INTERVAL:
-        time.sleep(_REQUEST_INTERVAL - elapsed)
-
     params["format"] = "json"
-    # 使用 urlencode 正确编码中文参数
     query_string = urlencode(params)
     url = f"{PRTS_API_URL}?{query_string}"
 
     req = Request(url, headers={"User-Agent": PRTS_USER_AGENT})
 
     try:
-        with urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-            _last_request_time = time.time()
+        with rate_limited_urlopen(req) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except HTTPError as e:
-        _last_request_time = time.time()
         raise RuntimeError(f"PRTS API HTTP 错误: {e.code} {e.reason}") from e
     except URLError as e:
-        _last_request_time = time.time()
         raise RuntimeError(f"无法连接 PRTS Wiki: {e.reason}") from e
     except json.JSONDecodeError as e:
-        _last_request_time = time.time()
         raise RuntimeError(f"PRTS API 返回了无效的 JSON: {e}") from e
 
 
@@ -403,14 +388,34 @@ def _extract_archives(wikitext: str) -> list[dict]:
 
     # 提取所有档案条目
     # 终止条件：下一个 |档案N= 或字符串末尾（_extract_template_body 已移除尾部 }}）
-    for m in re.finditer(r"\|档案(\d+)=([^\n|]+)\s*\n\s*\|档案\1条件=[^\n]*\n\s*\|档案\1文本=(.*?)(?=\n\s*\|档案\d+=|$)", fields, re.DOTALL):
+    # 先检测是否存在档案字段
+    archive_keys = set(re.findall(r"\|档案(\d+)=", fields))
+    if not archive_keys:
+        return archives
+
+    archive_pattern = re.compile(
+        r"\|档案(\d+)=([^\n|]+)\s*\n\s*\|档案\1条件=[^\n]*\n\s*\|档案\1文本=(.*?)(?=\n\s*\|档案\d+=|$)",
+        re.DOTALL,
+    )
+    matched_indices = set()
+    for m in archive_pattern.finditer(fields):
         idx = int(m.group(1))
+        matched_indices.add(str(idx))
         title = m.group(2).strip()
         text = m.group(3).strip()
         text = re.sub(r"<br\s*/?>", "\n", text)
         text = clean_wikitext(text)
         if text:
             archives.append({"index": idx, "title": title, "text": text})
+
+    # 格式变动检测：预期字段存在但正则未匹配
+    missed = archive_keys - matched_indices
+    if missed:
+        logger.warning(
+            "档案格式可能已变动：以下档案编号存在于模板中但正则未匹配到完整条目：%s。"
+            "请检查 PRTS Wiki 模板格式是否发生变化。",
+            sorted(missed, key=int),
+        )
 
     return archives
 

@@ -19,135 +19,32 @@ phase_inferrer.py — 多层级时期自动推断引擎
 import json
 import re
 import sys
-import time
-import urllib.parse
-import urllib.request
 from pathlib import Path
 
-# ──────────────────────────────────────────────
-# 常量
-# ──────────────────────────────────────────────
+# 确保 tools 目录在 import 路径中
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
 
-PRTS_API = "https://prts.wiki/api.php"
-REQUEST_TIMEOUT = 15
+from constants import (
+    PHASE_ORDER,
+    PHASE_PATTERNS,
+    PHASE_KEYWORDS,
+    CHAPTER_PHASE_MAP,
+    ACTIVITY_PHASE_MAP,
+    FACTION_CATEGORY_PHASE,
+    CLUSTER_KEYWORDS,
+)
+from prts_client import prts_api_get, fetch_page_categories as _fetch_page_categories
+from shared_utils import setup_logging
 
-# 已知的时期列表（按时序排列）
-PHASE_ORDER = ["early", "babel", "resurrected"]
-
-# 内容精确匹配（正则）— 优先级最高
-PHASE_PATTERNS = [
-    (re.compile(r"魔王.{0,10}(?:卡兹戴尔|回归|归来)"), "babel"),
-    (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
-]
-
-# 内容关键词匹配 — 次优先
-PHASE_KEYWORDS = {
-    "babel": ["巴别塔", "内战", "卡兹戴尔重建", "和平协议", "卡兹戴尔的和平"],
-    "resurrected": ["黑冠", "赦罪师", "巫术"],
-}
-
-# 章节代码快速映射（保留，但作为 fallback 而非唯一来源）
-CHAPTER_PHASE_MAP = {
-    "第0章": "early",
-    "第1章": "early",
-    "第2章": "early",
-    "第3章": "early",
-    "第4章": "early",
-    "第5章": "early",
-    "第6章": "early",
-    "第7章": "early",
-    "第8章": "babel",
-    "第9章": "babel",
-    "第10章": "resurrected",
-    "第11章": "resurrected",
-    "第12章": "resurrected",
-    "第13章": "resurrected",
-    "第14章": "resurrected",
-    "BB-": "babel",
-    "LT-": "resurrected",
-    "H10-": "resurrected",
-    "H11-": "resurrected",
-    "H12-": "resurrected",
-    "H14-": "resurrected",
-    "DM-": "early",
-    "WD-": "early",
-}
-
-# 活动名称 → 时期（从活动元数据自动发现后缓存于此）
-ACTIVITY_PHASE_MAP = {
-    "巴别塔": "babel",
-    "慈悲灯塔": "resurrected",
-    "伦蒂尼姆": "resurrected",
-    "生于黑夜": "early",
-    "切尔诺伯格": "early",
-    "遗尘漫步": "early",
-}
-
-# PRTS 分类标签 → 时期
-# 从干员页面的"分类:属于XX的干员"推断默认时期
-FACTION_CATEGORY_PHASE = {
-    "属于巴别塔的干员": "babel",
-    "属于罗德岛的干员": "resurrected",  # 罗德岛时期 = 复活后（对特蕾西娅）
-    "属于整合运动的干员": "early",
-    "属于卡兹戴尔的干员": "early",
-    "属于维多利亚的干员": "resurrected",
-    "属于拉特兰的干员": "early",
-    "属于莱塔尼亚的干员": "early",
-    "属于乌萨斯的干员": "early",
-    "属于炎国的干员": "early",
-    "属于汐斯塔的干员": "early",
-}
-
-# 内容聚类关键词 — 用于 fallback 推断
-CLUSTER_KEYWORDS = {
-    "early": [
-        "切尔诺伯格", "整合运动", "塔露拉", "天灾", "矿石病", "感染者",
-        "佣兵", "雇佣兵", "战场", "撤退", "行动",
-    ],
-    "babel": [
-        "巴别塔", "特蕾西娅", "特雷西斯", "卡兹戴尔", "内战", "萨卡兹",
-        "王旗", "正统", "摄政王", "和平协议",
-    ],
-    "resurrected": [
-        "伦蒂尼姆", "飞空艇", "黑冠", "赦罪师", "巫术", "复活",
-        "飞地", "城防", "维多利亚",
-    ],
-}
-
-
-# ──────────────────────────────────────────────
-# PRTS API 工具（含速率限制）
-# ──────────────────────────────────────────────
-
-_last_request_time = 0.0
-_REQUEST_INTERVAL = 0.5  # 最小请求间隔（秒）
-
-
-def _prts_api_get(params: dict) -> dict:
-    """调用 PRTS MediaWiki API（含速率限制）"""
-    global _last_request_time
-
-    # 速率限制：确保两次请求间隔 >= _REQUEST_INTERVAL
-    elapsed = time.time() - _last_request_time
-    if elapsed < _REQUEST_INTERVAL:
-        time.sleep(_REQUEST_INTERVAL - elapsed)
-
-    params["format"] = "json"
-    url = f"{PRTS_API}?{urllib.parse.urlencode(params)}"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "arknights-operator-skill/2.0"})
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-            _last_request_time = time.time()
-            return json.loads(resp.read().decode("utf-8"))
-    except Exception as e:
-        _last_request_time = time.time()
-        print(f"[phase_inferrer] PRTS API 请求失败: {e}", file=sys.stderr)
-        return {}
+logger = setup_logging("phase_inferrer")
 
 
 def fetch_page_categories(page_title: str) -> list[str]:
-    """获取 PRTS 页面的分类标签"""
-    data = _prts_api_get({
+    """获取 PRTS 页面的分类标签（委托给 prts_client）"""
+    return _fetch_page_categories(page_title)
+    data = prts_api_get({
         "action": "query",
         "titles": page_title,
         "prop": "categories",
@@ -167,7 +64,7 @@ def fetch_page_categories(page_title: str) -> list[str]:
 def fetch_activity_info(page_title: str) -> dict:
     """从 PRTS 活动页面提取 {{活动信息}} 模板数据"""
     # 先获取 wikitext
-    data = _prts_api_get({
+    data = prts_api_get({
         "action": "query",
         "titles": page_title,
         "prop": "revisions",

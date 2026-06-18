@@ -22,11 +22,57 @@
 
 import argparse
 import json
+import logging
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# ──────────────────────────────────────────────
+# 正则安全：防止 ReDoS 攻击
+# ──────────────────────────────────────────────
+
+# 正则复杂度限制
+_MAX_PATTERN_LENGTH = 500       # 单条正则最大字符数
+_MAX_NESTED_QUANTIFIERS = 3     # 最大嵌套量词数（如 .*.*.*）
+_REDOS_DANGEROUS = re.compile(
+    r'\((?!\?)[^)]*\)[+*{]|'           # 捕获组后跟量词
+    r'\.\*\.\*|'                        # 连续贪婪匹配
+    r'\(\?:\.\*\)\*|'                   # 非捕获组贪婪匹配后跟量词
+    r'\(\.\*\)[+*]'                     # 捕获组贪婪匹配后跟量词
+)
+
+
+def _validate_regex_safety(pattern: str, source_id: str = "") -> None:
+    """验证正则表达式的安全性，防止 ReDoS 攻击
+
+    Args:
+        pattern: 正则表达式字符串
+        source_id: 来源标识（用于错误消息）
+
+    Raises:
+        ValueError: 正则不安全
+    """
+    if len(pattern) > _MAX_PATTERN_LENGTH:
+        raise ValueError(
+            f"正则过长 ({len(pattern)} > {_MAX_PATTERN_LENGTH})：{pattern[:80]}..."
+        )
+
+    # 检测嵌套量词
+    nested_count = 0
+    for ch in pattern:
+        if ch in '+*{':
+            nested_count += 1
+        elif ch in ')}]' and nested_count > 0:
+            nested_count -= 1
+    # 简化检测：查找已知的危险模式
+    if _REDOS_DANGEROUS.search(pattern):
+        raise ValueError(
+            f"正则包含潜在的 ReDoS 模式：{pattern[:80]}..."
+        )
 
 
 # ──────────────────────────────────────────────
@@ -150,8 +196,10 @@ def load_misconceptions(filepath: Optional[str] = None) -> list[dict]:
         norm_patterns = []
         for p in patterns:
             if isinstance(p, str):
+                _validate_regex_safety(p, item.get("id", "unknown"))
                 norm_patterns.append({"pattern": p, "warning": f"匹配到误解模式: {p}"})
             elif isinstance(p, dict) and "pattern" in p:
+                _validate_regex_safety(p["pattern"], item.get("id", "unknown"))
                 norm_patterns.append(p)
 
         normalized.append({

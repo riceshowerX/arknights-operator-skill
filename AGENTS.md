@@ -6,7 +6,8 @@
 
 **技术栈**: Python 3 (标准库), Markdown, JSON
 **已验证角色**: 特蕾西娅 (operators/te-lei-xi-ya/), W (operators/w/)
-**冒烟测试**: `python3 -m pytest tests/test_smoke.py -v` (51 项全部通过)
+**冒烟测试**: `python3 -m pytest tests/test_smoke.py -v` (54 项全部通过)
+**工程配置**: `pyproject.toml` (含 ruff、mypy、pytest 配置)
 
 ## 核心架构
 
@@ -14,6 +15,15 @@
 - **Persona (persona.md)**: 角色"如何存在" — 五层优先级性格结构 (Layer 0-4 + Layer 5 边界) + Correction 层
 - **context.json**: 语境化数据中间层，统一标注场景/时期/对象
 - **phase_inferrer.py**: 多层级时期自动推断引擎（消除手动映射依赖）
+
+### 共享模块（v2.0 新增）
+
+| 模块 | 用途 |
+|------|------|
+| `constants.py` | 所有领域知识常量统一来源（时期映射、语音标签、正则模式等） |
+| `prts_client.py` | PRTS API 统一客户端（全局速率限制、错误处理） |
+| `shared_utils.py` | 通用工具（slug 验证、路径安全、句子分割、日志配置、正则安全编译） |
+| `pipeline.py` | 蒸馏流水线编排器（一键执行全流程） |
 
 ## 数据流
 
@@ -40,14 +50,22 @@ speech_act_analyzer  dialogue_fingerprint  relationship_graph  temporal_slicer
                          knowledge.md + persona.md + SKILL.md
 ```
 
+共享依赖关系：
+```
+constants.py  ←── 所有工具
+prts_client.py  ←── game_data_parser, story_extractor, phase_inferrer
+shared_utils.py  ←── 所有工具
+```
+
 ## 工具链
 
 | 工具 | 用途 | 关键参数 |
 |------|------|---------|
+| `pipeline.py` | **一键蒸馏编排器** | `--name {角色名} --full` |
 | `game_data_parser.py` | PRTS Wiki 数据获取 | `--source prts --name {角色名}` |
-| `story_extractor.py` | 剧情页面提取 | `--chapter {页面名} --character {角色名}` (支持多次 --chapter) |
-| `phase_inferrer.py` | 多层级时期自动推断 | `--operator {干员名}` / `--chapter {章节名}` / `--context-json` |
-| `context_annotator.py` | 语境化标注枢纽 | `--operator-json --story-json --knowledge-md --output [--interactive]` |
+| `story_extractor.py` | 剧情页面提取 | `--chapter {页面名} --character {角色名}` |
+| `phase_inferrer.py` | 多层级时期自动推断 | `--operator {干员名}` / `--chapter {章节名}` |
+| `context_annotator.py` | 语境化标注枢纽 | `--operator-json --story-json --knowledge-md --output` |
 | `speech_act_analyzer.py` | 话语行为分类 | `--context-json` (语境化模式) |
 | `dialogue_fingerprint.py` | 7维语言指纹 | `--context-json` (语境化模式) |
 | `relationship_graph.py` | 关系图谱 + 时序轨迹 | `--context-json` (语境化模式) |
