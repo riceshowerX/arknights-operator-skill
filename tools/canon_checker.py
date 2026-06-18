@@ -22,14 +22,18 @@
 
 import argparse
 import json
-import logging
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+try:
+    from shared_utils import setup_logging
+except ImportError:
+    from tools.shared_utils import setup_logging
+
+logger = setup_logging("canon_checker")
 
 # ──────────────────────────────────────────────
 # 正则安全：防止 ReDoS 攻击

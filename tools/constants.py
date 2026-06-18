@@ -177,8 +177,8 @@ SITUATION_KEYWORDS: dict[str, list[str]] = {
 
 PRTS_API_URL: str = "https://prts.wiki/api.php"
 PRTS_USER_AGENT: str = "arknights-operator-skill/2.0"
-PRTS_REQUEST_TIMEOUT: int = 15
-PRTS_REQUEST_INTERVAL: float = 0.5  # 最小请求间隔（秒）
+PRTS_REQUEST_TIMEOUT: int = 30  # PRTS Wiki 不稳定，需要更长超时
+PRTS_REQUEST_INTERVAL: float = 0.3  # 最小请求间隔（秒），适度放宽以提高效率
 
 # ──────────────────────────────────────────────
 # 安全相关

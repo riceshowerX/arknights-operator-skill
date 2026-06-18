@@ -32,9 +32,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
@@ -48,10 +45,8 @@ from constants import (
     SCENE_HEADER_RE,
     WIKITEXT_DIALOGUE_RE,
     SCRIPT_DIALOGUE_RE,
-    PRTS_API_URL,
-    PRTS_USER_AGENT,
 )
-from prts_client import rate_limited_urlopen
+from prts_client import fetch_page_wikitext
 from shared_utils import setup_logging
 
 logger = setup_logging("story_extractor")
@@ -107,43 +102,22 @@ SCRIPT_NOISE_RE = re.compile(
 # ──────────────────────────────────────────────
 
 def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
-    """获取剧情页面的 wikitext 原文，自动跟随 redirect"""
+    """获取剧情页面的 wikitext 原文，自动跟随 redirect
+    
+    使用 prts_client.fetch_page_wikitext 统一处理重试和速率限制。
+    """
     if _depth > 3:
         logger.error("重定向链太深: '%s'", chapter)
         return ""
-    # 先尝试用 action=parse（自动跟随 redirect）
-    params = urlencode({
-        'action': 'parse',
-        'page': chapter,
-        'prop': 'wikitext',
-        'format': 'json',
-        'redirects': 'true',
-    })
-    url = f"{PRTS_API_URL}?{params}"
-    req = Request(url, headers={'User-Agent': PRTS_USER_AGENT})
-
-    try:
-        with rate_limited_urlopen(req) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-    except (HTTPError, URLError) as e:
-        logger.error("无法获取剧情页面 '%s': %s", chapter, e)
-        return ""
-
-    wikitext = data.get('parse', {}).get('wikitext', {}).get('*', '')
-
-    # 如果是 redirect，手动跟随
-    if wikitext.startswith('#REDIRECT') or wikitext.startswith('#redirect'):
-        redirect_match = re.search(r'\[\[([^\]]+)\]\]', wikitext)
-        if redirect_match:
-            target = redirect_match.group(1)
-            logger.info("跟随重定向: '%s' → '%s'", chapter, target)
-            return fetch_chapter_wikitext(target, _depth=_depth + 1)
+    
+    # 使用统一的 prts_client（含重试和速率限制）
+    wikitext = fetch_page_wikitext(chapter, follow_redirects=True)
 
     # 如果内容为空，尝试查找 /NBT 子页面
     if not wikitext:
         # 尝试 chapter/NBT
         nbt_page = f"{chapter}/NBT"
-        nbt_wikitext = _fetch_raw_wikitext(nbt_page)
+        nbt_wikitext = fetch_page_wikitext(nbt_page, follow_redirects=True)
         if nbt_wikitext:
             logger.info("自动切换到 NBT 子页面: '%s'", nbt_page)
             return nbt_wikitext
@@ -151,27 +125,6 @@ def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
         logger.warning("页面 '%s' 内容为空或不存在（也尝试了 /NBT 子页面）", chapter)
 
     return wikitext
-
-
-def _fetch_raw_wikitext(page: str) -> str:
-    """直接获取页面 wikitext，不跟随 redirect"""
-    params = urlencode({
-        'action': 'parse',
-        'page': page,
-        'prop': 'wikitext',
-        'format': 'json',
-        'redirects': 'true',
-    })
-    url = f"{PRTS_API_URL}?{params}"
-    req = Request(url, headers={'User-Agent': PRTS_USER_AGENT})
-
-    try:
-        with rate_limited_urlopen(req) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-    except (HTTPError, URLError):
-        return ""
-
-    return data.get('parse', {}).get('wikitext', {}).get('*', '')
 
 
 # ──────────────────────────────────────────────
@@ -388,6 +341,57 @@ def infer_phase(scene: str, chapter: str) -> str:
     return "unknown"
 
 
+def discover_story_pages(activity_name: str) -> list[str]:
+    """自动发现活动的剧情子页面
+
+    PRTS Wiki 的剧情文本通常存储在子页面中，如：
+    - "DM-1 埋藏/BEG"、"DM-1 埋藏/END"
+    - "7-10 暗淡者之火/BEG"、"7-10 暗淡者之火/END"
+    - "BB-ST-3 灵魂尽头/NBT"
+
+    此函数通过搜索活动名，找到所有包含 /BEG、/END、/NBT 等后缀的剧情子页面。
+
+    Args:
+        activity_name: 活动名或章节前缀，如 "生于黑夜"、"DM"、"7-10"
+
+    Returns:
+        剧情子页面名列表，按页面名排序
+    """
+    from prts_client import prts_api_get
+
+    # 搜索所有以活动名为前缀的页面
+    pages = []
+    for suffix in ["/BEG", "/END", "/NBT", "/BEG2", "/END2"]:
+        search_term = f"{activity_name}{suffix}"
+        data = prts_api_get({
+            "action": "query",
+            "list": "prefixsearch",
+            "pssearch": search_term,
+            "pslimit": "50",
+        })
+        for r in data.get("query", {}).get("prefixsearch", []):
+            title = r.get("title", "")
+            if title and title not in pages:
+                pages.append(title)
+
+    # 也搜索活动名本身（可能直接包含剧情）
+    data = prts_api_get({
+        "action": "query",
+        "list": "prefixsearch",
+        "pssearch": activity_name,
+        "pslimit": "50",
+    })
+    for r in data.get("query", {}).get("prefixsearch", []):
+        title = r.get("title", "")
+        if title and title not in pages:
+            # 只添加包含剧情后缀的页面
+            if any(s in title for s in ["/BEG", "/END", "/NBT"]):
+                pages.append(title)
+
+    pages.sort()
+    return pages
+
+
 # ──────────────────────────────────────────────
 # CLI 入口
 # ──────────────────────────────────────────────
@@ -395,16 +399,35 @@ def infer_phase(scene: str, chapter: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="PRTS 剧情对话提取器")
     parser.add_argument(
-        "--chapter", action="append", required=True,
-        help="章节/剧情页面名（可多次指定），如 'BB-ST-3 灵魂尽头/NBT' 或 '第8章/怒号光明'"
+        "--chapter", action="append",
+        help="章节/剧情页面名（可多次指定），如 'DM-1 埋藏/BEG' 或 '7-10 暗淡者之火/BEG'"
+    )
+    parser.add_argument(
+        "--discover",
+        help="自动发现活动的剧情子页面（传入活动名或章节前缀，如 'DM'、'生于黑夜'）"
     )
     parser.add_argument("--character", required=True, help="角色名")
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
     args = parser.parse_args()
 
+    # 确定要提取的章节列表
+    chapters = list(args.chapter or [])
+    if args.discover:
+        discovered = discover_story_pages(args.discover)
+        if discovered:
+            logger.info("发现 %d 个剧情页面: %s", len(discovered), ", ".join(discovered[:5]))
+            if len(discovered) > 5:
+                logger.info("  ... 及其他 %d 个页面", len(discovered) - 5)
+            chapters.extend(discovered)
+        else:
+            logger.warning("未发现 '%s' 的剧情子页面", args.discover)
+
+    if not chapters:
+        parser.error("请指定 --chapter 或 --discover 参数")
+
     all_dialogues = []
 
-    for chapter in args.chapter:
+    for chapter in chapters:
         wikitext = fetch_chapter_wikitext(chapter)
         if not wikitext:
             continue

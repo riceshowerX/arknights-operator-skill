@@ -91,9 +91,9 @@ def run_tool(tool_name: str, args: list[str], description: str = "") -> bool:
 _STEP_ARTIFACTS: dict[str, list[str]] = {
     "fetch": ["operator_data.json"],
     "annotate": ["context.json"],
-    "analyze": ["context.json"],  # analyze 会更新 context.json，但依赖它存在
-    "validate": [],  # validate 无特定产物
-    "write": ["SKILL.md"],
+    "analyze": ["context.json"],  # analyze 会回写 context.json（添加 speech_acts 等字段）
+    "validate": [],  # validate 输出到 stdout，无特定文件产物
+    "write": ["meta.json"],  # skill_writer --action create 生成 meta.json
 }
 
 
@@ -108,8 +108,17 @@ def _step_completed(output_dir: str, step_name: str) -> bool:
     )
 
 
-def step_fetch(name: str, output_dir: str, skip_fetch: bool = False) -> bool:
-    """步骤 1: 获取原始数据"""
+def step_fetch(name: str, output_dir: str, skip_fetch: bool = False,
+               chapters: list[str] | None = None, discover: str | None = None) -> bool:
+    """步骤 1: 获取原始数据
+
+    Args:
+        name: 角色名
+        output_dir: 输出目录
+        skip_fetch: 跳过 fetch
+        chapters: 手动指定的章节列表
+        discover: 自动发现的页面前缀（如 "DM"、"BB"）
+    """
     if skip_fetch:
         logger.info("跳过 fetch 步骤（--skip-fetch）")
         return True
@@ -124,16 +133,35 @@ def step_fetch(name: str, output_dir: str, skip_fetch: bool = False) -> bool:
     ):
         return False
 
-    # 1b. 提取剧情对话（尝试常见章节）
-    # 这里需要根据角色手动指定章节，暂时跳过自动提取
-    logger.info("剧情提取需要手动指定章节，跳过自动提取")
-    logger.info("提示: python3 story_extractor.py --chapter 'BB-ST-3/NBT' --character %s", name)
+    # 1b. 提取剧情对话
+    story_json = str(Path(output_dir) / "story_data.json")
+    story_args = ["--character", name, "--output", story_json]
+
+    if discover:
+        # 自动发现模式：根据前缀搜索所有剧情页面
+        story_args.extend(["--discover", discover])
+        logger.info("使用自动发现模式，前缀: %s", discover)
+    elif chapters:
+        # 手动指定章节
+        for ch in chapters:
+            story_args.extend(["--chapter", ch])
+    else:
+        logger.info("未指定章节或发现前缀，跳过剧情提取")
+        logger.info("提示: python3 story_extractor.py --discover DM --character %s", name)
+        return True
+
+    if not run_tool("story_extractor", story_args, f"提取 {name} 的剧情对话"):
+        logger.warning("剧情提取失败，但不阻断流程")
 
     return True
 
 
 def step_annotate(name: str, output_dir: str, slug: str) -> bool:
-    """步骤 2: 语境化标注"""
+    """步骤 2: 语境化标注
+
+    注意: context_annotator 需要 --knowledge-md（由 AI Agent 根据 knowledge_analyzer prompt 生成），
+    在全自动 pipeline 中此文件可能不存在。如果不存在，跳过此步骤并提示用户手动生成。
+    """
     operator_json = str(Path(output_dir) / "operator_data.json")
     knowledge_md = str(Path(output_dir) / "knowledge.md")
     context_json = str(Path(output_dir) / "context.json")
@@ -142,13 +170,23 @@ def step_annotate(name: str, output_dir: str, slug: str) -> bool:
         logger.warning("operator_data.json 不存在，跳过语境标注")
         return True
 
+    if not Path(knowledge_md).exists():
+        logger.warning(
+            "knowledge.md 不存在，跳过语境标注。"
+            "请先使用 AI Agent 根据 prompts/knowledge_builder.md 生成 knowledge.md"
+        )
+        return True
+
     args = [
         "--operator-json", operator_json,
+        "--knowledge-md", knowledge_md,
         "--output", context_json,
     ]
 
-    if Path(knowledge_md).exists():
-        args.extend(["--knowledge-md", knowledge_md])
+    # 添加 story JSON（如果存在）
+    story_json = Path(output_dir) / "story.json"
+    if story_json.exists():
+        args.extend(["--story-json", str(story_json)])
 
     return run_tool("context_annotator", args, f"语境化标注: {name}")
 
@@ -179,13 +217,19 @@ def step_analyze(name: str, output_dir: str) -> bool:
 def step_validate(name: str, output_dir: str) -> bool:
     """步骤 3b: 验证"""
     persona_md = str(Path(output_dir) / "persona.md")
+    knowledge_md = str(Path(output_dir) / "knowledge.md")
     context_json = str(Path(output_dir) / "context.json")
 
-    # canon_checker
-    if Path(persona_md).exists():
-        run_tool("canon_checker", ["--persona", persona_md], "设定一致性校验")
+    # canon_checker: 使用 --sources 交叉验证 knowledge.md 和 persona.md
+    sources = [p for p in [knowledge_md, persona_md] if Path(p).exists()]
+    if sources:
+        run_tool(
+            "canon_checker",
+            ["--sources"] + sources,
+            "设定一致性校验",
+        )
 
-    # persona_validator
+    # persona_validator: 使用 --persona + --context-json
     if Path(persona_md).exists() and Path(context_json).exists():
         run_tool(
             "persona_validator",
@@ -197,10 +241,20 @@ def step_validate(name: str, output_dir: str) -> bool:
 
 
 def step_write(name: str, output_dir: str, slug: str) -> bool:
-    """步骤 4: 写入 Skill 文件"""
+    """步骤 4: 写入 Skill 文件
+
+    注意: skill_writer 的 --action create 会创建默认模板文件。
+    实际的 knowledge.md 和 persona.md 内容由 AI Agent 根据 Prompt 生成，
+    此步骤仅确保目录结构和 meta.json 存在。
+    """
     return run_tool(
         "skill_writer",
-        ["--slug", slug, "--name", name, "--base-dir", str(Path(output_dir).parent)],
+        [
+            "--action", "create",
+            "--slug", slug,
+            "--name", name,
+            "--base-dir", str(Path(output_dir).parent),
+        ],
         f"写入 Skill 文件: {slug}",
     )
 
@@ -224,6 +278,16 @@ def main():
         help="断点续传：检测已有中间产物，跳过已完成的步骤",
     )
     parser.add_argument("--dry-run", action="store_true", help="仅打印计划，不执行")
+    parser.add_argument(
+        "--discover",
+        help="自动发现剧情页面的前缀（如 DM、BB、SV），自动搜索所有匹配页面",
+    )
+    parser.add_argument(
+        "--chapter",
+        action="append",
+        dest="chapters",
+        help="手动指定剧情章节名（可多次使用，如 --chapter 'DM-1 埋藏' --chapter 'DM-2 遗愿'）",
+    )
 
     args = parser.parse_args()
 
@@ -257,7 +321,11 @@ def main():
         return
 
     steps = {
-        "fetch": lambda: step_fetch(args.name, output_dir, args.skip_fetch),
+        "fetch": lambda: step_fetch(
+            args.name, output_dir, args.skip_fetch,
+            discover_prefix=args.discover,
+            chapters=args.chapters,
+        ),
         "annotate": lambda: step_annotate(args.name, output_dir, slug),
         "analyze": lambda: step_analyze(args.name, output_dir),
         "validate": lambda: step_validate(args.name, output_dir),

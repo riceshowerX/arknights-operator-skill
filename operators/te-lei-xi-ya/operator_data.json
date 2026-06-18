@@ -1,0 +1,15 @@
+{
+  "slug": "te-lei-xi-ya",
+  "source_url": "https://prts.wiki/w/%E7%89%B9%E8%95%BE%E8%A5%BF%E5%A8%85",
+  "source": "prts",
+  "lang": "zh",
+  "page_type": "enemy",
+  "name_zh": "特蕾西娅",
+  "threat_level": "领袖",
+  "description": "早已逝去之人，早已宽恕之罪。",
+  "damage_type": "法术",
+  "attack_type": "远程",
+  "race": "萨卡兹",
+  "abilities_raw": "·可以捕获魂灵涡流，捕获魂灵涡流时，恢复自身一定生命值\n·拥有<永恒尘埃>环绕自身，大幅度降低来源于环绕侧的伤害\n·场上<茧笼>数量到达一定程度后扣除所有目标生命\n{{color|#FF4F0B|第一形态",
+  "fetch_time": "2026-06-18T11:46:27+0800"
+}

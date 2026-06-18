@@ -59,10 +59,11 @@ git clone https://github.com/riceshowerX/arknights-operator-skill ~/.openclaw/sk
 
 ### 依赖
 
-核心工具链仅依赖 Python 3.10+ 标准库。可选依赖（拼音 slug 生成）：
+核心工具链仅依赖 Python 3.10+ 标准库，无需安装额外依赖。
 
 ```bash
-pip install -r requirements-optional.txt
+# 运行测试
+python -m pytest tests/ -v
 ```
 
 ### 创建角色
@@ -163,7 +164,7 @@ Correction 序号越大越新，越新越优先
 | 工具 | 功能 |
 |------|------|
 | `game_data_parser.py` | PRTS Wiki API / 本地文件解析，自动生成拼音 slug |
-| `story_extractor.py` | PRTS 剧情页面 → 结构化对话提取 |
+| `story_extractor.py` | PRTS 剧情页面 → 结构化对话提取（支持 `--discover` 自动发现子页面） |
 
 ### 语境化分析
 
@@ -191,7 +192,7 @@ Correction 序号越大越新，越新越优先
 | `constants.py` | 领域知识常量（时期映射、关系类型、角色别名等） |
 | `prts_client.py` | 统一 PRTS API 调用 + 速率限制 + 指数退避重试 |
 | `shared_utils.py` | 通用工具（路径验证、slug 验证、原子写入、分句等） |
-| `pipeline.py` | 一键编排：`python pipeline.py --full --slug {slug}`（支持 `--resume` 断点续传） |
+| `pipeline.py` | 一键编排：`python pipeline.py --full --slug {slug} --name {name}`（支持 `--resume` 断点续传 + `--discover` 自动发现剧情页面） |
 
 ---
 

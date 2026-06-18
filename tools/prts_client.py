@@ -48,8 +48,8 @@ _rate_lock = threading.Lock()
 _last_request_time: float = 0.0
 
 # 重试配置
-_MAX_RETRIES = 3
-_RETRY_BASE_DELAY = 1.0  # 秒，指数退避基数
+_MAX_RETRIES = 5  # PRTS Wiki 不稳定，增加重试次数
+_RETRY_BASE_DELAY = 0.5  # 秒，指数退避基数（0.5s, 1s, 2s, 4s, 8s）
 
 
 def _rate_limit() -> None:
