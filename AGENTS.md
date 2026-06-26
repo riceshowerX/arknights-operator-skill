@@ -4,9 +4,10 @@
 
 明日方舟角色蒸馏工具，将游戏角色转化为结构化 AI Skill。采用 Knowledge + Persona 双轨分离架构，五层优先级 Persona 结构，支持资料导入、语境化分析、对话纠正和版本管理。
 
+**版本**: 3.4.0（单一来源：pyproject.toml）
 **技术栈**: Python 3 (标准库), Markdown, JSON
 **已验证角色**: 特蕾西娅 (operators/te-lei-xi-ya/), W (operators/w/)
-**冒烟测试**: `python3 -m pytest tests/test_smoke.py -v` (54 项全部通过)
+**冒烟测试**: `python3 -m pytest tests/test_smoke.py -v` (98 项通过)
 **工程配置**: `pyproject.toml` (含 ruff、mypy、pytest 配置)
 
 ## 核心架构

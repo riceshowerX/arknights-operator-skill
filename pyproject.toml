@@ -1,6 +1,6 @@
 [project]
 name = "arknights-operator-skill"
-version = "2.0.0"
+version = "3.4.0"
 description = "明日方舟角色蒸馏工具 — 将游戏角色转化为结构化的 AI Skill"
 readme = "README.md"
 license = {text = "MIT"}
@@ -46,6 +46,12 @@ strict = false
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+# 逐步收紧类型检查：对核心模块启用严格模式
+[[tool.mypy.overrides]]
+module = ["tools.constants", "tools.game_data_parser", "tools.context_annotator"]
+disallow_untyped_defs = true
+disallow_any_generics = true
+warn_redundant_casts = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

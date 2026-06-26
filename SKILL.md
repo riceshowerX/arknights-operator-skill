@@ -2,7 +2,7 @@
 name: create-operator
 description: "Distill an Arknights operator into an AI Skill. Generate Knowledge + Persona with 5-layer structure, evolution support. | 将明日方舟角色蒸馏成AI Skill，生成知识库+5层人格，支持持续进化。"
 argument-hint: "[operator-name-or-slug]"
-version: "3.1.0"
+version: "3.4.0"
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
 ---

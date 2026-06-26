@@ -1,0 +1,208 @@
+{
+  "operators": {
+    "特蕾西娅": {
+      "en": "Theresa",
+      "race": "萨卡兹",
+      "faction": "巴别塔"
+    },
+    "特雷西斯": {
+      "en": "Theresis",
+      "race": "萨卡兹",
+      "faction": "卡兹戴尔"
+    },
+    "阿米娅": {
+      "en": "Amiya",
+      "race": "卡特斯",
+      "faction": "罗德岛"
+    },
+    "博士": {
+      "en": "Doctor",
+      "race": "未知",
+      "faction": "罗德岛"
+    },
+    "凯尔希": {
+      "en": "Kal'tsit",
+      "race": "菲林",
+      "faction": "罗德岛"
+    },
+    "可露希尔": {
+      "en": "Closure",
+      "race": "吸血鬼",
+      "faction": "罗德岛"
+    },
+    "W": {
+      "en": "Wiš'adel",
+      "race": "萨卡兹",
+      "faction": "罗德岛"
+    },
+    "维什戴尔": {
+      "en": "Wiš'adel",
+      "race": "萨卡兹",
+      "faction": "罗德岛"
+    },
+    "塔露拉": {
+      "en": "Talulah",
+      "race": "德拉克",
+      "faction": "整合运动"
+    },
+    "爱国者": {
+      "en": "Patriot",
+      "race": "萨卡兹",
+      "faction": "整合运动"
+    },
+    "霜星": {
+      "en": "FrostNova",
+      "race": "萨卡兹",
+      "faction": "整合运动"
+    },
+    "梅菲斯特": {
+      "en": "Mephisto",
+      "race": "里拉",
+      "faction": "整合运动"
+    },
+    "浮士德": {
+      "en": "Faust",
+      "race": "萨卡兹",
+      "faction": "整合运动"
+    },
+    "陈": {
+      "en": "Ch'en",
+      "race": "德拉克",
+      "faction": "龙门"
+    },
+    "星熊": {
+      "en": "Hoshiguma",
+      "race": "鬼",
+      "faction": "龙门"
+    },
+    "塞雷娅": {
+      "en": "Saria",
+      "race": "瓦伊凡",
+      "faction": "莱茵生命"
+    },
+    "伊芙利特": {
+      "en": "Ifrit",
+      "race": "萨卡兹",
+      "faction": "莱茵生命"
+    },
+    "赫默": {
+      "en": "Silence",
+      "race": "里拉",
+      "faction": "莱茵生命"
+    },
+    "推进之王": {
+      "en": "Siege",
+      "race": "阿斯兰",
+      "faction": "维多利亚"
+    },
+    "因陀罗": {
+      "en": "Indra",
+      "race": "维多利亚",
+      "faction": "维多利亚"
+    },
+    "达格达": {
+      "en": "Dagda",
+      "race": "阿斯兰",
+      "faction": "维多利亚"
+    },
+    "号角": {
+      "en": "Horn",
+      "race": "鲁珀",
+      "faction": "维多利亚"
+    },
+    "风笛": {
+      "en": "Bagpipe",
+      "race": "瑞柏巴",
+      "faction": "维多利亚"
+    },
+    "赫德雷": {
+      "en": "Hoederer",
+      "race": "萨卡兹",
+      "faction": "卡兹戴尔"
+    },
+    "伊内丝": {
+      "en": "Ines",
+      "race": "卡普里尼",
+      "faction": "卡兹戴尔"
+    },
+    "罗德岛精英干员Scout": {
+      "en": "Scout",
+      "race": "萨卡兹",
+      "faction": "罗德岛"
+    },
+    "迷迭香": {
+      "en": "Rosa",
+      "race": "斐迪亚",
+      "faction": "罗德岛"
+    },
+    "Logos": {
+      "en": "Logos",
+      "race": "萨卡兹",
+      "faction": "罗德岛"
+    },
+    "赦罪师": {
+      "en": "Confessor",
+      "race": "萨卡兹",
+      "faction": "卡兹戴尔"
+    },
+    "军事委员会": {
+      "en": "Military Commission",
+      "race": "萨卡兹",
+      "faction": "卡兹戴尔"
+    },
+    "银灰": {
+      "en": "SilverAsh",
+      "race": "菲林",
+      "faction": "喀兰贸易"
+    },
+    "煌": {
+      "en": "Blaze",
+      "race": "萨卡兹",
+      "faction": "罗德岛"
+    }
+  },
+  "aliases": {
+    "Theresa": "特蕾西娅",
+    "Theresis": "特雷西斯",
+    "Amiya": "阿米娅",
+    "Doctor": "博士",
+    "Kal'tsit": "凯尔希",
+    "Closure": "可露希尔",
+    "Wiš'adel": "W",
+    "W": "W",
+    "维什戴尔": "维什戴尔",
+    "Talulah": "塔露拉",
+    "Ch'en": "陈",
+    "Saria": "塞雷娅",
+    "Ifrit": "伊芙利特",
+    "SilverAsh": "银灰",
+    "Blaze": "煌",
+    "爱国者": "爱国者",
+    "Patriot": "爱国者",
+    "FrostNova": "霜星",
+    "Siege": "推进之王",
+    "维娜": "推进之王",
+    "Horn": "号角",
+    "Bagpipe": "风笛",
+    "Hoederer": "赫德雷",
+    "Ines": "伊内丝",
+    "Scout": "罗德岛精英干员Scout",
+    "Rosa": "迷迭香",
+    "Logos": "Logos",
+    "Mephisto": "梅菲斯特",
+    "Faust": "浮士德",
+    "Hoshiguma": "星熊",
+    "Silence": "赫默",
+    "Indra": "因陀罗",
+    "Dagda": "达格达",
+    "Confessor": "赦罪师",
+    "Military Commission": "军事委员会",
+    "魔王": "特蕾西娅",
+    "兄长": "特雷西斯",
+    "小兔子": "阿米娅",
+    "老女人": "凯尔希",
+    "凯太后": "凯尔希",
+    "赫总": "赫德雷",
+    "伊内丝小姐": "伊内丝"
+  }
+}

@@ -9,16 +9,18 @@
 - 日志配置
 """
 
+import json
 import logging
 import re
 import sys
 from pathlib import Path
 
-# 支持从 tools 目录内和从项目根目录两种导入方式
-try:
-    from constants import SLUG_RE
-except ImportError:
-    from tools.constants import SLUG_RE
+# 确保 tools 目录在 import 路径中，支持从任意位置运行
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from constants import SLUG_RE
 
 logger = logging.getLogger(__name__)
 
@@ -241,3 +243,135 @@ def safe_compile_regex(pattern: str, max_length: int = 500) -> re.Pattern | None
     except re.error as e:
         logger.warning("正则表达式编译失败: %s", e)
         return None
+
+
+# ──────────────────────────────────────────────
+# Context JSON Schema 验证
+# ──────────────────────────────────────────────
+
+# 当前支持的 schema 版本
+_CONTEXT_SCHEMA_VERSION = "1.0.0"
+
+# AnnotatedLine id 格式: V001 / S001 / A001
+_LINE_ID_RE = re.compile(r'^[VSA]\d{3,}$')
+_SLUG_FORMAT_RE = re.compile(r'^[a-z0-9]+(-[a-z0-9]+)*$')
+
+
+class SchemaValidationError(Exception):
+    """context.json schema 验证错误"""
+
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__(f"schema 验证失败 ({len(errors)} 项): " + "; ".join(errors[:5]))
+
+
+def validate_context(data: dict, strict: bool = False) -> list[str]:
+    """验证 context.json 数据是否符合 schema。
+
+    不依赖外部库（如 jsonschema），使用纯 Python 手写校验，
+    确保零依赖约束不变。
+
+    Args:
+        data: context.json 反序列化后的 dict
+        strict: 严格模式 — 警告也视为错误
+
+    Returns:
+        错误列表（空列表 = 通过）
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    # --- 顶层必填字段 ---
+    for field in ("character", "slug", "annotated_lines", "stats"):
+        if field not in data:
+            errors.append(f"缺少必填字段: {field}")
+
+    # --- schema_version ---
+    if "schema_version" not in data:
+        warnings.append("缺少 schema_version 字段，建议添加以支持版本化校验")
+    elif data["schema_version"] != _CONTEXT_SCHEMA_VERSION:
+        warnings.append(
+            f"schema_version={data['schema_version']} != 当前版本 {_CONTEXT_SCHEMA_VERSION}，"
+            f"可能存在不兼容"
+        )
+
+    # --- slug 格式 ---
+    slug = data.get("slug", "")
+    if slug and not _SLUG_FORMAT_RE.match(slug):
+        errors.append(f"slug 格式无效: {slug!r}，应为小写字母数字+连字符")
+
+    # --- annotated_lines ---
+    lines = data.get("annotated_lines", [])
+    if not isinstance(lines, list):
+        errors.append("annotated_lines 应为数组")
+    else:
+        for i, line in enumerate(lines):
+            if not isinstance(line, dict):
+                errors.append(f"annotated_lines[{i}] 应为对象")
+                continue
+
+            # 必填字段
+            for field in ("id", "text", "source", "context"):
+                if field not in line:
+                    errors.append(f"annotated_lines[{i}] 缺少必填字段: {field}")
+
+            # id 格式
+            line_id = line.get("id", "")
+            if line_id and not _LINE_ID_RE.match(line_id):
+                errors.append(f"annotated_lines[{i}].id 格式无效: {line_id!r}")
+
+            # source 枚举
+            source = line.get("source", "")
+            valid_sources = {"voice", "story", "archive"}
+            if source and source not in valid_sources:
+                errors.append(
+                    f"annotated_lines[{i}].source={source!r} 不在有效值 {valid_sources} 中"
+                )
+
+            # context 必填
+            ctx = line.get("context")
+            if isinstance(ctx, dict):
+                if "phase" not in ctx:
+                    errors.append(f"annotated_lines[{i}].context 缺少必填字段: phase")
+            elif ctx is None:
+                errors.append(f"annotated_lines[{i}].context 为 null")
+
+    # --- stats ---
+    stats = data.get("stats")
+    if isinstance(stats, dict):
+        for field in ("total_lines", "source_distribution", "phase_distribution"):
+            if field not in stats:
+                errors.append(f"stats 缺少必填字段: {field}")
+
+        total = stats.get("total_lines")
+        if isinstance(total, int) and total != len(lines):
+            warnings.append(
+                f"stats.total_lines={total} != annotated_lines 实际长度 {len(lines)}"
+            )
+
+    return errors + warnings if strict else errors
+
+
+def validate_context_file(path: str | Path, strict: bool = False) -> list[str]:
+    """从文件加载并验证 context.json。
+
+    Args:
+        path: context.json 文件路径
+        strict: 严格模式
+
+    Returns:
+        错误列表
+    """
+    filepath = Path(path)
+    if not filepath.exists():
+        return [f"context.json 文件不存在: {filepath}"]
+
+    try:
+        data = json.loads(filepath.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        return [f"context.json 解析失败: {e}"]
+
+    if not isinstance(data, dict):
+        return ["context.json 顶层应为对象"]
+
+    return validate_context(data, strict=strict)

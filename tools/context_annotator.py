@@ -44,11 +44,11 @@ from constants import (
     OPERATOR_DEFAULT_PHASE,
     TIMELINE_RE,
 )
-from shared_utils import validate_path, validate_slug, setup_logging, atomic_write_json
+from shared_utils import validate_path, validate_slug, setup_logging, atomic_write_json, validate_context
 
 logger = setup_logging("context_annotator")
 
-# 导入自动推断引擎
+# 导入自动推断引擎（可选依赖：缺失时退化为基础时期推断）
 try:
     from phase_inferrer import (
         infer_phase_from_content,
@@ -524,6 +524,16 @@ def main():
     for line in context["annotated_lines"]:
         line.pop("_inference_source", None)
         line.pop("_inference_confidence", None)
+
+    # 添加 schema 版本号
+    context["schema_version"] = "1.0.0"
+
+    # 写入前进行 schema 校验
+    validation_errors = validate_context(context)
+    if validation_errors:
+        for err in validation_errors:
+            print(f"schema 验证错误: {err}", file=sys.stderr)
+        print(f"警告：context.json 存在 {len(validation_errors)} 项 schema 验证错误", file=sys.stderr)
 
     atomic_write_json(args.output, context)
 

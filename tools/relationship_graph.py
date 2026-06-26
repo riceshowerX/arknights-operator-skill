@@ -46,7 +46,10 @@ logger = setup_logging("relationship_graph")
 # 明日方舟角色名库（用于文本中的实体识别）
 # ──────────────────────────────────────────────
 
-OPERATOR_DB = {
+# 内建默认角色名库（仅作 fallback，优先从 data/operator_db.json 加载）
+# 要扩展名库，编辑 data/operator_db.json 或使用 --operator-db 指定自定义文件。
+
+_OPERATOR_DB_BUILTIN = {
     # 巴别塔/罗德岛核心
     "特蕾西娅": {"en": "Theresa", "race": "萨卡兹", "faction": "巴别塔"},
     "特雷西斯": {"en": "Theresis", "race": "萨卡兹", "faction": "卡兹戴尔"},
@@ -88,8 +91,8 @@ OPERATOR_DB = {
     "煌": {"en": "Blaze", "race": "萨卡兹", "faction": "罗德岛"},
 }
 
-# 别名映射
-ALIAS_MAP = {
+# 内建别名映射（仅作 fallback）
+_ALIAS_MAP_BUILTIN = {
     "Theresa": "特蕾西娅",
     "Theresis": "特雷西斯",
     "Amiya": "阿米娅",
@@ -138,43 +141,113 @@ ALIAS_MAP = {
 }
 
 
-def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
+def _load_operator_db_from_json(json_path: Path) -> tuple[dict, dict]:
+    """从 JSON 文件加载角色名库和别名映射。
+
+    JSON 格式:
+    {
+        "operators": {"特蕾西娅": {"en": "Theresa", ...}, ...},
+        "aliases": {"Theresa": "特蕾西娅", ...}
+    }
     """
-    加载角色名库和别名映射
-
-    支持从外部 JSON 文件加载自定义角色名库，
-    与内置名库合并（外部覆盖内置同名项）
-    """
-    db = dict(OPERATOR_DB)
-    aliases = dict(ALIAS_MAP)
-
-    if not filepath:
-        return db, aliases
-
-    path = Path(filepath)
-    if not path.exists():
-        print(f"警告：角色名库文件不存在 {filepath}，使用内置名库", file=sys.stderr)
-        return db, aliases
-
     try:
-        custom = json.loads(path.read_text(encoding="utf-8"))
+        raw = json.loads(json_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        print(f"警告：角色名库文件格式错误 {filepath}：{e}，使用内置名库", file=sys.stderr)
-        return db, aliases
+        print(f"警告：角色名库文件解析失败 {json_path}: {e}，使用内建名库", file=sys.stderr)
+        return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
-    if not isinstance(custom, dict):
-        print(f"警告：角色名库文件应为 JSON 对象，使用内置名库", file=sys.stderr)
-        return db, aliases
+    if not isinstance(raw, dict):
+        print(f"警告：角色名库文件格式错误（应为对象），使用内建名库", file=sys.stderr)
+        return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
-    custom_ops = custom.get("operators", {})
+    db = dict(_OPERATOR_DB_BUILTIN)
+    aliases = dict(_ALIAS_MAP_BUILTIN)
+
+    # 合并 JSON 中的 operators（覆盖内建同名项）
+    custom_ops = raw.get("operators", {})
     if isinstance(custom_ops, dict):
         db.update(custom_ops)
 
-    custom_aliases = custom.get("aliases", {})
+    # 合并别名
+    custom_aliases = raw.get("aliases", {})
     if isinstance(custom_aliases, dict):
         aliases.update(custom_aliases)
 
     return db, aliases
+
+
+def _fetch_operators_from_prts() -> dict | None:
+    """从 PRTS API 动态拉取角色列表，用于扩展名库覆盖率。
+
+    仅在名库未通过 --operator-db 指定时尝试拉取。
+    拉取失败不影响功能（使用内建名库 fallback）。
+
+    Returns:
+        角色信息 dict，或 None（拉取失败时）
+    """
+    try:
+        from prts_client import PRTSClient
+        client = PRTSClient()
+        # 拉取干员列表页（分类页面包含所有干员链接）
+        result = client.fetch_page_content("干员一览")
+        if not result:
+            return None
+
+        # 从页面提取角色名（简单提取链接文本）
+        import re
+        names = re.findall(r'\[\[([^\]|]+?)(?:\|[^\]]+?)?\]\]', result)
+        operators = {}
+        for name in names:
+            name = name.strip()
+            # 过滤非角色页面
+            if len(name) < 2 or name.startswith("模板") or name.startswith("分类"):
+                continue
+            if name not in operators:
+                operators[name] = {}  # 仅名称，详细字段由后续按需查询填充
+        return operators if operators else None
+
+    except Exception as e:
+        print(f"提示：PRTS 动态拉取角色列表失败: {e}，使用本地名库", file=sys.stderr)
+        return None
+
+
+def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
+    """
+    加载角色名库和别名映射
+
+    加载优先级：
+    1. --operator-db 指定的自定义 JSON 文件
+    2. data/operator_db.json（项目内置外置文件）
+    3. 尝试从 PRTS API 动态拉取（仅补充名称，不覆盖内建详情）
+    4. 内建硬编码名库（最终 fallback）
+
+    外部文件与内建名库合并（外部覆盖内置同名项）
+    """
+    # 优先级 1：自定义文件
+    if filepath:
+        path = Path(filepath)
+        if path.exists():
+            return _load_operator_db_from_json(path)
+        print(f"警告：角色名库文件不存在 {filepath}，使用内置名库", file=sys.stderr)
+        return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
+
+    # 优先级 2：默认 data/operator_db.json
+    default_path = Path(__file__).parent.parent / "data" / "operator_db.json"
+    if default_path.exists():
+        return _load_operator_db_from_json(default_path)
+
+    # 优先级 3：尝试 PRTS 动态拉取
+    prts_ops = _fetch_operators_from_prts()
+    if prts_ops:
+        db = dict(_OPERATOR_DB_BUILTIN)
+        # 动态拉取仅补充名称，不覆盖内建的详细字段
+        for name, info in prts_ops.items():
+            if name not in db:
+                db[name] = info
+        return db, _ALIAS_MAP_BUILTIN
+
+    # 优先级 4：内建 fallback
+    return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
 
 # ──────────────────────────────────────────────
@@ -213,8 +286,8 @@ RELATIONSHIP_PATTERNS = [
 
 def normalize_name(name: str, operator_db: Optional[dict] = None, alias_map: Optional[dict] = None) -> Optional[str]:
     """将名称标准化为中文名"""
-    db = operator_db or OPERATOR_DB
-    aliases = alias_map or ALIAS_MAP
+    db = operator_db or _OPERATOR_DB_BUILTIN
+    aliases = alias_map or _ALIAS_MAP_BUILTIN
 
     name = name.strip()
     if name in db:
@@ -342,8 +415,8 @@ def extract_entities(text: str, operator_db: Optional[dict] = None, alias_map: O
     时间复杂度从 O(n×m) 降为 O(n + m + 匹配数)。
     匹配后仍应用边界检查（CJK/英文边界）过滤误匹配。
     """
-    db = operator_db or OPERATOR_DB
-    aliases = alias_map or ALIAS_MAP
+    db = operator_db or _OPERATOR_DB_BUILTIN
+    aliases = alias_map or _ALIAS_MAP_BUILTIN
 
     ac = _build_ac_automaton(db, aliases)
     candidates = ac.search(text)
@@ -550,7 +623,7 @@ def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None
         node_names.add(key[1])
 
     nodes = []
-    db = operator_db or OPERATOR_DB
+    db = operator_db or _OPERATOR_DB_BUILTIN
     for name in sorted(node_names):
         info = db.get(name, {})
         nodes.append({
@@ -630,7 +703,7 @@ def enrich_edges_with_strength(
 
     在 merge_relationships 的输出基础上，为每条边添加 strength 字段。
     """
-    db = operator_db or OPERATOR_DB
+    db = operator_db or _OPERATOR_DB_BUILTIN
     total_lines = len(all_texts)
 
     # 情感词集合（用于检测共现段落中的情感密度）
@@ -781,8 +854,8 @@ def generate_contextual_relationships(
     按 period 分片提取关系，计算跨时期关系演变，
     结果回写 context.json 的 annotated_relations。
     """
-    db = operator_db or OPERATOR_DB
-    aliases = alias_map or ALIAS_MAP
+    db = operator_db or _OPERATOR_DB_BUILTIN
+    aliases = alias_map or _ALIAS_MAP_BUILTIN
 
     lines = context.get("annotated_lines", [])
     character = context.get("character", "unknown")

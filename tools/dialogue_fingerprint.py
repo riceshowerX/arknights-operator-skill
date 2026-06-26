@@ -40,7 +40,11 @@ from pathlib import Path
 # 情感词典（中文）— 带权重版本
 # 每个词条为 (词, 权重) 元组，权重范围 0.5~1.5
 # 权重反映情感强度：高权重 = 强烈情感，低权重 = 轻微暗示
-EMOTION_LEXICON: dict[str, list[tuple[str, float]]] = {
+#
+# 词典从 data/emotion_lexicon.json 加载；如文件不存在则使用以下内建默认值。
+# 要扩展词典，编辑 data/emotion_lexicon.json 即可，无需修改源码。
+
+_EMOTION_LEXICON_BUILTIN: dict[str, list[tuple[str, float]]] = {
     "温柔": [
         ("温柔", 1.0), ("轻声", 0.8), ("微笑", 0.9), ("柔和", 0.7),
         ("温暖", 0.8), ("关怀", 1.0), ("呵护", 1.2), ("怜惜", 1.1),
@@ -84,7 +88,6 @@ EMOTION_LEXICON: dict[str, list[tuple[str, float]]] = {
         ("依靠", 0.8), ("在一起", 0.7), ("同行", 0.8), ("深信", 1.2),
         ("依赖", 0.8), ("无条件", 1.0),
     ],
-    # ── 新增类别 ──
     "嘲讽": [
         ("呵", 0.8), ("可笑", 1.0), ("有趣", 0.6), ("愚蠢", 1.2),
         ("天真", 0.9), ("不自量力", 1.3), ("滑稽", 1.0), ("嗤笑", 1.2),
@@ -105,6 +108,52 @@ EMOTION_LEXICON: dict[str, list[tuple[str, float]]] = {
         ("依恋", 1.1), ("难舍", 1.2),
     ],
 }
+
+
+def _load_emotion_lexicon(filepath: str | None = None) -> dict[str, list[tuple[str, float]]]:
+    """加载情感词典。优先从 JSON 文件加载，失败则使用内建默认值。
+
+    JSON 文件格式: {"温柔": [{"word": "温柔", "weight": 1.0}, ...], ...}
+
+    Args:
+        filepath: 自定义词典路径。None 时使用默认 data/emotion_lexicon.json
+
+    Returns:
+        情感 → [(词, 权重), ...] 映射
+    """
+    json_path = Path(filepath) if filepath else Path(__file__).parent.parent / "data" / "emotion_lexicon.json"
+
+    if not json_path.exists():
+        return _EMOTION_LEXICON_BUILTIN
+
+    try:
+        raw = json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(f"警告：情感词典文件解析失败 {json_path}: {e}，使用内建词典", file=sys.stderr)
+        return _EMOTION_LEXICON_BUILTIN
+
+    if not isinstance(raw, dict):
+        print(f"警告：情感词典文件格式错误（应为对象），使用内建词典", file=sys.stderr)
+        return _EMOTION_LEXICON_BUILTIN
+
+    result: dict[str, list[tuple[str, float]]] = {}
+    for emotion, entries in raw.items():
+        if not isinstance(entries, list):
+            continue
+        converted = []
+        for entry in entries:
+            if isinstance(entry, dict) and "word" in entry and "weight" in entry:
+                converted.append((entry["word"], float(entry["weight"])))
+            elif isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                converted.append((str(entry[0]), float(entry[1])))
+        if converted:
+            result[emotion] = converted
+
+    return result if result else _EMOTION_LEXICON_BUILTIN
+
+
+# 模块级初始化：从 JSON 文件加载（如存在），否则用内建值
+EMOTION_LEXICON: dict[str, list[tuple[str, float]]] = _load_emotion_lexicon()
 
 # 通用中文字频基线（用于口头禅检测的显著性对比）
 _CN_CHAR_FREQ_BASELINE = 0.003  # 约 0.3%

@@ -38,11 +38,26 @@ from shared_utils import setup_logging
 logger = setup_logging("game_data_parser")
 
 
-class OperatorData(TypedDict, total=False):
-    """角色数据结构类型定义"""
+class _OperatorDataRequired(TypedDict):
+    """角色数据 — 必填字段（核心标识，缺失则无法定位角色）"""
+
     name_zh: str
-    name_en: str
     slug: str
+    source_url: str
+
+
+class OperatorData(_OperatorDataRequired, total=False):
+    """角色数据 — 可选字段（从 PRTS 解析，可能因页面格式而缺失）
+
+    必填字段继承自 _OperatorDataRequired:
+        name_zh: 角色中文名
+        slug: URL 安全标识符
+        source_url: PRTS 页面 URL
+
+    以下为可选字段:
+    """
+
+    name_en: str
     race: str
     faction: str
     identity: str
@@ -54,7 +69,6 @@ class OperatorData(TypedDict, total=False):
     voice_lines: list[dict]
     tags: list[str]
     page_type: str
-    source_url: str
 
 
 # ──────────────────────────────────────────────
@@ -639,42 +653,116 @@ def _fetch_voice_subpage(name: str) -> list[dict]:
 # ──────────────────────────────────────────────
 
 def extract_operator_data_from_wikitext(wikitext: str, name: str) -> dict:
-    """
-    从 PRTS Wiki 的 wikitext 中提取角色信息
+    """从 PRTS Wiki 的 wikitext 中提取角色信息
 
     此函数保留用于向后兼容，推荐使用 fetch_and_parse_prts() 获取更完整的数据。
+
+    Returns:
+        角色数据字典，含 ``_parse_report`` 子字典记录解析诊断信息。
+        ``_parse_report`` 结构：
+        - ``parsed_fields``: 成功提取的字段名列表
+        - ``missing_fields``: 期望但未能提取的字段名列表
+        - ``warnings``: 解析过程中的警告列表
+        - ``wikitext_length``: 原始 wikitext 字符数
+        - ``wikitext_snippet``: 前 200 字符预览（用于调试格式问题）
     """
+    # 解析报告
+    report = {
+        "parsed_fields": [],
+        "missing_fields": [],
+        "warnings": [],
+        "wikitext_length": len(wikitext),
+        "wikitext_snippet": wikitext[:200] if wikitext else "",
+    }
+
+    # 期望提取的字段
+    expected_fields = ["race", "faction", "profession", "archives", "voice_lines"]
+
     data = {
         "name_zh": name,
         "slug": to_slug(name),
         "source": "prts",
     }
 
+    # 检测 wikitext 是否为空或过短
+    if not wikitext or len(wikitext.strip()) < 20:
+        report["warnings"].append(
+            f"wikitext 过短或为空（{len(wikitext)} 字符），可能无法提取有效数据"
+        )
+        data["_parse_report"] = report
+        report["missing_fields"] = expected_fields
+        return data
+
+    # 检测是否包含标准信息框
+    has_infobox = bool(re.search(r"\{\{[^{}]*干员[^{}]*\}\}", wikitext))
+    if not has_infobox:
+        report["warnings"].append(
+            "未检测到标准干员信息框（{{干员|...}}），页面格式可能非标准"
+        )
+
     # 提取种族
     race_match = re.search(r"\|\s*种族\s*=\s*([^\n|]+)", wikitext)
     if race_match:
         data["race"] = race_match.group(1).strip()
+        report["parsed_fields"].append("race")
+    else:
+        report["missing_fields"].append("race")
+        # 尝试替代模式
+        alt_race = re.search(r"\|\s*race\s*=\s*([^\n|]+)", wikitext)
+        if alt_race:
+            data["race"] = alt_race.group(1).strip()
+            report["parsed_fields"].append("race")
+            report["warnings"].append("种族字段通过替代模式 (race=) 提取")
 
     # 提取阵营/阵营
     faction_match = re.search(r"\|\s*阵营\s*=\s*([^\n|]+)", wikitext)
     if faction_match:
         data["faction"] = faction_match.group(1).strip()
+        report["parsed_fields"].append("faction")
+    else:
+        report["missing_fields"].append("faction")
+        alt_faction = re.search(r"\|\s*(?:group|faction)\s*=\s*([^\n|]+)", wikitext)
+        if alt_faction:
+            data["faction"] = alt_faction.group(1).strip()
+            report["parsed_fields"].append("faction")
+            report["warnings"].append("阵营字段通过替代模式提取")
 
     # 提取职业
     profession_match = re.search(r"\|\s*职业\s*=\s*([^\n|]+)", wikitext)
     if profession_match:
         data["profession"] = profession_match.group(1).strip()
+        report["parsed_fields"].append("profession")
+    else:
+        report["missing_fields"].append("profession")
 
     # 提取档案
     archives = _extract_archives(wikitext)
     if archives:
         data["archives"] = archives
+        report["parsed_fields"].append("archives")
+        if len(archives) < 2:
+            report["warnings"].append(
+                f"仅提取到 {len(archives)} 条档案，可能不完整（通常 4+ 条）"
+            )
+    else:
+        report["missing_fields"].append("archives")
+        report["warnings"].append("未能提取任何档案内容，Wikitext 格式可能不匹配")
 
     # 提取语音
     voice_lines = _extract_voice_lines(wikitext)
     if voice_lines:
         data["voice_lines"] = voice_lines
+        report["parsed_fields"].append("voice_lines")
+        if len(voice_lines) < 5:
+            report["warnings"].append(
+                f"仅提取到 {len(voice_lines)} 条语音，可能不完整"
+            )
+    else:
+        report["missing_fields"].append("voice_lines")
+        report["warnings"].append("未能提取任何语音内容，Wikitext 格式可能不匹配")
 
+    # 附加解析报告
+    data["_parse_report"] = report
     return data
 
 

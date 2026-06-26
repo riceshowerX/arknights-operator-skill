@@ -1,0 +1,176 @@
+[
+  {
+    "pattern": "(你|您)(愿意|想|要不要).{1,15}[吗？?]",
+    "type": "invite",
+    "confidence": 0.85,
+    "label": "邀请"
+  },
+  {
+    "pattern": "我们一起.{1,10}",
+    "type": "invite",
+    "confidence": 0.9,
+    "label": "邀请"
+  },
+  {
+    "pattern": "(不如|要不|让我们).{1,10}[吧。]",
+    "type": "invite",
+    "confidence": 0.8,
+    "label": "邀请"
+  },
+  {
+    "pattern": "来吧",
+    "type": "invite",
+    "confidence": 0.7,
+    "label": "邀请"
+  },
+  {
+    "pattern": ".{0,8}(?:…{2,}|\\.{6,})$",
+    "type": "evade",
+    "confidence": 0.75,
+    "label": "回避"
+  },
+  {
+    "pattern": "^(?:…{2,}|\\.{6,})",
+    "type": "evade",
+    "confidence": 0.7,
+    "label": "回避"
+  },
+  {
+    "pattern": "你呢[？?]",
+    "type": "evade",
+    "confidence": 0.8,
+    "label": "回避"
+  },
+  {
+    "pattern": "(也许|或许|大概|可能).{0,10}$",
+    "type": "evade",
+    "confidence": 0.7,
+    "label": "回避"
+  },
+  {
+    "pattern": "我不知道.{0,5}$",
+    "type": "evade",
+    "confidence": 0.65,
+    "label": "回避"
+  },
+  {
+    "pattern": "为什么.{1,15}[？?]",
+    "type": "question",
+    "confidence": 0.8,
+    "label": "质问"
+  },
+  {
+    "pattern": "你(觉得|认为|打算).{1,15}[？?]",
+    "type": "question",
+    "confidence": 0.75,
+    "label": "质问"
+  },
+  {
+    "pattern": "(难道|岂).{1,15}[？?]",
+    "type": "question",
+    "confidence": 0.85,
+    "label": "质问"
+  },
+  {
+    "pattern": "我(会|一定|绝不|将).{1,20}$",
+    "type": "commit",
+    "confidence": 0.85,
+    "label": "承诺"
+  },
+  {
+    "pattern": "(一定|必定|绝对).{1,15}",
+    "type": "commit",
+    "confidence": 0.8,
+    "label": "承诺"
+  },
+  {
+    "pattern": "请(相信|放心).{0,10}",
+    "type": "commit",
+    "confidence": 0.75,
+    "label": "承诺"
+  },
+  {
+    "pattern": "不是你的错",
+    "type": "comfort",
+    "confidence": 0.9,
+    "label": "宽慰"
+  },
+  {
+    "pattern": "你不必.{1,15}",
+    "type": "comfort",
+    "confidence": 0.85,
+    "label": "宽慰"
+  },
+  {
+    "pattern": "(已经足够|不要紧)",
+    "type": "comfort",
+    "confidence": 0.85,
+    "label": "宽慰"
+  },
+  {
+    "pattern": "没关系(?!.{0,5}[。…])",
+    "type": "comfort",
+    "confidence": 0.8,
+    "label": "宽慰"
+  },
+  {
+    "pattern": "我(理解|明白|知道你的).{0,10}",
+    "type": "comfort",
+    "confidence": 0.75,
+    "label": "宽慰"
+  },
+  {
+    "pattern": "(好了|没事|别担心)",
+    "type": "comfort",
+    "confidence": 0.7,
+    "label": "安抚"
+  },
+  {
+    "pattern": "(睡吧|休息吧)",
+    "type": "comfort",
+    "confidence": 0.75,
+    "label": "安抚"
+  },
+  {
+    "pattern": "[悲伤痛苦遗憾].{0,5}[………]",
+    "type": "restrain",
+    "confidence": 0.8,
+    "label": "克制"
+  },
+  {
+    "pattern": "我(知道|明白).{0,8}$",
+    "type": "restrain",
+    "confidence": 0.7,
+    "label": "克制"
+  },
+  {
+    "pattern": "没关系.{0,5}[。…]",
+    "type": "restrain",
+    "confidence": 0.7,
+    "label": "克制"
+  },
+  {
+    "pattern": "我在",
+    "type": "presence",
+    "confidence": 0.9,
+    "label": "存在确认"
+  },
+  {
+    "pattern": "我会记住",
+    "type": "presence",
+    "confidence": 0.85,
+    "label": "记忆承诺"
+  },
+  {
+    "pattern": "再(见|会)[。…]?",
+    "type": "presence",
+    "confidence": 0.8,
+    "label": "告别"
+  },
+  {
+    "pattern": "保重",
+    "type": "presence",
+    "confidence": 0.75,
+    "label": "告别"
+  }
+]

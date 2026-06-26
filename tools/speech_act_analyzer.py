@@ -38,7 +38,11 @@ logger = setup_logging("speech_act_analyzer")
 # ──────────────────────────────────────────────
 
 # 每条规则：(正则, 行为类型, 置信度, 中文标签)
-SPEECH_ACT_RULES = [
+#
+# 规则从 data/speech_act_rules.json 加载；如文件不存在则使用以下内建默认值。
+# 要调整规则，编辑 data/speech_act_rules.json 即可，无需修改源码。
+
+_SPEECH_ACT_RULES_BUILTIN = [
     # 邀请：用温和方式提出要求
     (r"(你|您)(愿意|想|要不要).{1,15}[吗？?]", "invite", 0.85, "邀请"),
     (r"我们一起.{1,10}", "invite", 0.9, "邀请"),
@@ -83,6 +87,50 @@ SPEECH_ACT_RULES = [
     (r"再(见|会)[。…]?", "presence", 0.8, "告别"),
     (r"保重", "presence", 0.75, "告别"),
 ]
+
+
+def _load_speech_act_rules(filepath: str | None = None) -> list[tuple]:
+    """加载话语行为规则。优先从 JSON 文件加载，失败则使用内建默认值。
+
+    JSON 格式: [{"pattern": "...", "type": "...", "confidence": 0.85, "label": "..."}, ...]
+
+    Args:
+        filepath: 自定义规则文件路径。None 时使用默认 data/speech_act_rules.json
+
+    Returns:
+        [(pattern_str, act_type, confidence, label), ...] 列表
+    """
+    json_path = Path(filepath) if filepath else Path(__file__).parent.parent / "data" / "speech_act_rules.json"
+
+    if not json_path.exists():
+        return _SPEECH_ACT_RULES_BUILTIN
+
+    try:
+        raw = json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(f"警告：话语行为规则文件解析失败 {json_path}: {e}，使用内建规则", file=sys.stderr)
+        return _SPEECH_ACT_RULES_BUILTIN
+
+    if not isinstance(raw, list):
+        print(f"警告：话语行为规则文件应为 JSON 数组，使用内建规则", file=sys.stderr)
+        return _SPEECH_ACT_RULES_BUILTIN
+
+    result = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        pattern = item.get("pattern")
+        act_type = item.get("type")
+        confidence = item.get("confidence", 0.8)
+        label = item.get("label", "")
+        if pattern and act_type:
+            result.append((pattern, act_type, float(confidence), label))
+
+    return result if result else _SPEECH_ACT_RULES_BUILTIN
+
+
+# 模块级初始化：从 JSON 文件加载（如存在），否则用内建值
+SPEECH_ACT_RULES = _load_speech_act_rules()
 
 # 编译正则
 COMPILED_RULES = [

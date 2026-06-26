@@ -20,23 +20,20 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Optional
 
-# 支持从 tools 目录内和从项目根目录两种导入方式
-try:
-    from constants import (
-        PRTS_API_URL,
-        PRTS_USER_AGENT,
-        PRTS_REQUEST_TIMEOUT,
-        PRTS_REQUEST_INTERVAL,
-    )
-except ImportError:
-    from tools.constants import (
-        PRTS_API_URL,
-        PRTS_USER_AGENT,
-        PRTS_REQUEST_TIMEOUT,
-        PRTS_REQUEST_INTERVAL,
-    )
+# 确保 tools 目录在 import 路径中，支持从任意位置运行
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from constants import (
+    PRTS_API_URL,
+    PRTS_USER_AGENT,
+    PRTS_REQUEST_TIMEOUT,
+    PRTS_REQUEST_INTERVAL,
+)
 
 logger = logging.getLogger(__name__)
 

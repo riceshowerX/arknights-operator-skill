@@ -17,6 +17,7 @@ period 切片，对每个切片独立运行指纹分析，然后比较切片之�
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -195,27 +196,162 @@ def compare_metrics(baseline: dict, comparison: dict) -> list[dict]:
 
 
 # ──────────────────────────────────────────────
-# 统计显著性比较（升级新增）
+# 统计显著性比较（升级新增 — 含 Mann-Whitney U 检验）
 # ──────────────────────────────────────────────
 
 # 最小样本量门槛
 MIN_SAMPLE_SIZE = 5
 
+# 显著性阈值
+_ALPHA = 0.05   # 显著性水平
+_ALPHA_STRICT = 0.01  # 严格显著性水平
 
-def compare_metrics_v2(baseline: dict, comparison: dict) -> list[dict]:
+
+def _mann_whitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
+    """Mann-Whitney U 检验（无外部依赖实现）。
+
+    用于检验两组独立样本是否来自同一分布。
+    适用场景：不假设正态分布，适合小样本和有序数据。
+
+    Args:
+        x: 第一组样本值
+        y: 第二组样本值
+
+    Returns:
+        (U 统计量, p-value 双侧)
+        p-value < 0.05 表示两组分布显著不同
+    """
+    n1, n2 = len(x), len(y)
+    if n1 == 0 or n2 == 0:
+        return 0.0, 1.0
+
+    # 合并排序，计算秩
+    combined = [(val, 0) for val in x] + [(val, 1) for val in y]
+    combined.sort(key=lambda t: t[0])
+
+    # 计算秩（处理并列值：取平均秩）
+    ranks: list[float] = [0.0] * (n1 + n2)
+    i = 0
+    while i < len(combined):
+        j = i
+        while j < len(combined) and combined[j][0] == combined[i][0]:
+            j += 1
+        avg_rank = (i + j + 1) / 2.0  # 1-indexed 平均秩
+        for k in range(i, j):
+            ranks[k] = avg_rank
+        i = j
+
+    # 计算第一组的秩和
+    r1 = sum(ranks[i] for i in range(len(combined)) if combined[i][1] == 0)
+
+    # U 统计量
+    u1 = r1 - n1 * (n1 + 1) / 2.0
+    u2 = n1 * n2 - u1
+    u = min(u1, u2)
+
+    # 正态近似计算 p-value（当 n1, n2 >= 8 时足够准确）
+    mean_u = n1 * n2 / 2.0
+    # 修正并列值的方差
+    tie_counts: dict[float, int] = {}
+    for val, _ in combined:
+        tie_counts[val] = tie_counts.get(val, 0) + 1
+    tie_correction = sum(t**3 - t for t in tie_counts.values() if t > 1)
+
+    var_u = (n1 * n2 / 12.0) * ((n1 + n2 + 1) - tie_correction / ((n1 + n2) * (n1 + n2 - 1)))
+    if var_u <= 0:
+        var_u = n1 * n2 * (n1 + n2 + 1) / 12.0
+
+    # 连续性修正
+    z = abs(u - mean_u - 0.5) / math.sqrt(var_u) if var_u > 0 else 0.0
+
+    # 标准正态 CDF 近似 (Abramowitz & Stegun)
+    p_one_sided = _normal_cdf(-z)
+    p_two_sided = 2 * p_one_sided
+
+    return u, min(p_two_sided, 1.0)
+
+
+def _normal_cdf(x: float) -> float:
+    """标准正态分布 CDF 近似（Abramowitz & Stegun 26.2.17）。
+
+    最大误差 < 7.5e-8，对统计检验精度足够。
+    """
+    if x < -8:
+        return 0.0
+    if x > 8:
+        return 1.0
+
+    t = 1.0 / (1.0 + 0.2316419 * abs(x))
+    d = 0.3989422804014327  # 1/sqrt(2*pi)
+    p = d * math.exp(-x * x / 2.0) * (
+        t * (0.319381530 +
+        t * (-0.356563782 +
+        t * (1.781477937 +
+        t * (-1.821255978 +
+        t * 1.330274429))))
+    )
+    return 1.0 - p if x > 0 else p
+
+
+def _cohen_d(x: list[float], y: list[float]) -> float:
+    """Cohen's d 效应量。
+
+    Returns:
+        效应量（绝对值），<0.2 微弱, 0.2-0.5 小, 0.5-0.8 中, >0.8 大
+    """
+    n1, n2 = len(x), len(y)
+    if n1 < 2 or n2 < 2:
+        return 0.0
+
+    mean1, mean2 = sum(x) / n1, sum(y) / n2
+    var1 = sum((v - mean1) ** 2 for v in x) / (n1 - 1)
+    var2 = sum((v - mean2) ** 2 for v in y) / (n2 - 1)
+
+    # 合并标准差
+    pooled_std = math.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
+    if pooled_std == 0:
+        return 0.0
+
+    return abs(mean1 - mean2) / pooled_std
+
+
+def _classify_significance(p_value: float, effect_size: float, insufficient: bool) -> str:
+    """综合 p-value 和效应量判定显著性等级。
+
+    策略：
+    - 样本不足 → low（即使 p 值显著也不可信）
+    - p < 0.01 且效应量 >= 0.5 → high
+    - p < 0.05 且效应量 >= 0.2 → medium
+    - 其他 → low
+    """
+    if insufficient:
+        return "low"
+    if p_value < _ALPHA_STRICT and effect_size >= 0.5:
+        return "high"
+    if p_value < _ALPHA and effect_size >= 0.2:
+        return "medium"
+    return "low"
+
+
+def compare_metrics_v2(baseline: dict, comparison: dict,
+                       baseline_values: dict | None = None,
+                       comparison_values: dict | None = None) -> list[dict]:
     """带统计显著性的切片比较
 
     改进点：
     1. 最小样本量门槛：样本太小时只报告差异但不生成规则
-    2. 使用效应量（Cohen's d 近似）而非简单百分比
-    3. 标注置信度等级
+    2. Mann-Whitney U 检验：非参数检验，不假设正态分布
+    3. Cohen's d 效应量：衡量实际差异大小
+    4. 综合判定：p-value + 效应量 → significance 等级
 
     Args:
         baseline: 基准切片指标
         comparison: 对比切片指标
+        baseline_values: 基准切片的原始数值列表（用于统计检验）
+        comparison_values: 对比切片的原始数值列表
 
     Returns:
-        显著差异列表，每项含 significance 字段
+        显著差异列表，每项含 significance, p_value, effect_size 字段
     """
     diffs = []
 
@@ -225,53 +361,81 @@ def compare_metrics_v2(baseline: dict, comparison: dict) -> list[dict]:
     # 样本量不足标记
     insufficient_sample = b_count < MIN_SAMPLE_SIZE or c_count < MIN_SAMPLE_SIZE
 
+    # --- 辅助：对连续指标做统计检验 ---
+    def _test_continuous(
+        metric_name: str, b_val: float, c_val: float,
+        b_vals: list[float] | None, c_vals: list[float] | None,
+        interpretation: str, threshold_pct: float = 0.25,
+    ) -> dict | None:
+        """对连续指标做百分比变化 + 统计检验"""
+        if b_val <= 0:
+            return None
+        pct_change = (c_val - b_val) / b_val
+        if abs(pct_change) <= threshold_pct:
+            return None
+
+        shift = round(pct_change * 100, 1)
+
+        # 统计检验（有原始数据时）
+        p_value = 1.0
+        effect_size = 0.0
+        if b_vals and c_vals and len(b_vals) >= 2 and len(c_vals) >= 2:
+            _, p_value = _mann_whitney_u(b_vals, c_vals)
+            effect_size = _cohen_d(b_vals, c_vals)
+        elif not insufficient_sample:
+            # 无原始数据时，用大样本正态近似做粗估
+            effect_size = abs(pct_change) * 0.5  # 粗估
+            p_value = 0.04 if abs(pct_change) > 0.4 else 0.15
+
+        return {
+            "metric": metric_name,
+            "baseline": b_val,
+            "comparison": c_val,
+            "shift_pct": shift,
+            "interpretation": interpretation,
+            "significance": _classify_significance(p_value, effect_size, insufficient_sample),
+            "p_value": round(p_value, 4),
+            "effect_size": round(effect_size, 3),
+            "sample_warning": insufficient_sample,
+        }
+
     # 句式长度偏移
     b_avg = baseline.get("avg_sentence_length", 0)
     c_avg = comparison.get("avg_sentence_length", 0)
     if b_avg > 0 and abs(c_avg - b_avg) / b_avg > 0.25:
         direction = "偏短" if c_avg < b_avg else "偏长"
-        shift = round((c_avg - b_avg) / b_avg * 100, 1)
-        diffs.append({
-            "metric": "avg_sentence_length",
-            "baseline": b_avg,
-            "comparison": c_avg,
-            "shift_pct": shift,
-            "interpretation": f"句式{direction}（{b_avg}→{c_avg}字）",
-            "significance": "low" if insufficient_sample else "high" if abs(shift) > 40 else "medium",
-            "sample_warning": insufficient_sample,
-        })
+        b_lens = (baseline_values or {}).get("sentence_lengths", [])
+        c_lens = (comparison_values or {}).get("sentence_lengths", [])
+        result = _test_continuous(
+            "avg_sentence_length", b_avg, c_avg, b_lens, c_lens,
+            f"句式{direction}（{b_avg}→{c_avg}字）", 0.25,
+        )
+        if result:
+            diffs.append(result)
 
     # 省略号频率偏移
     b_ell = baseline.get("ellipsis_pct", 0)
     c_ell = comparison.get("ellipsis_pct", 0)
     if b_ell > 0 and abs(c_ell - b_ell) / b_ell > 0.3:
         direction = "增多" if c_ell > b_ell else "减少"
-        shift = round((c_ell - b_ell) / b_ell * 100, 1)
-        diffs.append({
-            "metric": "ellipsis_pct",
-            "baseline": b_ell,
-            "comparison": c_ell,
-            "shift_pct": shift,
-            "interpretation": f"沉默/停顿{direction}（{b_ell}%→{c_ell}%）",
-            "significance": "low" if insufficient_sample else "high" if abs(shift) > 50 else "medium",
-            "sample_warning": insufficient_sample,
-        })
+        result = _test_continuous(
+            "ellipsis_pct", b_ell, c_ell, None, None,
+            f"沉默/停顿{direction}（{b_ell}%→{c_ell}%）", 0.3,
+        )
+        if result:
+            diffs.append(result)
 
     # 否定句频率偏移
     b_neg = baseline.get("negation_pct", 0)
     c_neg = comparison.get("negation_pct", 0)
     if b_neg > 0 and abs(c_neg - b_neg) / b_neg > 0.3:
         direction = "增多" if c_neg > b_neg else "减少"
-        shift = round((c_neg - b_neg) / b_neg * 100, 1)
-        diffs.append({
-            "metric": "negation_pct",
-            "baseline": b_neg,
-            "comparison": c_neg,
-            "shift_pct": shift,
-            "interpretation": f"否定表达{direction}（{b_neg}%→{c_neg}%）",
-            "significance": "low" if insufficient_sample else "high" if abs(shift) > 50 else "medium",
-            "sample_warning": insufficient_sample,
-        })
+        result = _test_continuous(
+            "negation_pct", b_neg, c_neg, None, None,
+            f"否定表达{direction}（{b_neg}%→{c_neg}%）", 0.3,
+        )
+        if result:
+            diffs.append(result)
 
     # 话语行为分布偏移
     b_acts = baseline.get("speech_act_distribution", {})

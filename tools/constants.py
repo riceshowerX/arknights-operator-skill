@@ -218,3 +218,59 @@ SCRIPT_CONTROL_RE: re.Pattern = re.compile(
 
 # 时间线正则（从 knowledge.md 提取）
 TIMELINE_RE: re.Pattern = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
+
+# ──────────────────────────────────────────────
+# 核心类型定义
+# ──────────────────────────────────────────────
+
+from typing import TypedDict
+
+
+class _LineContextRequired(TypedDict):
+    """AnnotatedLine.context 必填字段"""
+
+    phase: str
+
+
+class LineContext(_LineContextRequired, total=False):
+    """语境化标注行的上下文信息
+
+    必填: phase
+    可选: scene, interlocutor, preceding_event, situation_type
+    """
+
+    scene: str
+    interlocutor: str | None
+    preceding_event: str
+    situation_type: str
+
+
+class _AnnotatedLineRequired(TypedDict):
+    """AnnotatedLine 必填字段"""
+
+    id: str
+    text: str
+    source: str
+
+
+class AnnotatedLine(_AnnotatedLineRequired, total=False):
+    """语境化标注行 — context.json 的核心数据单元
+
+    必填字段:
+        id: 行标识符（如 "V001", "S001", "A001"）
+        text: 文本内容
+        source: 来源类型（"voice" / "story" / "archive"）
+
+    可选字段:
+        source_detail: 来源详情
+        context: 上下文信息
+        narration: 旁白/描述文本列表
+        speech_acts: 话语行为标签（由 speech_act_analyzer 填充）
+        emotion: 情感标注（由情感分析填充）
+    """
+
+    source_detail: str
+    context: LineContext
+    narration: list[str]
+    speech_acts: list[str]
+    emotion: dict

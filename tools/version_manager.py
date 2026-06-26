@@ -7,82 +7,137 @@ import json
 import re
 import shutil
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-try:
-    from shared_utils import validate_slug
-except ImportError:
-    from tools.shared_utils import validate_slug
+# 确保 tools 目录在 import 路径中，支持从任意位置运行
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from shared_utils import validate_slug
 
 
 def _normalize_version(version: str) -> str:
-    """
-    规范化版本号为 v{major}.{minor} 格式
+    """规范化版本号为 v{major}.{minor} 格式。
 
-    - "v1" → "v1.0"
-    - "v1.0" → "v1.0"
-    - "1.0" → "v1.0"
-    - "1" → "v1.0"
+    支持的输入格式：
+    - "v1"     → "v1.0"
+    - "v1.0"   → "v1.0"
+    - "1.0"    → "v1.0"
+    - "1"      → "v1.0"
+
+    无法解析时，抛出 ValueError 而非静默返回。
     """
     version = version.strip()
+    if not version:
+        raise ValueError("版本号不能为空")
+
     # 去掉前缀 v
-    if version.startswith("v"):
-        version = version[1:]
+    raw = version[1:] if version.startswith("v") else version
+
     # 已经是 major.minor 格式
-    m = re.match(r"(\d+)\.(\d+)$", version)
+    m = re.match(r"^(\d+)\.(\d+)$", raw)
     if m:
         return f"v{m.group(1)}.{m.group(2)}"
+
     # 只有 major
-    m2 = re.match(r"(\d+)$", version)
+    m2 = re.match(r"^(\d+)$", raw)
     if m2:
         return f"v{m2.group(1)}.0"
-    # 无法解析，原样返回（带 v 前缀）
-    return f"v{version}" if not version.startswith("v") else version
+
+    raise ValueError(
+        f"无法解析版本号 '{version}'，合法格式: v1, v1.0, 1, 1.0"
+    )
+
+
+# 版本号内部表示（方便比较）
+@dataclass
+class _SemVer:
+    """简化语义版本（仅 major.minor）"""
+    major: int
+    minor: int
+
+    def __lt__(self, other: "_SemVer") -> bool:
+        if self.major != other.major:
+            return self.major < other.major
+        return self.minor < other.minor
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _SemVer):
+            return NotImplemented
+        return self.major == other.major and self.minor == other.minor
+
+    def __le__(self, other: "_SemVer") -> bool:
+        return self == other or self < other
+
+    def __str__(self) -> str:
+        return f"v{self.major}.{self.minor}"
+
+
+def _parse_dir_version(dir_name: str) -> _SemVer | None:
+    """从目录名解析版本号。
+
+    支持新旧两种格式：
+    - v1.0, v2.3 → 标准格式
+    - v1, v2     → 旧格式，视为 v1.0, v2.0
+
+    不合法的名称返回 None（而非抛异常，因为 versions 目录下
+    可能有非版本目录）。
+    """
+    # 标准格式 v{major}.{minor}
+    m = re.match(r"^v(\d+)\.(\d+)$", dir_name)
+    if m:
+        return _SemVer(int(m.group(1)), int(m.group(2)))
+
+    # 旧格式 v{N} → 视为 v{N}.0（仅 major，minor=0）
+    m2 = re.match(r"^v(\d+)$", dir_name)
+    if m2:
+        return _SemVer(int(m2.group(1)), 0)
+
+    return None
 
 
 def _get_next_version(versions_dir: Path, major: int | None = None) -> str:
-    """
-    确定下一个版本号
+    """确定下一个版本号。
 
-    规则：使用 v{大版本}.{小版本} 格式
+    规则：
     - 首次备份 → v1.0
-    - 后续备份 → 小版本 +1
-    - 如果指定了 --major，则在指定大版本下递增
-    - 如果目录名不规范（如旧格式 v1, v2），兼容处理
+    - 后续备份 → 同一 major 下 minor +1
+    - --major 指定大版本 → 在该大版本下递增 minor
+    - 旧格式目录（v1, v2）→ 已由 _parse_dir_version 统一处理
+
+    不再在 _get_next_version 中内联正则，统一走 _parse_dir_version。
     """
     existing = list(versions_dir.glob("v*"))
-    if major is not None:
-        max_major = major
-    else:
-        max_major = 1
-    max_minor = -1  # -1 表示还没有任何版本
 
+    # 收集所有已存在版本
+    parsed_versions: list[_SemVer] = []
     for v in existing:
-        # 支持 v1.0, v1.1 格式
-        m = re.match(r"v(\d+)\.(\d+)", v.name)
-        if m:
-            v_major = int(m.group(1))
-            v_minor = int(m.group(2))
-            if major is not None and v_major != major:
-                continue
-            if v_major == max_major and v_minor > max_minor:
-                max_minor = v_minor
-            elif v_major > max_major and major is None:
-                max_major = v_major
-                max_minor = v_minor
-            continue
+        sv = _parse_dir_version(v.name)
+        if sv is not None:
+            parsed_versions.append(sv)
 
-        # 兼容旧格式 v1, v2 等 → 视为 v1.1, v1.2
-        m2 = re.match(r"v(\d+)$", v.name)
-        if m2:
-            num = int(m2.group(1))
-            if num > max_minor:
-                max_minor = num
+    # 确定 major
+    target_major = major if major is not None else 1
 
-    if max_minor < 0:
-        return f"v{max_major}.0"
-    return f"v{max_major}.{max_minor + 1}"
+    # 筛选目标 major 下的版本
+    same_major = [sv for sv in parsed_versions if sv.major == target_major]
+
+    if not same_major:
+        # 目标 major 下无任何版本
+        # 如果未指定 major，检查是否需要跟随更大的 major
+        if major is None and parsed_versions:
+            max_existing = max(parsed_versions)
+            if max_existing.major > target_major:
+                target_major = max_existing.major
+                same_major = [sv for sv in parsed_versions if sv.major == target_major]
+        if not same_major:
+            return f"v{target_major}.0"
+
+    max_ver = max(same_major)
+    return str(_SemVer(target_major, max_ver.minor + 1))
 
 
 def backup_version(slug: str, base_dir: str = "./operators") -> dict:
@@ -140,7 +195,10 @@ def rollback_version(slug: str, version: str, base_dir: str = "./operators", bac
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
     # 规范化版本号格式
-    version = _normalize_version(version)
+    try:
+        version = _normalize_version(version)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     version_dir = versions_dir / version
 
     if not version_dir.exists():

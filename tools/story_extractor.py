@@ -51,7 +51,7 @@ from shared_utils import setup_logging
 
 logger = setup_logging("story_extractor")
 
-# 导入自动推断引擎
+# 导入自动推断引擎（可选依赖：缺失时退化为基础时期推断）
 try:
     from phase_inferrer import (
         infer_phase as _infer_phase_auto,

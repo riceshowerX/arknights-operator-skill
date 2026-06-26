@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "arknights-operator-skill/context.schema.json",
+  "title": "ContextSchema",
+  "description": "明日方舟角色蒸馏协议 — context.json 数据校验 Schema",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["character", "slug", "annotated_lines", "stats", "schema_version"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema 版本号，用于向后兼容检查",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "character": {
+      "type": "string",
+      "description": "角色中文名"
+    },
+    "slug": {
+      "type": "string",
+      "description": "角色拼音 slug",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "PRTS Wiki 来源 URL"
+    },
+    "page_type": {
+      "type": "string",
+      "description": "页面类型"
+    },
+    "timeline": {
+      "type": "array",
+      "description": "时间线事件列表",
+      "items": {
+        "type": "object",
+        "required": ["event", "phase"],
+        "properties": {
+          "event": { "type": "string" },
+          "phase": { "type": "string" },
+          "approximate": { "type": "boolean" }
+        }
+      }
+    },
+    "annotated_lines": {
+      "type": "array",
+      "description": "语境化标注行列表",
+      "items": {
+        "$ref": "#/$defs/annotatedLine"
+      }
+    },
+    "annotated_relations": {
+      "type": "array",
+      "description": "角色关系标注列表",
+      "items": {
+        "type": "object"
+      }
+    },
+    "inference_report": {
+      "type": ["object", "null"],
+      "description": "时期推断报告"
+    },
+    "stats": {
+      "type": "object",
+      "required": ["total_lines", "source_distribution", "phase_distribution"],
+      "properties": {
+        "total_lines": { "type": "integer", "minimum": 0 },
+        "source_distribution": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "phase_distribution": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "situation_distribution": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "annotatedLine": {
+      "type": "object",
+      "required": ["id", "text", "source", "context"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "行唯一标识，格式如 V001/S001/A001",
+          "pattern": "^[VSA]\\d{3,}$"
+        },
+        "text": {
+          "type": "string",
+          "description": "行文本内容"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["voice", "story", "archive"],
+          "description": "来源类型"
+        },
+        "source_detail": {
+          "type": "string",
+          "description": "来源详情（语音标题/场景名/档案段落）"
+        },
+        "context": {
+          "$ref": "#/$defs/lineContext"
+        },
+        "speech_acts": {
+          "type": "array",
+          "description": "话语行为标签列表",
+          "items": { "type": "string" }
+        },
+        "emotion": {
+          "type": "object",
+          "description": "情感标注",
+          "properties": {
+            "primary": { "type": "string" },
+            "secondary": { "type": "array", "items": { "type": "string" } },
+            "valence": { "type": "number" },
+            "arousal": { "type": "number" }
+          }
+        }
+      }
+    },
+    "lineContext": {
+      "type": "object",
+      "required": ["phase"],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "description": "故事时期/阶段"
+        },
+        "scene": {
+          "type": "string",
+          "description": "场景描述"
+        },
+        "interlocutor": {
+          "type": ["string", "null"],
+          "description": "对话对象"
+        },
+        "preceding_event": {
+          "type": "string",
+          "description": "前序事件"
+        },
+        "situation_type": {
+          "type": "string",
+          "description": "场景类型"
+        }
+      }
+    }
+  }
+}

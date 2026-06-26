@@ -8,10 +8,12 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-try:
-    from shared_utils import validate_slug
-except ImportError:
-    from tools.shared_utils import validate_slug
+# 确保 tools 目录在 import 路径中，支持从任意位置运行
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from shared_utils import validate_slug
 
 
 def list_skills(base_dir: str = "./operators") -> dict:

@@ -1,0 +1,554 @@
+{
+  "温柔": [
+    {
+      "word": "温柔",
+      "weight": 1.0
+    },
+    {
+      "word": "轻声",
+      "weight": 0.8
+    },
+    {
+      "word": "微笑",
+      "weight": 0.9
+    },
+    {
+      "word": "柔和",
+      "weight": 0.7
+    },
+    {
+      "word": "温暖",
+      "weight": 0.8
+    },
+    {
+      "word": "关怀",
+      "weight": 1.0
+    },
+    {
+      "word": "呵护",
+      "weight": 1.2
+    },
+    {
+      "word": "怜惜",
+      "weight": 1.1
+    },
+    {
+      "word": "注视",
+      "weight": 0.5
+    },
+    {
+      "word": "轻抚",
+      "weight": 1.0
+    },
+    {
+      "word": "低声",
+      "weight": 0.6
+    },
+    {
+      "word": "柔声",
+      "weight": 0.9
+    },
+    {
+      "word": "安抚",
+      "weight": 1.0
+    },
+    {
+      "word": "慈爱",
+      "weight": 1.2
+    }
+  ],
+  "悲伤": [
+    {
+      "word": "悲伤",
+      "weight": 1.2
+    },
+    {
+      "word": "哀伤",
+      "weight": 1.2
+    },
+    {
+      "word": "沉默",
+      "weight": 0.6
+    },
+    {
+      "word": "叹息",
+      "weight": 0.9
+    },
+    {
+      "word": "泪水",
+      "weight": 1.0
+    },
+    {
+      "word": "遗憾",
+      "weight": 0.8
+    },
+    {
+      "word": "失去",
+      "weight": 1.0
+    },
+    {
+      "word": "怀念",
+      "weight": 0.9
+    },
+    {
+      "word": "痛",
+      "weight": 1.0
+    },
+    {
+      "word": "消逝",
+      "weight": 1.0
+    },
+    {
+      "word": "陨落",
+      "weight": 1.3
+    },
+    {
+      "word": "永别",
+      "weight": 1.5
+    },
+    {
+      "word": "哀悼",
+      "weight": 1.2
+    },
+    {
+      "word": "沉痛",
+      "weight": 1.3
+    }
+  ],
+  "愤怒": [
+    {
+      "word": "愤怒",
+      "weight": 1.2
+    },
+    {
+      "word": "不可饶恕",
+      "weight": 1.5
+    },
+    {
+      "word": "绝不允许",
+      "weight": 1.4
+    },
+    {
+      "word": "休想",
+      "weight": 1.0
+    },
+    {
+      "word": "愚蠢",
+      "weight": 0.8
+    },
+    {
+      "word": "可恶",
+      "weight": 1.0
+    },
+    {
+      "word": "不可原谅",
+      "weight": 1.5
+    },
+    {
+      "word": "暴怒",
+      "weight": 1.4
+    },
+    {
+      "word": "愤慨",
+      "weight": 1.2
+    },
+    {
+      "word": "痛恨",
+      "weight": 1.4
+    },
+    {
+      "word": "怒斥",
+      "weight": 1.3
+    }
+  ],
+  "坚定": [
+    {
+      "word": "坚定",
+      "weight": 1.0
+    },
+    {
+      "word": "决不",
+      "weight": 1.1
+    },
+    {
+      "word": "一定",
+      "weight": 0.7
+    },
+    {
+      "word": "必须",
+      "weight": 0.7
+    },
+    {
+      "word": "绝不",
+      "weight": 1.1
+    },
+    {
+      "word": "无论如何",
+      "weight": 1.0
+    },
+    {
+      "word": "必然",
+      "weight": 0.9
+    },
+    {
+      "word": "必将",
+      "weight": 1.0
+    },
+    {
+      "word": "誓言",
+      "weight": 1.2
+    },
+    {
+      "word": "誓约",
+      "weight": 1.3
+    },
+    {
+      "word": "不动摇",
+      "weight": 1.2
+    },
+    {
+      "word": "义无反顾",
+      "weight": 1.3
+    },
+    {
+      "word": "矢志",
+      "weight": 1.4
+    }
+  ],
+  "恐惧": [
+    {
+      "word": "恐惧",
+      "weight": 1.2
+    },
+    {
+      "word": "害怕",
+      "weight": 1.0
+    },
+    {
+      "word": "可怕",
+      "weight": 0.9
+    },
+    {
+      "word": "战栗",
+      "weight": 1.3
+    },
+    {
+      "word": "颤抖",
+      "weight": 1.0
+    },
+    {
+      "word": "不安",
+      "weight": 0.8
+    },
+    {
+      "word": "危险",
+      "weight": 0.7
+    },
+    {
+      "word": "惊惧",
+      "weight": 1.2
+    },
+    {
+      "word": "惶恐",
+      "weight": 1.1
+    }
+  ],
+  "希望": [
+    {
+      "word": "希望",
+      "weight": 1.0
+    },
+    {
+      "word": "未来",
+      "weight": 0.7
+    },
+    {
+      "word": "黎明",
+      "weight": 0.9
+    },
+    {
+      "word": "明天",
+      "weight": 0.6
+    },
+    {
+      "word": "一定会",
+      "weight": 1.0
+    },
+    {
+      "word": "终将",
+      "weight": 0.9
+    },
+    {
+      "word": "曙光",
+      "weight": 1.2
+    },
+    {
+      "word": "期盼",
+      "weight": 1.0
+    },
+    {
+      "word": "憧憬",
+      "weight": 0.9
+    },
+    {
+      "word": "祈愿",
+      "weight": 1.1
+    },
+    {
+      "word": "信念",
+      "weight": 1.1
+    },
+    {
+      "word": "勇气",
+      "weight": 1.0
+    }
+  ],
+  "孤独": [
+    {
+      "word": "孤独",
+      "weight": 1.2
+    },
+    {
+      "word": "独自",
+      "weight": 0.8
+    },
+    {
+      "word": "一个人",
+      "weight": 0.7
+    },
+    {
+      "word": "无人",
+      "weight": 0.7
+    },
+    {
+      "word": "寂寞",
+      "weight": 1.0
+    },
+    {
+      "word": "空旷",
+      "weight": 0.6
+    },
+    {
+      "word": "遥远",
+      "weight": 0.5
+    },
+    {
+      "word": "漂泊",
+      "weight": 0.9
+    },
+    {
+      "word": "流浪",
+      "weight": 0.9
+    },
+    {
+      "word": "形单影只",
+      "weight": 1.3
+    },
+    {
+      "word": "孑然",
+      "weight": 1.2
+    }
+  ],
+  "信任": [
+    {
+      "word": "信任",
+      "weight": 1.0
+    },
+    {
+      "word": "相信",
+      "weight": 0.9
+    },
+    {
+      "word": "托付",
+      "weight": 1.2
+    },
+    {
+      "word": "交付",
+      "weight": 0.9
+    },
+    {
+      "word": "依靠",
+      "weight": 0.8
+    },
+    {
+      "word": "在一起",
+      "weight": 0.7
+    },
+    {
+      "word": "同行",
+      "weight": 0.8
+    },
+    {
+      "word": "深信",
+      "weight": 1.2
+    },
+    {
+      "word": "依赖",
+      "weight": 0.8
+    },
+    {
+      "word": "无条件",
+      "weight": 1.0
+    }
+  ],
+  "嘲讽": [
+    {
+      "word": "呵",
+      "weight": 0.8
+    },
+    {
+      "word": "可笑",
+      "weight": 1.0
+    },
+    {
+      "word": "有趣",
+      "weight": 0.6
+    },
+    {
+      "word": "愚蠢",
+      "weight": 1.2
+    },
+    {
+      "word": "天真",
+      "weight": 0.9
+    },
+    {
+      "word": "不自量力",
+      "weight": 1.3
+    },
+    {
+      "word": "滑稽",
+      "weight": 1.0
+    },
+    {
+      "word": "嗤笑",
+      "weight": 1.2
+    },
+    {
+      "word": "嘲讽",
+      "weight": 1.2
+    },
+    {
+      "word": "讥讽",
+      "weight": 1.2
+    },
+    {
+      "word": "轻蔑",
+      "weight": 1.1
+    }
+  ],
+  "绝望": [
+    {
+      "word": "无望",
+      "weight": 1.5
+    },
+    {
+      "word": "徒劳",
+      "weight": 1.2
+    },
+    {
+      "word": "终焉",
+      "weight": 1.3
+    },
+    {
+      "word": "末日",
+      "weight": 1.3
+    },
+    {
+      "word": "注定",
+      "weight": 0.9
+    },
+    {
+      "word": "无法改变",
+      "weight": 1.2
+    },
+    {
+      "word": "深渊",
+      "weight": 1.1
+    },
+    {
+      "word": "绝望",
+      "weight": 1.5
+    },
+    {
+      "word": "万劫不复",
+      "weight": 1.5
+    }
+  ],
+  "自豪": [
+    {
+      "word": "骄傲",
+      "weight": 1.0
+    },
+    {
+      "word": "荣耀",
+      "weight": 1.1
+    },
+    {
+      "word": "自豪",
+      "weight": 1.2
+    },
+    {
+      "word": "无愧",
+      "weight": 0.9
+    },
+    {
+      "word": "辉煌",
+      "weight": 1.0
+    },
+    {
+      "word": "伟大",
+      "weight": 0.8
+    },
+    {
+      "word": "传承",
+      "weight": 0.7
+    },
+    {
+      "word": "使命",
+      "weight": 0.8
+    }
+  ],
+  "眷恋": [
+    {
+      "word": "眷恋",
+      "weight": 1.2
+    },
+    {
+      "word": "不舍",
+      "weight": 1.0
+    },
+    {
+      "word": "留恋",
+      "weight": 1.0
+    },
+    {
+      "word": "牵挂",
+      "weight": 0.9
+    },
+    {
+      "word": "思念",
+      "weight": 1.0
+    },
+    {
+      "word": "故乡",
+      "weight": 0.7
+    },
+    {
+      "word": "家园",
+      "weight": 0.8
+    },
+    {
+      "word": "归处",
+      "weight": 1.0
+    },
+    {
+      "word": "依恋",
+      "weight": 1.1
+    },
+    {
+      "word": "难舍",
+      "weight": 1.2
+    }
+  ]
+}
