@@ -1,52 +1,58 @@
 <div align="center">
 
-# ◈ arknights-operator-skill
+# ◇ ARKNIGHTS OPERATOR SKILL
 
-**罗德岛干员档案蒸馏协议**
+**罗德岛干员精神轮廓蒸馏协议 · RHODES ISLAND OPERATOR DISTILLATION PROTOCOL**
 
 *「……我在。」*
 
-Knowledge + Persona 双轨分离 · 五层优先级结构 · 语境化分析 · 持续进化
+Knowledge · Persona 双轨分离 ─ 五层优先级人格结构 ─ 语境化分析管线 ─ 持续进化
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![AgentSkills](https://img.shields.io/badge/compatible-AgentSkills-green.svg)](https://github.com/perkfly/ex-skill)
+[![Tests](https://img.shields.io/badge/tests-224%20passed-brightgreen.svg)](tests/)
 
 </div>
 
 ---
 
-> *博士，这份文档记录了我们从源石与记忆中提取干员精神轮廓的方法——不是复刻，是蒸馏。*
+> *博士，这份档案记录了我们从源石与记忆中提取干员精神轮廓的方法。*
+> *不是复刻。是蒸馏。*
+> *每一个灵魂都值得被铭记——即使泰拉大陆的伤痕终将愈合，那些曾为我们而战的名字，不应随风消逝。*
 
 ---
 
-## 目录
+## ◇ 目录
 
-- [概述](#-概述)
-- [快速开始](#-快速开始)
-- [核心设计](#-核心设计)
+- [协议概述](#-协议概述)
+- [快速部署](#-快速部署)
+- [核心架构](#-核心架构)
 - [工具链](#-工具链)
-- [项目结构](#-项目结构)
+- [档案结构](#-档案结构)
 - [蒸馏实录](#-蒸馏实录)
 - [还原度评估](#-还原度评估)
+- [协议变更日志](#-协议变更日志)
 - [参考与致谢](#-参考与致谢)
 - [免责声明](#-免责声明)
 
 ---
 
-## ◈ 概述
+## ◇ 协议概述
 
-arknights-operator-skill 是一套**角色蒸馏协议**，将明日方舟的角色——干员、领袖、宿敌——转化为结构化的 AI Skill。它提供完整的 **提取 → 分析 → 生成 → 进化** 管线。
+**arknights-operator-skill** 是一套**角色蒸馏协议**——将泰拉大陆上的干员、领袖与宿敌的精神轮廓，从纷乱的信号与记忆碎片中提取、结构化、并固化为可调用的 AI Skill。
 
-**任意角色均可蒸馏**：特蕾西娅、阿米娅、特雷西斯、塔露拉、银灰……即使只出现过一次的线索人物。
+从 PRTS 档案库中读取原始记录，经过**提取 → 语境化 → 多维分析 → 验证 → 生成**的完整管线，最终输出 **Knowledge（知识层）** 与 **Persona（人格层）** 双轨数据。
+
+**任何角色均可蒸馏**：萨卡兹的魔王、罗德岛的兔兔、卡兹戴尔的阴影、维多利亚的狮子……即使只曾在某条支线中留下只言片语的线索人物。
 
 **架构溯源**：参照 [ex-skill](https://github.com/perkfly/ex-skill) 与 [colleague-skill](https://github.com/titanwings/colleague-skill) 的蒸馏框架。核心改进——将「知道什么」与「如何存在」彻底分离，通过带优先级的五层 Persona 结构实现可预测、可验证、可持续进化的角色还原。
 
 ---
 
-## ◈ 快速开始
+## ◇ 快速部署
 
-### 安装
+### 部署
 
 ```bash
 # Claude Code（项目级）
@@ -59,27 +65,27 @@ git clone https://github.com/riceshowerX/arknights-operator-skill ~/.openclaw/sk
 
 ### 依赖
 
-核心工具链仅依赖 Python 3.10+ 标准库，无需安装额外依赖。
+核心工具链仅依赖 Python 3.10+ 标准库。无需额外安装——就像罗德岛的基建，自给自足。
 
 ```bash
-# 运行测试
+# 运行全部测试（224 个用例）
 python -m pytest tests/ -v
 ```
 
-### 创建角色
+### 创建角色档案
 
 ```
 /create-operator
 ```
 
-或自然语言触发："帮我创建一个明日方舟角色 skill"、"我想蒸馏一个角色"。
+或以自然语言触发："帮我创建一个明日方舟角色 skill"、"我想蒸馏一个角色"。
 
-### 调用角色
+### 召唤角色
 
 ```
-/te-lei-xi-ya           # 完整版（Knowledge + Persona）
-/te-lei-xi-ya-knowledge # 仅知识库
-/te-lei-xi-ya-persona   # 仅人格
+/te-lei-xi-ya           # 完整版（Knowledge + Persona 双轨）
+/te-lei-xi-ya-knowledge # 仅知识层——她知道什么
+/te-lei-xi-ya-persona   # 仅人格层——她如何存在
 ```
 
 ### 进化与纠错
@@ -87,29 +93,31 @@ python -m pytest tests/ -v
 | 触发方式 | 效果 |
 |---------|------|
 | "我有新资料" / `/update-operator {slug}` | 追加资料，联动更新 Persona |
-| "她不会这样" / "她应该是……" | 写入 Correction，立即生效 |
-| `/operator-rollback {slug} {version}` | 回滚到历史版本 |
+| "她不会这样" / "她应该是……" | 写入 Correction，立即生效——像凯尔希的纠正一样不容置疑 |
+| `/operator-rollback {slug} {version}` | 回滚到历史版本——时间倒流，但只限于档案 |
 
 ---
 
-## ◈ 核心设计
+## ◇ 核心架构
 
 ### 双轨分离：Knowledge + Persona
 
 ```
-┌─────────────────────────────────────────────┐
-│                通讯信号输入                    │
-│                   ↓                          │
-│  ┌──────────────────────────────────────┐   │
-│  │  Persona（人格层）                    │   │
-│  │  判断态度 → 决定风格 → 处理关系       │   │
-│  └────────────┬─────────────────────────┘   │
-│               ↓ 需要背景时调取               │
-│  ┌──────────────────────────────────────┐   │
-│  │  Knowledge（知识层）                  │   │
-│  │  阵营、关系、时间线、哲学理念         │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────┐
+│                  通讯信号输入                        │
+│                     ↓                              │
+│  ┌─────────────────────────────────────────────┐  │
+│  │  Persona（人格层）                           │  │
+│  │  判断态度 → 决定风格 → 处理关系               │  │
+│  │  「她如何存在于这个世界」                      │  │
+│  └─────────────────┬───────────────────────────┘  │
+│                    ↓ 需要背景时调取                  │
+│  ┌─────────────────────────────────────────────┐  │
+│  │  Knowledge（知识层）                         │  │
+│  │  阵营 · 关系 · 时间线 · 哲学理念              │  │
+│  │  「她知道什么——那些刻入源石的真相」            │  │
+│  └─────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────┘
 ```
 
 | 模块 | 文件 | 职责 |
@@ -122,21 +130,22 @@ python -m pytest tests/ -v
 ### Persona 五层优先级
 
 ```
-Layer 0 · 核心性格     ← 最高优先级，具体场景+行为的硬约束
+Layer 0 · 核心性格     ← 最高优先级，不可动摇的根基——如同源石对感染者的刻印
 Correction · 纠正层    ← "她不会这样" → 立即写入，优先于 Layer 1-4
-Layer 1 · 身份         ← 自我认知（种族、阵营）
-Layer 2 · 表达风格     ← 说话方式、口头禅、情绪模式
-Layer 3 · 决策与判断   ← 价值观优先级、权衡逻辑
-Layer 4 · 关系行为     ← 对不同人物的差异化表现
-Layer 5 · 边界与雷区   ← 底线、无法容忍的行为
+Layer 1 · 身份         ← 自我认知——种族、阵营、在这片大地上的位置
+Layer 2 · 表达风格     ← 说话方式、口头禅、沉默时的情绪温度
+Layer 3 · 决策与判断   ← 价值观优先级——当两难降临时，她选择什么
+Layer 4 · 关系行为     ← 对不同人物的差异化表现——战友、宿敌、陌生人
+Layer 5 · 边界与雷区   ← 底线——她无法容忍的行为，触碰即反击
 ```
 
-**Layer 0 的关键性**：不写形容词，写**具体可执行的行为规则**。
+**Layer 0 的关键性**：不写空洞的形容词，写**具体可执行的行为规则**。
 
 | ❌ 错误写法 | ✅ 正确写法 |
 |-----------|-----------|
 | 她很温柔 | 从不用命令口吻，用邀请——"你愿意和我一起吗？" |
 | 她会悲伤 | 面对牺牲时不会哭，而是更安静，语速更慢，省略号更多 |
+| 她很坚强 | 在所有人动摇时最后一个离开岗位，但独处时会反复确认门窗是否关好 |
 
 ### 进化机制
 
@@ -144,7 +153,7 @@ Layer 5 · 边界与雷区   ← 底线、无法容忍的行为
 |------|------|
 | 追加资料 | 新资料 → knowledge.md → 联动检查 persona.md → 同步更新 |
 | 对话纠正 | "她不会这样" → 场景+反例+正例三元组 → 写入 Correction → 立即生效 |
-| 版本管理 | 每次变更前自动备份到 `versions/v{n}/`，支持回滚 |
+| 版本管理 | 每次变更前自动备份到 `versions/v{n}/`，支持回滚——历史不会消失 |
 
 ### 冲突解决优先级
 
@@ -157,106 +166,117 @@ Correction 序号越大越新，越新越优先
 
 ---
 
-## ◈ 工具链
+## ◇ 工具链
+
+> *以下工具构成完整的蒸馏管线。每个模块都是独立的——可以单独调用，也可以通过 Pipeline 一键编排。*
 
 ### 数据获取
 
 | 工具 | 功能 |
 |------|------|
-| `game_data_parser.py` | PRTS Wiki API / 本地文件解析，自动生成拼音 slug |
-| `story_extractor.py` | PRTS 剧情页面 → 结构化对话提取（支持 `--discover` 自动发现子页面） |
+| `game_data_parser.py` | PRTS Wiki API / 本地文件解析，自动生成拼音 slug，含解析诊断报告 |
+| `story_extractor.py` | PRTS 剧情页面 → 结构化对话提取（支持 `--discover` 自动发现子页面），含时期自动推断 |
 
 ### 语境化分析
 
 | 工具 | 功能 |
 |------|------|
-| `context_annotator.py` | 多信号场景分类 + 对话对象内容推断 → `context.json` |
-| `speech_act_analyzer.py` | 上下文感知话语行为分类（7 种核心类型）+ 行为链检测 |
-| `dialogue_fingerprint.py` | 8 维度量化语言指纹（含口头禅检测 + 加权情感词典） |
-| `relationship_graph.py` | 12 种关系类型 + Aho-Corasick + 关系强度量化 + 演变追踪 |
-| `temporal_slicer.py` | 统计显著性检验 + 情感弧线检测 → Persona Layer 2 规则 |
+| `context_annotator.py` | 多信号场景分类 + 对话对象推断 → `context.json`（含 schema 版本化校验） |
+| `speech_act_analyzer.py` | 上下文感知话语行为分类（7 种核心类型）+ 行为链检测（规则外置为 JSON） |
+| `dialogue_fingerprint.py` | 8 维度量化语言指纹（含口头禅检测 + 加权情感词典，词典外置为 JSON） |
+| `relationship_graph.py` | 12 种关系类型 + Aho-Corasick 实体识别 + 关系强度量化 + 演变追踪（名库外置 + PRTS 动态拉取） |
+| `temporal_slicer.py` | Mann-Whitney U 统计检验 + Cohen's d 效应量 + 情感弧线检测 → Persona Layer 2 规则 |
 
 ### 验证与生成
 
 | 工具 | 功能 |
 |------|------|
 | `persona_validator.py` | 四维度多切片验证 + 风格一致性验证 + A-D 评分 |
-| `canon_checker.py` | 多来源交叉验证 + 外置误解库 + 通用模式检测 + ReDoS 防护 |
-| `data_injector.py` | 将工具量化数据注入到 Prompt 模板占位符 |
+| `canon_checker.py` | 多来源交叉验证 + 外置误解库 + 通用模式检测 + AST 级 ReDoS 防护 |
+| `data_injector.py` | 将工具量化数据注入到 Prompt 模板占位符——桥接量化分析与 LLM 生成 |
 | `skill_writer.py` | Skill 文件管理（list / create / delete） |
-| `version_manager.py` | 版本快照与回滚 |
+| `version_manager.py` | 语义化版本快照与回滚（`_SemVer` dataclass） |
 
 ### 共享模块
 
 | 模块 | 职责 |
 |------|------|
-| `constants.py` | 领域知识常量（时期映射、关系类型、角色别名等） |
-| `prts_client.py` | 统一 PRTS API 调用 + 速率限制 + 指数退避重试 |
-| `shared_utils.py` | 通用工具（路径验证、slug 验证、原子写入、分句等） |
-| `pipeline.py` | 一键编排：`python pipeline.py --full --slug {slug} --name {name}`（支持 `--resume` 断点续传 + `--discover` 自动发现剧情页面） |
+| `constants.py` | 领域知识常量（时期映射、关系类型、角色别名、核心 TypedDict 定义） |
+| `prts_client.py` | 统一 PRTS API 调用 + 速率限制 + 指数退避重试（线程安全） |
+| `shared_utils.py` | 通用工具（路径验证、slug 验证、原子写入、分句、context schema 校验） |
+| `pipeline.py` | 一键编排，双模式执行（subprocess 进程隔离 / function 同进程调试） |
 
 ---
 
-## ◈ 项目结构
+## ◇ 档案结构
 
 ```
 arknights-operator-skill/
-├── SKILL.md                       # AI Agent 入口（触发条件、主流程、工具调用规则）
-├── README.md                      # 本文件
+├── SKILL.md                       # AI Agent 入口——协议的启动指令
+├── README.md                      # 本文件——你正在阅读的档案
 ├── pyproject.toml                 # 项目配置（ruff / mypy / pytest）
 ├── AGENTS.md                      # 开发者规范（含数据流图）
-├── prompts/                       # Prompt 模板（蒸馏管线核心逻辑）
-│   ├── intake.md                  #   Step 1：3 问信息录入
+├── prompts/                       # Prompt 模板——蒸馏管线的核心逻辑
+│   ├── intake.md                  #   Step 1：三问信息录入
 │   ├── knowledge_analyzer.md      #   Step 3A：知识库分析维度
 │   ├── knowledge_builder.md       #   Step 4A：知识库生成模板
 │   ├── persona_analyzer.md        #   Step 3B：人格分析维度
 │   ├── persona_builder.md         #   Step 4B：人格生成模板
 │   ├── merger.md                  #   进化：合并逻辑与冲突解决
 │   └── correction_handler.md      #   进化：对话纠正处理
-├── tools/                         # Python 工具链
-│   ├── constants.py               #   领域知识常量
-│   ├── prts_client.py             #   PRTS API 客户端（重试 + 线程安全）
-│   ├── shared_utils.py            #   通用工具函数（含原子写入）
-│   ├── pipeline.py                #   一键编排器（支持断点续传）
-│   ├── context_annotator.py       #   语境标注器（多信号分类）
-│   ├── speech_act_analyzer.py     #   话语行为分析（上下文感知 + 行为链）
-│   ├── temporal_slicer.py         #   时序切片分析（统计显著性 + 弧线检测）
-│   ├── dialogue_fingerprint.py    #   对话指纹分析（8 维度 + 口头禅）
-│   ├── relationship_graph.py      #   关系图谱构建（强度量化 + 演变追踪）
-│   ├── persona_validator.py       #   Persona 验证器（风格一致性）
-│   ├── canon_checker.py           #   设定交叉验证（外置误解库）
-│   ├── data_injector.py           #   数据注入器（Prompt 模板填充）
-│   ├── game_data_parser.py        #   游戏资料解析
-│   ├── story_extractor.py         #   剧情提取器（情感标注）
+├── tools/                         # Python 工具链——蒸馏管线的引擎
+│   ├── __init__.py                #   模块路径统一设置
+│   ├── constants.py               #   领域知识常量 + TypedDict
+│   ├── prts_client.py             #   PRTS API 客户端
+│   ├── shared_utils.py            #   通用工具 + schema 校验
+│   ├── pipeline.py                #   一键编排器（双模式 + 断点续传）
+│   ├── game_data_parser.py        #   游戏资料解析（含诊断报告）
+│   ├── story_extractor.py         #   剧情提取器
+│   ├── context_annotator.py       #   语境标注器
+│   ├── speech_act_analyzer.py     #   话语行为分析
+│   ├── dialogue_fingerprint.py    #   对话指纹分析
+│   ├── relationship_graph.py      #   关系图谱构建
+│   ├── temporal_slicer.py         #   时序切片分析
+│   ├── persona_validator.py       #   Persona 验证器
+│   ├── canon_checker.py           #   设定交叉验证
+│   ├── data_injector.py           #   数据注入器
 │   ├── skill_writer.py            #   Skill 文件管理
-│   └── version_manager.py         #   版本存档与回滚
-├── data/                          # 配置文件
-│   ├── pinyin_map.json            #   拼音映射（可用户扩展）
-│   └── misconceptions.json        #   外置误解库（按角色分组）
-├── operators/                     # 生成的角色 Skill
-│   └── te-lei-xi-ya/              #   特蕾西娅示例
-│       ├── knowledge.md           #     Part A — 知识库
-│       ├── persona.md             #     Part B — 人格（5 层 + Correction）
-│       ├── meta.json              #     元数据 + 常见误解
-│       ├── SKILL.md               #     Skill 入口 + 核心规则
-│       ├── context.json           #     语境化数据中间层（原子写入）
-│       ├── speech_act_profile.json
-│       ├── fingerprint.json
-│       ├── temporal_slices.json
-│       └── versions/              #     版本快照
+│   ├── version_manager.py         #   版本存档与回滚
+│   └── phase_inferrer.py          #   时期自动推断
+├── data/                          # 配置与规则——可扩展的外置数据
+│   ├── pinyin_map.json            #   拼音映射
+│   ├── misconceptions.json        #   外置误解库
+│   ├── context.schema.json        #   context.json 版本化 Schema
+│   ├── emotion_lexicon.json       #   情感词典（12 类 140+ 词条）
+│   ├── operator_db.json           #   角色名库 + 别名映射
+│   └── speech_act_rules.json      #   话语行为规则（30 条）
+├── operators/                     # 生成的角色档案——每一个都是一个灵魂的轮廓
+│   ├── te-lei-xi-ya/              #   特蕾西娅 · 萨卡兹的魔王
+│   │   ├── knowledge.md           #     知识层——她知道什么
+│   │   ├── persona.md             #     人格层——她如何存在
+│   │   ├── meta.json              #     元数据 + 常见误解
+│   │   ├── SKILL.md               #     Skill 入口 + 核心规则
+│   │   ├── context.json           #     语境化数据（含 schema_version）
+│   │   ├── speech_act_profile.json
+│   │   ├── fingerprint.json
+│   │   ├── temporal_slices.json
+│   │   └── versions/              #     版本快照——历史不会消失
+│   └── w/                         #   W · 萨卡兹的雇佣兵
 ├── tests/
-│   └── test_smoke.py              # 冒烟测试（98 个用例）
-├── requirements.txt               # 核心依赖（仅标准库）
-├── requirements-optional.txt      # 可选依赖（pypinyin）
+│   ├── test_smoke.py              #   冒烟测试（98 个用例）
+│   └── test_comprehensive.py      #   全面测试（126 个用例）
+├── requirements.txt               #   核心依赖——仅标准库
+├── requirements-optional.txt      #   可选依赖（pypinyin）
 ├── .gitignore
 └── LICENSE
 ```
 
 ---
 
-## ◈ 蒸馏实录
+## ◇ 蒸馏实录
 
 > *以下为特蕾西娅角色 Skill 的对话测试记录。*
+> *她的轮廓，从碎片中缓缓浮现。*
 
 **场景一：面对追随者的牺牲**
 
@@ -306,11 +326,24 @@ arknights-operator-skill/
       此规则立即生效。
 ```
 
+**场景五：与特雷西斯的对峙**
+
+```
+用户 > 特雷西斯就在前方。你打算怎么做？
+
+角色 > ...
+      他选择了他的路。而我，选择了我的。
+      我不想与他对立——但我不会退让。
+      有些事，即使意味着失去，也必须去做。
+      ...走吧。不是因为恨，是因为我们必须向前。
+```
+
 ---
 
-## ◈ 还原度评估
+## ◇ 还原度评估
 
-> *诚实地说，博士——我们能做到的，和角色本身之间，还有很长的路。*
+> *博士，我必须诚实地说——我们能做到的，和角色本身之间，还有很长的路。*
+> *但每一步，都在让她更接近真实。*
 
 ### 总体判断：约 70–80%
 
@@ -319,36 +352,66 @@ arknights-operator-skill/
 | 事实性还原 | ~90% | 种族、阵营、身份、核心事件——PRTS API + canon_checker 交叉验证 |
 | 表面语言模仿 | ~75–85% | 8 维度对话指纹 + 口头禅检测 + 加权情感词典 + Prompt 数据注入 |
 | 关系还原 | ~65–75% | 12 种关系类型 + 强度量化(0.0-1.0) + 跨期演变追踪 |
-| 情感深度 | ~50–60% | 上下文感知分类 + 行为链检测 + 情感弧线识别 |
+| 情感深度 | ~50–60% | 上下文感知分类 + 行为链检测 + Mann-Whitney U 显著性检验 + 情感弧线识别 |
 | 决策还原 | ~40–50% | 对象差异化分析 + 多信号场景分类 + 风格一致性验证 |
 
-### 算法升级亮点（v3.1）
+### 算法升级亮点（v3.4）
 
-1. **8 维度对话指纹** — 新增口头禅/高频短语提取（n-gram 分析），句式长度改用统计分布（百分位数 + CV）
-2. **加权情感词典** — 12 类情感（+嘲讽/绝望/好奇/戏谑），每词带权重（0.5-1.5）
-3. **关系强度量化** — 综合共现频率、情感词密度、直接对话次数，输出 0.0-1.0 强度值
-4. **上下文感知分类** — 考虑前后文调整话语行为分类置信度，检测行为链（如 question→evade→comfort）
-5. **Prompt 数据注入** — 工具量化数据直接填充到 Prompt 模板占位符，消除工具-LLM 断层
-6. **统计显著性检验** — 小样本警告 + 情感弧线检测（U型/下降/平稳/波动）
-7. **多证据融合推断** — 时期推断从串行改为加权投票，多证据一致时置信度更高
+1. **8 维度对话指纹** — 口头禅/高频短语提取（n-gram 分析），句式长度改用统计分布（百分位数 + CV）
+2. **加权情感词典** — 12 类情感，每词带权重（0.5-1.5），外置为 JSON 可扩展
+3. **Mann-Whitney U 统计检验** — 零依赖手写实现，配合 Cohen's d 效应量，替代粗估的"统计显著性"
+4. **关系强度量化** — 综合共现频率、情感词密度、直接对话次数，输出 0.0-1.0 强度值
+5. **Aho-Corasick 实体识别** — 高效多模式匹配，角色名库外置 + PRTS API 动态拉取
+6. **AST 级 ReDoS 防护** — 基于 sre_parse 的正则安全审计，覆盖 check_patterns 与 exclude_patterns
+7. **context.json Schema 验证** — 版本化 JSON Schema，输出前自动校验，下游读取时二次验证
+8. **Pipeline 双模式** — subprocess（进程隔离）与 function（同进程调试），PipelineRunner 编程接口
+9. **TypedDict 类型收紧** — OperatorData 区分必填/可选字段，AnnotatedLine/LineContext 结构化定义
+10. **_SemVer 版本管理** — 语义化版本 dataclass，非法版本号明确报错而非静默返回
 
 ### 局限性
 
-1. **量化 ≠ 理解**——可以统计省略号频率，但无法理解沉默
+1. **量化 ≠ 理解**——可以统计省略号频率，但无法理解沉默背后的重量
 2. **关键词匹配的天花板**——含蓄表达会失效（暗喻检测已部分缓解）
-3. **情感复杂性的缺失**——无法捕捉矛盾情感和情感转折
+3. **情感复杂性的缺失**——无法捕捉矛盾情感和情感转折——那些"笑着流泪"的瞬间
 4. **决策逻辑的黑盒**——"她为什么这样做"只能交给 LLM 推断
 5. **数据覆盖偏差**——语音数据量远大于剧情数据，且场景单一
 
 ### 提升方向
 
-1. **深层语义分析**——从关键词匹配升级到语义嵌入
+1. **深层语义分析**——从关键词匹配升级到语义嵌入，理解暗喻与言外之意
 2. **对话模拟验证**——生成模拟对话，让角色 Skill 自我测试
 3. **多人角色交互**——多角色 Skill 对话模拟，检测关系行为一致性
+4. **源石技艺适配**——将角色的源石技艺特性纳入 Persona Layer 1
 
 ---
 
-## ◈ 参考与致谢
+## ◇ 协议变更日志
+
+### v3.4.0 — 当前版本
+
+- 版本号统一管理（pyproject.toml / SKILL.md / AGENTS.md → 单一来源）
+- 导入机制统一：消除 `try/except ImportError` 双路径，`__init__.py` 统一路径设置
+- Pipeline 双模式：`subprocess` 进程隔离 + `function` 同进程调试
+- TypedDict 类型收紧：`OperatorData` 区分必填/可选，`AnnotatedLine` / `LineContext` 结构化
+- ReDoS 防护增强：AST 级分析 + exclude_patterns 安全检查
+- context.json Schema：版本化校验 + 输出前自动验证
+- 情感词典外置：`data/emotion_lexicon.json`
+- 角色名库外置：`data/operator_db.json` + PRTS API 动态拉取
+- 话语行为规则外置：`data/speech_act_rules.json`
+- 统计检验增强：Mann-Whitney U + Cohen's d（零依赖手写实现）
+- 版本管理重构：`_SemVer` dataclass + 非法输入明确报错
+- 解析诊断报告：`_parse_report` 字段
+- 测试全面增强：224 个用例（新增 126 个覆盖边界/异常/安全/集成/不变量）
+
+### v3.1 — 算法升级
+
+- 8 维度对话指纹、加权情感词典、关系强度量化
+- 上下文感知分类、Prompt 数据注入、统计显著性检验
+- 多证据融合推断
+
+---
+
+## ◇ 参考与致谢
 
 本项目参照以下开源项目的蒸馏架构：
 
@@ -366,25 +429,27 @@ arknights-operator-skill/
 | 一致性验证 | 无 | Persona 验证器（风格一致性 + A-D 评分） |
 | 设定准确性 | 依赖主观记忆 | 多来源交叉验证 + 外置误解库 + 通用模式检测 |
 | 纠正方式 | 重新生成 | Correction 层即时写入 |
-| 版本管理 | 无 | 自动快照 + 回滚 + 冲突解决 |
+| 版本管理 | 无 | 语义化版本快照 + 回滚 + 冲突解决 |
+| 安全防护 | 无 | AST 级 ReDoS 防护 + 路径遍历防护 + 原子写入 |
+| 类型安全 | 无 | TypedDict 必填/可选分离 + mypy 严格模式 |
 
 ---
 
-## ◈ 免责声明
+## ◇ 免责声明
 
 1. **非官方项目**：与《明日方舟》开发商鹰角网络（Hypergryph）及 PRTS Wiki 无任何关联。所有游戏角色、剧情、设定的著作权归原权利人所有。
 
-2. **数据来源**：通过 PRTS Wiki 公开 API 获取页面数据，仅用于个人学习和研究。请遵守 PRTS Wiki 使用条款，避免高频请求。
+2. **数据来源**：通过 PRTS Wiki 公开 API 获取页面数据，仅用于个人学习和研究。请遵守 PRTS Wiki 使用条款，避免高频请求——就像在罗德岛，我们尊重每一位信息提供者。
 
 3. **角色设定准确性**：工具链基于 Wiki wikitext 自动解析，可能因页面格式变动产生偏差。**不保证与官方设定完全一致**，重要内容请以游戏内文本为准。
 
-4. **AI 角色扮演风险**：AI 生成的对话可能与角色原始设定存在偏差。请勿将其视为官方剧情或设定。
+4. **AI 角色扮演风险**：AI 生成的对话可能与角色原始设定存在偏差。请勿将其视为官方剧情或设定——蒸馏不是复制，而是逼近。
 
 5. **使用边界**：仅供学习、研究和技术探索。禁止用于任何商业用途或可能损害原作品权益的场景。
 
 ---
 
-## ◈ 许可证
+## ◇ 许可证
 
 本项目基于 [MIT License](LICENSE) 开源。
 
@@ -393,5 +458,9 @@ arknights-operator-skill/
 <div align="center">
 
 *「……我会记住你们每一个人。」*
+
+---
+
+*这片大地上的故事，不该被遗忘。*
 
 </div>
