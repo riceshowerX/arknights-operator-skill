@@ -1,6 +1,6 @@
 [project]
 name = "arknights-operator-skill"
-version = "3.4.0"
+version = "3.5.0"
 description = "明日方舟角色蒸馏工具 — 将游戏角色转化为结构化的 AI Skill"
 readme = "README.md"
 license = {text = "MIT"}
@@ -26,6 +26,7 @@ dependencies = []
 full = ["pypinyin>=0.51.0"]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=4.0",
     "ruff>=0.6",
     "mypy>=1.11",
 ]
@@ -33,12 +34,28 @@ dev = [
 [project.scripts]
 arknights-distill = "tools.pipeline:main"
 
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# 允许 pip install -e . 后通过 from tools.xxx import ... 导入
+# 这是消除 sys.path hack 的推荐方式（参见 tools/__init__.py）
+include = ["tools*"]
+
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# tools/ 下的脚本需要 sys.path.insert 来支持「从任意位置直接运行」
+# （SKILL.md 依赖 python3 tools/xxx.py 调用方式），E402 在此为有意设计
+"tools/*.py" = ["E402"]
+# tests/ 同理，需要先注入 tools 路径再导入
+"tests/*.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -56,3 +73,22 @@ warn_redundant_casts = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[tool.coverage.run]
+source = ["tools"]
+branch = true
+omit = [
+    "tools/__init__.py",
+]
+
+[tool.coverage.report]
+# 覆盖率报告配置
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

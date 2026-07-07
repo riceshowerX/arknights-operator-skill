@@ -18,6 +18,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
@@ -47,7 +48,7 @@ def parse_persona(filepath: str) -> dict:
     """
     content = Path(filepath).read_text(encoding="utf-8")
 
-    result = {
+    result: dict[str, Any] = {
         "layer0_rules": [],
         "layer1_identity": [],
         "layer2_style": {},
@@ -392,8 +393,7 @@ def _extract_negation_patterns(rule: str) -> list[tuple[str, str]]:
     # 检查引号内容是否在"不"后面 → 是反例
     for phrase in quoted_phrases:
         # 如果引号内容在"不"后面，说明这是反例，应该检测
-        if re.search(rf"不[^」\u201d\u2019]*{re.escape(phrase)}", rule):
-            if len(phrase) >= 2:
+        if re.search(rf"不[^」\u201d\u2019]*{re.escape(phrase)}", rule) and len(phrase) >= 2:
                 escaped = re.escape(phrase)
                 if escaped not in already_matched:
                     patterns.append((escaped, f"使用了反例表达'{phrase}'"))
@@ -422,7 +422,10 @@ def validate_layer2_style(dialogues: list[str], style: dict) -> dict:
 
         for phrase in phrases:
             # 去掉引号标记，只检测核心词
-            clean_phrase = phrase.strip("「」""''")
+            # 去掉首尾可能的引号标记（逐字符剥离更安全）
+            clean_phrase = phrase.strip()
+            for q in ("「", "」", "“", "”", "‘", "’"):
+                clean_phrase = clean_phrase.removeprefix(q).removesuffix(q)
             count = sum(1 for d in dialogues if clean_phrase in d)
             freq = round(count / len(dialogues) * 100, 1) if dialogues else 0
             checks.append({
@@ -485,7 +488,7 @@ def validate_layer5_taboos(dialogues: list[str], taboos: list[str]) -> dict:
         # 提取禁忌中的核心词
         keywords = _extract_taboo_keywords(taboo)
 
-        for i, dialogue in enumerate(dialogue_lines):
+        for _i, dialogue in enumerate(dialogue_lines):
             for kw in keywords:
                 if kw in dialogue:
                     hits.append({
@@ -538,7 +541,7 @@ def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
     sentence_length = fingerprint.get("sentence_length", {})
     if sentence_length:
         median_len = sentence_length.get("median", 0)
-        rhythm = sentence_length.get("rhythm", "")
+        sentence_length.get("rhythm", "")
 
         # 计算实际对话的中位数长度
         actual_lengths = [len(d) for d in dialogues if d]
@@ -558,7 +561,7 @@ def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
             if deviation >= 0.3:
                 issues.append({
                     "type": "style_mismatch",
-                    "detail": f"句式长度中位数偏差 {round(deviation * 100, 1)}%（预期 {median_len}，实际 {round(actual_median, 1)}）",
+                    "detail": f"句式长度中位数偏差 {round(deviation * 100, 1)}%（预期 {median_len}，实际 {round(actual_median, 1)}）",  # noqa: E501  (中文消息折行破坏可读性)
                 })
 
     # 2. 停顿习惯一致性
@@ -600,7 +603,7 @@ def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
     rhetoric = fingerprint.get("rhetoric", {})
     if rhetoric:
         rhetorical_q_pct = rhetoric.get("rhetorical_question_pct", 0)
-        metaphor_pct = rhetoric.get("metaphor_pct", 0)
+        rhetoric.get("metaphor_pct", 0)
 
         # 计算实际反问频率
         question_count = sum(1 for d in dialogues if "？" in d or "?" in d)
@@ -725,7 +728,7 @@ def validate_relationship_tone(dialogues: list[str], persona: dict, relationship
         return {"score": 100, "checks": [], "issues": [], "note": "关系图谱为空，跳过关系语气检查"}
 
     # 统计不同关系类型的语气特征
-    tone_by_relation = {}
+    tone_by_relation: dict[str, list] = {}
     for rel in relations:
         target = rel.get("target", "")
         rel_type = rel.get("type", "unknown")
@@ -748,12 +751,11 @@ def validate_relationship_tone(dialogues: list[str], persona: dict, relationship
     for rule in layer4_relations:
         # 提取规则中提到的关系类型
         for rel_type in ["博士", "战友", "敌人", "亲人", "下属", "上级"]:
-            if rel_type in rule:
-                if rel_type not in covered_types:
-                    issues.append({
-                        "type": "uncovered_relation",
-                        "detail": f"Layer 4 规则提及「{rel_type}」但关系图谱中无此类型数据",
-                    })
+            if rel_type in rule and rel_type not in covered_types:
+                issues.append({
+                    "type": "uncovered_relation",
+                    "detail": f"Layer 4 规则提及「{rel_type}」但关系图谱中无此类型数据",
+                })
 
     score = 100 - len(issues) * 10
     score = max(0, score)
@@ -882,8 +884,8 @@ def validate_with_context(persona_path: str, context_path: str) -> dict:
 
     # 全局对话
     all_dialogues = [
-        l.get("text", "") for l in lines
-        if l.get("source") != "archive" and l.get("text")
+        line.get("text", "") for line in lines
+        if line.get("source") != "archive" and line.get("text")
     ]
 
     if not all_dialogues:
@@ -902,7 +904,7 @@ def validate_with_context(persona_path: str, context_path: str) -> dict:
         if phase != "unknown":
             by_phase.setdefault(phase, []).append(line["text"])
 
-    MIN_SLICE_SIZE = 2
+    MIN_SLICE_SIZE = 2  # noqa: N806  (模块常量风格)
     for phase, phase_dialogues in by_phase.items():
         if len(phase_dialogues) >= MIN_SLICE_SIZE:
             result = _validate_against_dialogues(persona, phase_dialogues)
@@ -1042,7 +1044,7 @@ def _detect_slice_inconsistencies(
 
     支持四种切片维度：phase、interlocutor、situation、source
     """
-    inconsistencies = []
+    inconsistencies: list[dict[str, Any]] = []
 
     # ── Phase 维度 ──
     # 收集每条规则在各切片中的违反情况
@@ -1065,7 +1067,7 @@ def _detect_slice_inconsistencies(
                 "type": "phase_specific_violation",
                 "dimension": "phase",
                 "rule": rule_key,
-                "description": f"规则在{', '.join(phases_with_violation)}时期被违反，但在{', '.join(phases_without)}时期未违反——可能是时期特有的行为，Persona 需要添加条件",
+                "description": f"规则在{', '.join(phases_with_violation)}时期被违反，但在{', '.join(phases_without)}时期未违反——可能是时期特有的行为，Persona 需要添加条件",  # noqa: E501  (中文消息折行破坏可读性)
                 "violated_phases": phases_with_violation,
                 "clean_phases": phases_without,
             })
@@ -1083,7 +1085,7 @@ def _detect_slice_inconsistencies(
                 inconsistencies.append({
                     "type": "interlocutor_score_gap",
                     "dimension": "interlocutor",
-                    "description": f"不同对话对象的验证分数差距较大（{min_score} vs {max_score}），Persona 可能需要为不同对象添加差异化规则",
+                    "description": f"不同对话对象的验证分数差距较大（{min_score} vs {max_score}），Persona 可能需要为不同对象添加差异化规则",  # noqa: E501  (中文消息折行破坏可读性)
                     "scores": scores,
                 })
 
@@ -1100,7 +1102,7 @@ def _detect_slice_inconsistencies(
                 inconsistencies.append({
                     "type": "situation_score_gap",
                     "dimension": "situation",
-                    "description": f"不同场景类型的验证分数差距较大（{min_sit} vs {max_sit}），Persona 可能需要为不同场景添加条件规则",
+                    "description": f"不同场景类型的验证分数差距较大（{min_sit} vs {max_sit}），Persona 可能需要为不同场景添加条件规则",  # noqa: E501  (中文消息折行破坏可读性)
                     "scores": sit_scores,
                 })
 
@@ -1121,7 +1123,7 @@ def _detect_slice_inconsistencies(
                 inconsistencies.append({
                     "type": "situation_specific_violation",
                     "dimension": "situation",
-                    "description": f"规则仅在 confront 场景下被违反，可能是战斗状态下的合理行为偏差，Persona 应允许条件例外",
+                    "description": "规则仅在 confront 场景下被违反，可能是战斗状态下的合理行为偏差，Persona 应允许条件例外",  # noqa: E501  (中文消息折行破坏可读性)
                     "confront_only_violations": list(confront_only)[:5],
                 })
 
@@ -1181,7 +1183,7 @@ def _generate_recommendations(
                 "priority": "medium",
                 "target": "Layer 0",
                 "issue": inc.get("description", ""),
-                "suggestion": f"为规则「{rule}」添加时期条件：在 {', '.join(violated)} 时期，此规则可以有例外或不同表现",
+                "suggestion": f"为规则「{rule}」添加时期条件：在 {', '.join(violated)} 时期，此规则可以有例外或不同表现",  # noqa: E501  (中文消息折行破坏可读性)
             })
 
         elif inc_type == "interlocutor_score_gap":
@@ -1208,7 +1210,7 @@ def _generate_recommendations(
                 "priority": "low",
                 "target": "Layer 0",
                 "issue": inc.get("description", ""),
-                "suggestion": f"为 confront 场景添加例外条款，允许在战斗/对抗情境下的合理偏差。涉及规则：{violations[:3]}",
+                "suggestion": f"为 confront 场景添加例外条款，允许在战斗/对抗情境下的合理偏差。涉及规则：{violations[:3]}",  # noqa: E501  (中文消息折行破坏可读性)
             })
 
     # ── 数据源差异建议 ──
@@ -1221,12 +1223,12 @@ def _generate_recommendations(
             max_src = max(source_scores.values())
             min_src = min(source_scores.values())
             if max_src - min_src > 15:
-                lower_src = min(source_scores, key=source_scores.get)
+                lower_src = min(source_scores, key=lambda k: source_scores[k])
                 recommendations.append({
                     "priority": "low",
                     "target": "data_quality",
                     "issue": f"数据源一致性差异：{source_scores}",
-                    "suggestion": f"{lower_src} 数据源的一致性较低，可能是因为该来源对话场景较单一。建议补充更多样化的{lower_src}数据",
+                    "suggestion": f"{lower_src} 数据源的一致性较低，可能是因为该来源对话场景较单一。建议补充更多样化的{lower_src}数据",  # noqa: E501  (中文消息折行破坏可读性)
                 })
 
     # ── 低置信度切片警告 ──
@@ -1256,7 +1258,7 @@ def _build_slice_quality_overview(
     source_results: dict[str, dict],
 ) -> dict:
     """构建切片质量概览，展示各维度的覆盖情况和评分"""
-    overview = {
+    overview: dict[str, Any] = {
         "phase": {
             name: {
                 "score": result.get("overall_score", 0),

@@ -27,13 +27,13 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import (
+    ACTIVITY_PHASE_MAP,
+    CHAPTER_PHASE_MAP,
+    CLUSTER_KEYWORDS,
+    FACTION_CATEGORY_PHASE,
+    PHASE_KEYWORDS,
     PHASE_ORDER,
     PHASE_PATTERNS,
-    PHASE_KEYWORDS,
-    CHAPTER_PHASE_MAP,
-    ACTIVITY_PHASE_MAP,
-    FACTION_CATEGORY_PHASE,
-    CLUSTER_KEYWORDS,
 )
 from prts_client import fetch_page_categories as _fetch_page_categories
 from shared_utils import setup_logging
@@ -219,7 +219,7 @@ def _find_activity_page(code_prefix: str, chapter: str) -> str | None:
     2. 用代码前缀查 PRTS（如 "DM" → 查询 DM 系列活动）
     """
     # 代码前缀 → 已知活动页面名映射
-    CODE_TO_ACTIVITY = {
+    CODE_TO_ACTIVITY = {  # noqa: N806  (模块常量风格)
         "DM": "生于黑夜",
         "BB": "巴别塔",
         "WD": "遗尘漫步",
@@ -524,7 +524,7 @@ def _interactive_fallback(
     if not sys.stdin.isatty():
         return None
 
-    print(f"\n[时期推断] 无法自动推断时期:")
+    print("\n[时期推断] 无法自动推断时期:")
     print(f"  对话: {text[:50]}...")
     if chapter:
         print(f"  章节: {chapter}")

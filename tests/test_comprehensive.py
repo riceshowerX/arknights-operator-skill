@@ -14,14 +14,12 @@
 """
 
 import json
-import math
 import os
 import re
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 # 将 tools 目录加入 import 路径
 TOOLS_DIR = Path(__file__).parent.parent / "tools"
@@ -813,7 +811,7 @@ class TestExternalDataFiles(unittest.TestCase):
     def test_operator_db_alias_mapping(self):
         """operator_db.json 别名映射有效"""
         data = json.loads((DATA_DIR / "operator_db.json").read_text(encoding="utf-8"))
-        for alias, canonical in data["aliases"].items():
+        for _alias, canonical in data["aliases"].items():
             # 别名指向的中文名应存在于 operators 中，或者是自身
             self.assertIsInstance(canonical, str)
 
@@ -996,7 +994,7 @@ class TestPipelineDualMode(unittest.TestCase):
 
     def test_pipeline_runner_creation(self):
         """PipelineRunner 创建"""
-        from pipeline import PipelineRunner, PipelineConfig
+        from pipeline import PipelineConfig, PipelineRunner
         config = PipelineConfig(name="测试", mode="subprocess")
         runner = PipelineRunner(config)
         self.assertIsNotNone(runner)
@@ -1045,14 +1043,14 @@ class TestEndToEndIntegration(unittest.TestCase):
             self.assertIn("context", line)
 
         # 用 context 数据生成指纹
-        voice_lines = [l for l in context["annotated_lines"] if l["source"] == "voice"]
-        dialogues = [{"text": l["text"]} for l in voice_lines]
+        voice_lines = [line for line in context["annotated_lines"] if line["source"] == "voice"]
+        dialogues = [{"text": line["text"]} for line in voice_lines]
         fingerprint = generate_fingerprint(dialogues, "测试角色")
         self.assertIn("dimensions", fingerprint)
 
     def test_context_to_relationship_graph(self):
         """从 context 到关系图谱的管线"""
-        from relationship_graph import extract_entities, compute_relationship_strength
+        from relationship_graph import compute_relationship_strength, extract_entities
 
         # 模拟 annotated_lines
         lines = [
@@ -1143,8 +1141,8 @@ class TestDataFileRoundtrip(unittest.TestCase):
 
     def test_speech_act_profile_roundtrip(self):
         """话语行为画像 roundtrip"""
-        from speech_act_analyzer import classify_speech_acts
         from shared_utils import atomic_write_json, load_json_safe
+        from speech_act_analyzer import classify_speech_acts
 
         with tempfile.TemporaryDirectory() as tmpdir:
             texts = ["你愿意和我一起吗？", "……也许吧。", "我在。"]

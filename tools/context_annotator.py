@@ -37,25 +37,30 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import (
-    VOICE_INTERLOCUTOR_MAP,
-    VOICE_SITUATION_MAP,
+    OPERATOR_DEFAULT_PHASE,
     PHASE_KEYWORDS,
     PHASE_PATTERNS,
-    OPERATOR_DEFAULT_PHASE,
     TIMELINE_RE,
+    VOICE_INTERLOCUTOR_MAP,
+    VOICE_SITUATION_MAP,
 )
-from shared_utils import validate_path, validate_slug, setup_logging, atomic_write_json, validate_context
+from shared_utils import (
+    atomic_write_json,
+    setup_logging,
+    validate_context,
+    validate_path,
+)
 
 logger = setup_logging("context_annotator")
 
 # 导入自动推断引擎（可选依赖：缺失时退化为基础时期推断）
 try:
     from phase_inferrer import (
-        infer_phase_from_content,
-        infer_default_phase_for_operator,
-        infer_phase_from_content_cluster,
+        PhaseInferenceResult,  # noqa: F401  (re-exported for downstream consumers)
         generate_inference_report,
-        PhaseInferenceResult,
+        infer_default_phase_for_operator,
+        infer_phase_from_content,
+        infer_phase_from_content_cluster,
     )
     HAS_PHASE_INFERRER = True
 except ImportError:
@@ -63,7 +68,6 @@ except ImportError:
 
 # 自动推断缓存（使用 lru_cache 限制大小，避免重复查询 PRTS）
 from functools import lru_cache as _lru_cache
-
 
 # ──────────────────────────────────────────────
 # 安全工具（委托给 shared_utils）
@@ -445,10 +449,7 @@ def build_context_json(
 
     # 3. 标注档案段落
     for i, archive in enumerate(operator_data.get("archives", [])):
-        if isinstance(archive, dict):
-            text = archive.get("text", "")
-        else:
-            text = str(archive)
+        text = archive.get("text", "") if isinstance(archive, dict) else str(archive)
         if text:
             annotated_lines.append(annotate_archive_text(text, i))
 

@@ -26,138 +26,37 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
-
-# Python 3.11+ 用 re._parser，3.10 回退 sre_parse
-try:
-    import re._parser as _sre_parse
-except ImportError:
-    import sre_parse as _sre_parse
 
 # 确保 tools 目录在 import 路径中，支持从任意位置运行
 _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from shared_utils import setup_logging
+from shared_utils import analyze_regex_safety, setup_logging
 
 logger = setup_logging("canon_checker")
 
 # ──────────────────────────────────────────────
-# 正则安全：防止 ReDoS 攻击
+# 正则安全：防止 ReDoS 攻击（统一实现位于 shared_utils.analyze_regex_safety）
 # ──────────────────────────────────────────────
-
-# 正则复杂度限制
-_MAX_PATTERN_LENGTH = 500       # 单条正则最大字符数
-_MAX_QUANTIFIED_GROUPS = 3      # 量词修饰的捕获/非捕获组最大嵌套层数
-_MAX_TOTAL_QUANTIFIERS = 20     # 单条正则中量词总数上限
-
-# 已知的 ReDoS 危险模式（补充 _ast_level_check 无法覆盖的边界情况）
-# 注意：此处使用 r-string，其中 \1 需写成 \\1 以避免被当作反向引用
-_REDOS_DANGEROUS = re.compile(
-    r'\((?!\?)[^)]*\)[+*{]|'           # 捕获组后跟量词
-    r'\.\*\.\*|'                        # 连续贪婪匹配
-    r'\(\?:\.\*\)\*|'                   # 非捕获组贪婪匹配后跟量词
-    r'\(\.\*\)[+*]|'                    # 捕获组贪婪匹配后跟量词
-    r'\([^)]+\)\\d+[+*{]|'             # 反向引用 \\d 后跟量词（近似模式）
-    r'\\d[+*{].*\\d[+*{]'              # 多个量词修饰的 \d 类
-)
+# v3.5 起，AST 级 ReDoS 检测的单一来源为 shared_utils.analyze_regex_safety。
+# 此处保留 _validate_regex_safety 接口（严格抛 ValueError）供 canon_checker
+# 内部及既有测试使用；_ast_level_check 作为兼容别名转发到统一实现。
 
 
 def _ast_level_check(pattern: str) -> list[str]:
-    """使用 _sre_parse 做 AST 级别的 ReDoS 风险检测。
+    """AST 级 ReDoS 风险检测（兼容别名，转发到 shared_utils.analyze_regex_safety）。
 
-    相比逐字符计数，AST 分析能准确识别：
-    - 量词修饰的子组内部是否也包含量词（嵌套量词）
-    - 交替分支中的重叠前缀（如 (a+|a+)）
-    - 反向引用 + 量词组合
-
-    Returns:
-        风险描述列表，空列表表示安全
+    保留此函数以兼容既有调用方与测试。
     """
-    risks: list[str] = []
-    try:
-        parsed = _sre_parse.parse(pattern)
-    except re.error as e:
-        risks.append(f"正则语法错误: {e}")
-        return risks
-
-    quantified_group_depth = 0
-
-    def _walk(node: _sre_parse.SubPattern, depth: int = 0) -> None:
-        nonlocal quantified_group_depth
-        for item in node:
-            op = item[0]
-            av = item[1]
-
-            # 量词：* + ? {m,n}
-            if op in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT):
-                repeat_args = av  # (min, max, subpattern)
-                if not isinstance(repeat_args, tuple) or len(repeat_args) < 3:
-                    continue
-                sub = repeat_args[2]
-
-                # 检查子模式内部是否包含量词 → 嵌套量词
-                has_inner_quant = False
-                for sub_item in sub:
-                    if sub_item[0] in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT):
-                        has_inner_quant = True
-                        break
-                    # 子模式中的组可能包含量词
-                    if sub_item[0] == _sre_parse.SUBPATTERN:
-                        sub_sub = sub_item[1]
-                        if isinstance(sub_sub, tuple) and len(sub_sub) >= 4:
-                            inner = sub_sub[3]
-                            for ii in inner:
-                                if ii[0] in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT):
-                                    has_inner_quant = True
-                                    break
-
-                if has_inner_quant:
-                    quantified_group_depth += 1
-                    if quantified_group_depth > _MAX_QUANTIFIED_GROUPS:
-                        risks.append(
-                            f"嵌套量词层数 {quantified_group_depth} > {_MAX_QUANTIFIED_GROUPS}"
-                        )
-
-                # 递归分析子模式
-                _walk(sub, depth + 1)
-
-            # 子组 / 捕获组
-            elif op == _sre_parse.SUBPATTERN:
-                sub_args = av
-                if isinstance(sub_args, tuple) and len(sub_args) >= 4:
-                    _walk(sub_args[3], depth + 1)
-
-            # 交替分支 (a|b)：检查重叠
-            elif op == _sre_parse.BRANCH:
-                branches = av
-                if isinstance(branches, tuple) and len(branches) >= 2:
-                    for branch in branches[1]:
-                        if hasattr(branch, '__iter__'):
-                            _walk(branch if hasattr(branch, '__len__') else [branch], depth + 1)
-
-    _walk(parsed)
-
-    # 量词总数检查
-    total_quantifiers = len([
-        item for item in parsed
-        if item[0] in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT)
-    ])
-    if total_quantifiers > _MAX_TOTAL_QUANTIFIERS:
-        risks.append(
-            f"量词总数 {total_quantifiers} > {_MAX_TOTAL_QUANTIFIERS}"
-        )
-
-    return risks
+    return analyze_regex_safety(pattern)
 
 
 def _validate_regex_safety(pattern: str, source_id: str = "") -> None:
-    """验证正则表达式的安全性，防止 ReDoS 攻击
+    """验证正则表达式的安全性，防止 ReDoS 攻击。
 
-    采用双重检测策略：
-    1. AST 级分析（_sre_parse）：检测嵌套量词、重叠交替分支
-    2. 正则模式匹配：补充 AST 难以覆盖的危险模式
+    委托 shared_utils.analyze_regex_safety 做统一检测
+    （AST 级嵌套量词/重叠分支 + 长度限制 + 危险模式补充）。
 
     Args:
         pattern: 正则表达式字符串
@@ -166,23 +65,13 @@ def _validate_regex_safety(pattern: str, source_id: str = "") -> None:
     Raises:
         ValueError: 正则不安全
     """
-    if len(pattern) > _MAX_PATTERN_LENGTH:
+    risks = analyze_regex_safety(pattern)
+    if risks:
+        joined = "; ".join(risks)
         raise ValueError(
-            f"正则过长 ({len(pattern)} > {_MAX_PATTERN_LENGTH})：{pattern[:80]}..."
+            f"正则包含 ReDoS 风险 [{source_id}]: {joined} — {pattern[:80]}"
         )
 
-    # AST 级别检测
-    ast_risks = _ast_level_check(pattern)
-    if ast_risks:
-        raise ValueError(
-            f"正则包含 ReDoS 风险 [{source_id}]: {'; '.join(ast_risks)} — {pattern[:80]}"
-        )
-
-    # 正则模式补充检测
-    if _REDOS_DANGEROUS.search(pattern):
-        raise ValueError(
-            f"正则包含潜在的 ReDoS 模式 [{source_id}]：{pattern[:80]}..."
-        )
 
 
 def _validate_all_patterns_safety(
@@ -312,7 +201,7 @@ def _load_builtin_misconceptions() -> list[dict]:
 BUILTIN_MISCONCEPTIONS = _load_builtin_misconceptions()
 
 
-def load_misconceptions(filepath: Optional[str] = None) -> list[dict]:
+def load_misconceptions(filepath: str | None = None) -> list[dict]:
     """
     加载误解库
 
@@ -473,7 +362,7 @@ def extract_canon_claims(text: str, source_label: str) -> list[dict]:
 def check_misconceptions(
     text: str,
     source_label: str,
-    misconceptions: Optional[list[dict]] = None,
+    misconceptions: list[dict] | None = None,
 ) -> list[dict]:
     """
     检查文本中是否包含已知误解
@@ -541,7 +430,7 @@ def check_misconceptions(
 def check_generic_misconceptions(
     text: str,
     source_label: str,
-    patterns: Optional[list[dict]] = None,
+    patterns: list[dict] | None = None,
 ) -> list[dict]:
     """
     通用误解检测 —— 适用于所有角色的通用模式检测
@@ -603,7 +492,7 @@ def check_generic_misconceptions(
 
 def check_character_consistency(
     text: str,
-    persona: Optional[dict] = None,
+    persona: dict | None = None,
 ) -> list[dict]:
     """
     角色一致性检查 —— 检测文本是否与角色设定一致
@@ -631,7 +520,7 @@ def check_character_consistency(
                 continue
 
             # 将禁忌规则转化为检测模式
-            taboo_lower = taboo.lower()
+            taboo.lower()
 
             # 感叹号禁忌
             if "感叹号" in taboo or "！" in taboo:
@@ -735,7 +624,7 @@ def cross_validate(all_claims: list[dict]) -> list[dict]:
         else:
             # 存在不一致
             versions = []
-            for nv, cs in normalized_values.items():
+            for _nv, cs in normalized_values.items():
                 versions.append({
                     "value": cs[0]["value"],
                     "sources": [c["source"] for c in cs],

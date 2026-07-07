@@ -19,7 +19,10 @@ PRTS 剧情页面有两种格式：
     python3 story_extractor.py --chapter "BB-ST-3 灵魂尽头/NBT" --character 特蕾西娅
 
     # 提取多个页面
-    python3 story_extractor.py --chapter "BB-ST-1 未完成的告别/NBT" --chapter "BB-ST-3 灵魂尽头/NBT" --character 特蕾西娅
+    python3 story_extractor.py \
+        --chapter "BB-ST-1 未完成的告别/NBT" \
+        --chapter "BB-ST-3 灵魂尽头/NBT" \
+        --character 特蕾西娅
 
     # 指定输出文件
     python3 story_extractor.py --chapter "BB-9/NBT" --character 特蕾西娅 --output /tmp/story.json
@@ -39,12 +42,12 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import (
-    CHAPTER_PHASE_MAP,
     ACTIVITY_PHASE_MAP,
-    SITUATION_KEYWORDS,
+    CHAPTER_PHASE_MAP,
     SCENE_HEADER_RE,
-    WIKITEXT_DIALOGUE_RE,
     SCRIPT_DIALOGUE_RE,
+    SITUATION_KEYWORDS,
+    WIKITEXT_DIALOGUE_RE,
 )
 from prts_client import fetch_page_wikitext
 from shared_utils import setup_logging
@@ -54,9 +57,11 @@ logger = setup_logging("story_extractor")
 # 导入自动推断引擎（可选依赖：缺失时退化为基础时期推断）
 try:
     from phase_inferrer import (
-        infer_phase as _infer_phase_auto,
-        infer_phase_from_chapter_code,
+        infer_phase as _infer_phase_auto,  # noqa: F401  (optional dependency)
+    )
+    from phase_inferrer import (
         infer_phase_from_activity_meta,
+        infer_phase_from_chapter_code,  # noqa: F401  (optional dependency)
     )
     HAS_PHASE_INFERRER = True
 except ImportError:
@@ -103,13 +108,13 @@ SCRIPT_NOISE_RE = re.compile(
 
 def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
     """获取剧情页面的 wikitext 原文，自动跟随 redirect
-    
+
     使用 prts_client.fetch_page_wikitext 统一处理重试和速率限制。
     """
     if _depth > 3:
         logger.error("重定向链太深: '%s'", chapter)
         return ""
-    
+
     # 使用统一的 prts_client（含重试和速率限制）
     wikitext = fetch_page_wikitext(chapter, follow_redirects=True)
 
@@ -214,7 +219,7 @@ def _extract_script_dialogues(wikitext: str, character: str) -> list[dict]:
         # 去除残留的脚本片段
         text = re.sub(r'\[.*?\]', '', text).strip()
         # 去除空行
-        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
         text = '\n'.join(lines)
 
         if not text:
@@ -481,10 +486,9 @@ def discover_story_pages(activity_name: str) -> list[str]:
     })
     for r in data.get("query", {}).get("prefixsearch", []):
         title = r.get("title", "")
-        if title and title not in pages:
+        if title and title not in pages and any(s in title for s in ["/BEG", "/END", "/NBT"]):
             # 只添加包含剧情后缀的页面
-            if any(s in title for s in ["/BEG", "/END", "/NBT"]):
-                pages.append(title)
+            pages.append(title)
 
     pages.sort()
     return pages

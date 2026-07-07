@@ -13,7 +13,11 @@ Knowledge · Persona 双轨分离 ─ 五层优先级人格结构 ─ 语境化�
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![AgentSkills](https://img.shields.io/badge/compatible-AgentSkills-green.svg)](https://github.com/perkfly/ex-skill)
-[![Tests](https://img.shields.io/badge/tests-224%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-246%20passed-brightgreen.svg)](tests/)
+[![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](.github/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-42%25-yellow.svg)](tests/COVERAGE.md)
+[![Ruff](https://img.shields.io/badge/ruff-0%20errors-brightgreen.svg)](https://docs.astral.sh/ruff/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
 </div>
 
@@ -194,7 +198,7 @@ Correction 序号越大越新，越新越优先
 | 工具 | 功能 |
 |------|------|
 | `persona_validator.py` | 四维度多切片验证 + 风格一致性验证 + A-D 评分 |
-| `canon_checker.py` | 多来源交叉验证 + 外置误解库 + 通用模式检测 + AST 级 ReDoS 防护 |
+| `canon_checker.py` | 多来源交叉验证 + 外置误解库 + 通用模式检测 + ReDoS 防护（委托 shared_utils 统一实现） |
 | `data_injector.py` | 将工具量化数据注入到 Prompt 模板占位符——桥接量化分析与 LLM 生成 |
 | `skill_writer.py` | Skill 文件管理（list / create / delete） |
 | `version_manager.py` | 语义化版本快照与回滚（`_SemVer` dataclass） |
@@ -205,8 +209,9 @@ Correction 序号越大越新，越新越优先
 |------|------|
 | `constants.py` | 领域知识常量（时期映射、关系类型、角色别名、核心 TypedDict 定义） |
 | `prts_client.py` | 统一 PRTS API 调用 + 速率限制 + 指数退避重试（线程安全） |
-| `shared_utils.py` | 通用工具（路径验证、slug 验证、原子写入、分句、context schema 校验） |
-| `pipeline.py` | 一键编排，双模式执行（subprocess 进程隔离 / function 同进程调试） |
+| `shared_utils.py` | 通用工具（路径验证、slug 验证、原子写入、分句、context schema 校验、**AST 级 ReDoS 防护统一实现**） |
+| `pipeline.py` | 一键编排，双模式执行（subprocess 进程隔离 / function 同进程调试）+ 断点续传 + **`--strict` 严格模式** |
+| `semantic_matcher.py` | **（v3.5 原型）** 语义匹配——可插拔后端（TF-IDF 基线 + Embedding 接口），探索关键词匹配的语义增强 |
 
 ---
 
@@ -216,8 +221,9 @@ Correction 序号越大越新，越新越优先
 arknights-operator-skill/
 ├── SKILL.md                       # AI Agent 入口——协议的启动指令
 ├── README.md                      # 本文件——你正在阅读的档案
-├── pyproject.toml                 # 项目配置（ruff / mypy / pytest）
+├── pyproject.toml                 # 项目配置（ruff / mypy / pytest / coverage）
 ├── AGENTS.md                      # 开发者规范（含数据流图）
+├── .github/workflows/ci.yml       # CI 工作流（pytest + 覆盖率 + ruff + mypy）
 ├── prompts/                       # Prompt 模板——蒸馏管线的核心逻辑
 │   ├── intake.md                  #   Step 1：三问信息录入
 │   ├── knowledge_analyzer.md      #   Step 3A：知识库分析维度
@@ -231,7 +237,8 @@ arknights-operator-skill/
 │   ├── constants.py               #   领域知识常量 + TypedDict
 │   ├── prts_client.py             #   PRTS API 客户端
 │   ├── shared_utils.py            #   通用工具 + schema 校验
-│   ├── pipeline.py                #   一键编排器（双模式 + 断点续传）
+│   ├── pipeline.py                #   一键编排器（双模式 + 断点续传 + --strict）
+│   ├── semantic_matcher.py        #   语义匹配原型（v3.5，可插拔后端）
 │   ├── game_data_parser.py        #   游戏资料解析（含诊断报告）
 │   ├── story_extractor.py         #   剧情提取器
 │   ├── context_annotator.py       #   语境标注器
@@ -265,10 +272,15 @@ arknights-operator-skill/
 │   │   └── versions/              #     版本快照——历史不会消失
 │   └── w/                         #   W · 萨卡兹的雇佣兵
 ├── tests/
-│   ├── test_smoke.py              #   冒烟测试（98 个用例）
-│   └── test_comprehensive.py      #   全面测试（126 个用例）
+│   ├── test_smoke.py              #   冒烟测试（100 个用例）
+│   ├── test_comprehensive.py      #   全面测试（126 个用例）
+│   ├── test_multi_faction.py      #   多阵营泛化测试（10 个用例，v3.5）
+│   ├── test_semantic_matcher.py   #   语义匹配器测试（12 个用例，v3.5）
+│   └── COVERAGE.md                #   覆盖率报告说明
 ├── requirements.txt               #   核心依赖——仅标准库
 ├── requirements-optional.txt      #   可选依赖（pypinyin）
+├── docs/
+│   └── SEMANTIC_MATCHER_DESIGN.md #   语义匹配设计文档（v3.5）
 ├── .gitignore
 └── LICENSE
 ```
@@ -359,6 +371,8 @@ arknights-operator-skill/
 
 ### 算法升级亮点（v3.4）
 
+> v3.5 工程质量修复详见上方变更日志
+
 1. **8 维度对话指纹** — 口头禅/高频短语提取（n-gram 分析），句式长度改用统计分布（百分位数 + CV）
 2. **加权情感词典** — 12 类情感，每词带权重（0.5-1.5），外置为 JSON 可扩展
 3. **Mann-Whitney U 统计检验** — 零依赖手写实现，配合 Cohen's d 效应量，替代粗估的"统计显著性"
@@ -389,7 +403,32 @@ arknights-operator-skill/
 
 ## ◇ 协议变更日志
 
-### v3.4.0 — 当前版本
+### v3.5.0 — 当前版本
+
+**工程质量全面修复**（基于代码审查的 4 个优先级改进）：
+
+🔴 立即修复
+- ruff lint 从 260 个错误降至 0（自动修复 124 个 + 手动修复 E501/E741/F401 等）
+- 修正 AGENTS.md 两处文档不一致（7维→8维；W 的 persona.md 状态）
+
+🟠 短期改进
+- 修复 `persona_validator` overview 类型缺陷（mypy 错误从 141 降至 130）
+- 清理未用 import/变量，16 处 E741 模糊变量名全部修复
+- 新增 GitHub Actions CI（`.github/workflows/ci.yml`）：pytest + 覆盖率 + ruff + mypy，Python 3.10/3.11/3.12 矩阵
+
+🟡 中期增强
+- 集成 pytest-cov，覆盖率配置于 `pyproject.toml`，基线 42%（见 `tests/COVERAGE.md`）
+- 新增 `tests/test_multi_faction.py`（10 用例）：龙门/罗德岛/莱茵生命三阵营角色泛化测试
+- 统一两套 ReDoS 实现：`shared_utils.analyze_regex_safety` 成为 AST 级检测单一来源，`canon_checker` 与 `safe_compile_regex` 均委托之
+
+🟢 长期演进
+- 消除 sys.path hack 噪音：ruff per-file-ignores + setuptools 可编辑安装配置
+- `pipeline.py` 新增 `--strict` 模式：将降级 warning（剧情提取失败/knowledge.md 缺失/分析工具失败）视为失败，用于 CI 暴露隐藏问题
+- 新增 `tools/semantic_matcher.py` 原型：可插拔语义后端（TF-IDF 基线 + Embedding 接口），探索关键词匹配的语义增强替代（见 `docs/SEMANTIC_MATCHER_DESIGN.md`）
+
+测试：224 → 246 用例（+22），全部通过
+
+### v3.4.0
 
 - 版本号统一管理（pyproject.toml / SKILL.md / AGENTS.md → 单一来源）
 - 导入机制统一：消除 `try/except ImportError` 双路径，`__init__.py` 统一路径设置

@@ -14,7 +14,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 # 将 tools 目录加入 import 路径
 TOOLS_DIR = Path(__file__).parent.parent / "tools"
@@ -239,8 +238,8 @@ class TestContextAnnotator(unittest.TestCase):
         self.assertIn("annotated_lines", result)
         self.assertIn("stats", result)
         # 魔王页面的语音行应该有 resurrected 默认时期
-        voice_lines = [l for l in result["annotated_lines"] if l["source"] == "voice"]
-        resurrected_voice = [l for l in voice_lines if l["context"]["phase"] == "resurrected"]
+        voice_lines = [line for line in result["annotated_lines"] if line["source"] == "voice"]
+        resurrected_voice = [line for line in voice_lines if line["context"]["phase"] == "resurrected"]
         self.assertGreater(len(resurrected_voice), 0)
 
 
@@ -347,8 +346,8 @@ class TestTemporalSlicer(unittest.TestCase):
     """temporal_slicer.py 冒烟测试"""
 
     def test_import_act_type_labels(self):
-        from temporal_slicer import ACT_TYPE_LABELS
         from speech_act_analyzer import ACT_TYPE_LABELS as SOURCE_LABELS
+        from temporal_slicer import ACT_TYPE_LABELS
         self.assertEqual(ACT_TYPE_LABELS, SOURCE_LABELS)
 
 
@@ -560,8 +559,8 @@ class TestEndToEndPipeline(unittest.TestCase):
         self.assertGreater(len(context["annotated_lines"]), 0)
 
         # 2. 生成指纹
-        voice_lines = [{"label": l.get("label", ""), "text": l["text"]}
-                       for l in SAMPLE_VOICE_LINES]
+        voice_lines = [{"label": line.get("label", ""), "text": line["text"]}
+                       for line in SAMPLE_VOICE_LINES]
         fingerprint = generate_fingerprint(voice_lines, "魔王")
         self.assertIn("dimensions", fingerprint)
 
@@ -611,7 +610,7 @@ class TestPipelineFileIO(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             fp_path = Path(tmpdir) / "fingerprint.json"
-            voice_lines = [{"text": l["text"]} for l in SAMPLE_VOICE_LINES]
+            voice_lines = [{"text": line["text"]} for line in SAMPLE_VOICE_LINES]
             fingerprint = generate_fingerprint(voice_lines, "测试角色")
             fp_path.write_text(json.dumps(fingerprint, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -625,7 +624,7 @@ class TestPipelineFileIO(unittest.TestCase):
         from dialogue_fingerprint import generate_fingerprint
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            voice_lines = [{"text": l["text"]} for l in SAMPLE_VOICE_LINES]
+            voice_lines = [{"text": line["text"]} for line in SAMPLE_VOICE_LINES]
             fingerprint = generate_fingerprint(voice_lines, "测试角色")
             fp_path = Path(tmpdir) / "fingerprint.json"
             fp_path.write_text(json.dumps(fingerprint, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -733,7 +732,7 @@ class TestGameDataParserCore(unittest.TestCase):
         from game_data_parser import _extract_template_body
         # 构造深度超过 50 的嵌套模板
         wikitext = "{{" * 60 + "Charinfo" + "}}" * 60
-        result = _extract_template_body(wikitext, "Charinfo")
+        _extract_template_body(wikitext, "Charinfo")
         # 应该返回 None 或有限结果，不会无限循环
         # 这里主要验证不会崩溃
 
@@ -905,7 +904,7 @@ class TestDialogueFingerprintV2(unittest.TestCase):
         """测试情感词典带权重"""
         from dialogue_fingerprint import EMOTION_LEXICON
         # 检查情感词典格式：list[tuple[str, float]]
-        for emotion, words in EMOTION_LEXICON.items():
+        for _emotion, words in EMOTION_LEXICON.items():
             self.assertIsInstance(words, list)
             for item in words:
                 self.assertIsInstance(item, tuple)

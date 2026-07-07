@@ -32,7 +32,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-
 # ──────────────────────────────────────────────
 # 中文情感词典（精简版，覆盖明日方舟角色常见情感表达）
 # ──────────────────────────────────────────────
@@ -133,7 +132,7 @@ def _load_emotion_lexicon(filepath: str | None = None) -> dict[str, list[tuple[s
         return _EMOTION_LEXICON_BUILTIN
 
     if not isinstance(raw, dict):
-        print(f"警告：情感词典文件格式错误（应为对象），使用内建词典", file=sys.stderr)
+        print("警告：情感词典文件格式错误（应为对象），使用内建词典", file=sys.stderr)
         return _EMOTION_LEXICON_BUILTIN
 
     result: dict[str, list[tuple[str, float]]] = {}
@@ -181,7 +180,7 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
         raise FileNotFoundError(f"文件不存在: {filepath}")
 
     if fmt == "prts-json":
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         # PRTS JSON 格式: {"voice_lines": [...]} 或直接 [...]
         if isinstance(data, list):
@@ -278,9 +277,9 @@ def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
         q3 = max(lengths)
 
     # 自适应分界（基于百分位数而非硬编码阈值）
-    short = sum(1 for l in lengths if l <= q1)
-    medium = sum(1 for l in lengths if q1 < l <= q3)
-    long = sum(1 for l in lengths if l > q3)
+    short = sum(1 for ln in lengths if ln <= q1)
+    medium = sum(1 for ln in lengths if q1 < ln <= q3)
+    long = sum(1 for ln in lengths if ln > q3)
 
     distribution = {
         "short_pct": round(short / total * 100, 1),
@@ -1001,9 +1000,9 @@ def _result_sentence_length(m: dict) -> dict:
         q3 = max(lengths)
 
     # 自适应分界
-    short = sum(1 for l in lengths if l <= q1)
-    medium = sum(1 for l in lengths if q1 < l <= q3)
-    long = sum(1 for l in lengths if l > q3)
+    short = sum(1 for ln in lengths if ln <= q1)
+    medium = sum(1 for ln in lengths if q1 < ln <= q3)
+    long = sum(1 for ln in lengths if ln > q3)
 
     distribution = {
         "short_pct": round(short / total * 100, 1),
@@ -1198,7 +1197,7 @@ def _result_natural_imagery(m: dict) -> dict:
             for k, v in m["nature_category_counts"].most_common()
         },
         "top_5_words": dict(m["nature_top_words"].most_common(5)),
-        "interpretation": f"自然意象密度{density_level}（{density}个/句），偏好{_top_category(m['nature_category_counts'])}意象",
+        "interpretation": f"自然意象密度{density_level}（{density}个/句），偏好{_top_category(m['nature_category_counts'])}意象",  # noqa: E501  (中文消息折行破坏可读性)
     }
 
 

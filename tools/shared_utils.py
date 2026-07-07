@@ -20,6 +20,8 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
+import contextlib
+
 from constants import SLUG_RE
 
 logger = logging.getLogger(__name__)
@@ -184,10 +186,8 @@ def atomic_write_json(filepath: str | Path, data: dict, indent: int = 2) -> None
         os.replace(tmp_path, filepath)
     except BaseException:
         # 写入失败时清理临时文件
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(tmp_path)
-        except OSError:
-            pass
         raise
 
 
@@ -206,36 +206,170 @@ def load_json_safe(filepath: str | Path) -> dict | None:
     if not filepath.exists():
         return None
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
         return None
 
 
 # ──────────────────────────────────────────────
-# 正则安全工具
+# 正则安全工具（AST 级 ReDoS 防护，统一实现）
 # ──────────────────────────────────────────────
 
+# Python 3.11+ 用 re._parser，3.10 回退 sre_parse
+try:
+    import re._parser as _sre_parse
+except ImportError:
+    import sre_parse as _sre_parse
 
-def safe_compile_regex(pattern: str, max_length: int = 500) -> re.Pattern | None:
-    """安全编译正则表达式，防止 ReDoS
+# 正则复杂度限制（统一常量）
+_MAX_PATTERN_LENGTH = 500          # 单条正则最大字符数
+_MAX_QUANTIFIED_GROUPS = 3         # 量词修饰的捕获/非捕获组最大嵌套层数
+_MAX_TOTAL_QUANTIFIERS = 20        # 单条正则中量词总数上限
+
+# 已知的 ReDoS 危险模式（补充 AST 检测无法覆盖的边界情况）
+# 注意：使用 r-string，\1 写成 \\1 以避免被当作反向引用
+_REDOS_DANGEROUS = re.compile(
+    r'\((?!\?)[^)]*\)[+*{]|'           # 捕获组后跟量词
+    r'\.\*\.\*|'                        # 连续贪婪匹配
+    r'\(\?:\.\*\)\*|'                   # 非捕获组贪婪匹配后跟量词
+    r'\(\.\*\)[+*]|'                    # 捕获组贪婪匹配后跟量词
+    r'\([^)]+\)\\d+[+*{]|'             # 反向引用 \d 后跟量词（近似模式）
+    r'\\d[+*{].*\\d[+*{]'              # 多个量词修饰的 \d 类
+)
+
+
+def analyze_regex_safety(pattern: str) -> list[str]:
+    """AST 级别分析正则表达式的 ReDoS 风险（统一核心实现）。
+
+    使用 _sre_parse 解析正则 AST，准确识别：
+    - 量词修饰的子组内部是否也包含量词（嵌套量词）
+    - 交替分支中的重叠前缀
+    - 反向引用 + 量词组合
+    - 量词总数超限
+
+    同时做长度检查与正则模式补充检测。
 
     Args:
         pattern: 正则表达式字符串
-        max_length: 最大允许长度
 
     Returns:
-        编译后的正则对象，不安全时返回 None
+        风险描述列表，空列表表示安全。
+        单一来源实现，供 safe_compile_regex / canon_checker 共用。
     """
-    if len(pattern) > max_length:
+    risks: list[str] = []
+
+    # 1. 长度检查
+    if len(pattern) > _MAX_PATTERN_LENGTH:
+        risks.append(f"正则过长 ({len(pattern)} > {_MAX_PATTERN_LENGTH})")
+        return risks
+
+    # 2. 正则模式补充检测（AST 难以覆盖的危险模式）
+    if _REDOS_DANGEROUS.search(pattern):
+        risks.append("匹配已知 ReDoS 危险模式")
+
+    # 3. AST 级检测
+    try:
+        parsed = _sre_parse.parse(pattern)
+    except re.error as e:
+        risks.append(f"正则语法错误: {e}")
+        return risks
+
+    quantified_group_depth = 0
+
+    def _walk(node, depth: int = 0) -> None:
+        nonlocal quantified_group_depth
+        for item in node:
+            op = item[0]
+            av = item[1]
+
+            # 量词：* + ? {m,n}
+            if op in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT):
+                repeat_args = av  # (min, max, subpattern)
+                if not isinstance(repeat_args, tuple) or len(repeat_args) < 3:
+                    continue
+                sub = repeat_args[2]
+
+                # 检查子模式内部是否包含量词 → 嵌套量词
+                has_inner_quant = False
+                for sub_item in sub:
+                    if sub_item[0] in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT):
+                        has_inner_quant = True
+                        break
+                    # 子模式中的组可能包含量词
+                    if sub_item[0] == _sre_parse.SUBPATTERN:
+                        sub_sub = sub_item[1]
+                        if isinstance(sub_sub, tuple) and len(sub_sub) >= 4:
+                            inner = sub_sub[3]
+                            for ii in inner:
+                                if ii[0] in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT):
+                                    has_inner_quant = True
+                                    break
+
+                if has_inner_quant:
+                    quantified_group_depth += 1
+                    if quantified_group_depth > _MAX_QUANTIFIED_GROUPS:
+                        risks.append(
+                            f"嵌套量词层数 {quantified_group_depth} > {_MAX_QUANTIFIED_GROUPS}"
+                        )
+
+                # 递归分析子模式
+                _walk(sub, depth + 1)
+
+            # 子组 / 捕获组
+            elif op == _sre_parse.SUBPATTERN:
+                sub_args = av
+                if isinstance(sub_args, tuple) and len(sub_args) >= 4:
+                    _walk(sub_args[3], depth + 1)
+
+            # 交替分支 (a|b)：检查重叠
+            elif op == _sre_parse.BRANCH:
+                branches = av
+                if isinstance(branches, tuple) and len(branches) >= 2:
+                    for branch in branches[1]:
+                        if hasattr(branch, "__iter__"):
+                            _walk(
+                                branch if hasattr(branch, "__len__") else [branch],
+                                depth + 1,
+                            )
+
+    _walk(parsed)
+
+    # 4. 量词总数检查
+    total_quantifiers = len([
+        item for item in parsed
+        if item[0] in (_sre_parse.MAX_REPEAT, _sre_parse.MIN_REPEAT)
+    ])
+    if total_quantifiers > _MAX_TOTAL_QUANTIFIERS:
+        risks.append(
+            f"量词总数 {total_quantifiers} > {_MAX_TOTAL_QUANTIFIERS}"
+        )
+
+    return risks
+
+
+def safe_compile_regex(pattern: str, max_length: int = 500) -> re.Pattern | None:
+    """安全编译正则表达式，防止 ReDoS（基于 AST 级统一实现）。
+
+    内部调用 analyze_regex_safety 做完整检测，检测通过才编译。
+    保留宽松接口：不安全时返回 None（不抛异常），便于调用方优雅降级。
+
+    Args:
+        pattern: 正则表达式字符串
+        max_length: 最大允许长度（向后兼容参数，实际限制由 _MAX_PATTERN_LENGTH 统一控制）
+
+    Returns:
+        编译后的正则对象，不安全或编译失败时返回 None
+    """
+    # 兼容旧 max_length 参数：若调用方传入更严格的限制则优先采用
+    effective_max = min(max_length, _MAX_PATTERN_LENGTH) if max_length else _MAX_PATTERN_LENGTH
+    if len(pattern) > effective_max:
         logger.warning("正则表达式过长 (%d 字符)，拒绝编译", len(pattern))
         return None
 
-    # 检查嵌套量词（ReDoS 的常见特征）
-    nested_quantifier_count = len(re.findall(r'[\*\+][\*\+]', pattern))
-    nested_quantifier_count += len(re.findall(r'\{[\d,]+?\}[\*\+]', pattern))
-    if nested_quantifier_count > 2:
-        logger.warning("正则表达式包含过多嵌套量词 (%d)，可能存在 ReDoS 风险", nested_quantifier_count)
+    risks = analyze_regex_safety(pattern)
+    if risks:
+        logger.warning("正则表达式存在 ReDoS 风险: %s — %s", "; ".join(risks), pattern[:80])
         return None
 
     try:

@@ -28,7 +28,7 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import ACT_TYPE_LABELS
-from shared_utils import split_sentences, setup_logging, atomic_write_json
+from shared_utils import atomic_write_json, setup_logging, split_sentences
 
 logger = setup_logging("temporal_slicer")
 
@@ -62,7 +62,7 @@ def compute_slice_metrics(lines: list[dict]) -> dict:
     if not lines:
         return {"line_count": 0}
 
-    texts = [l.get("text", "") for l in lines]
+    texts = [line.get("text", "") for line in lines]
     total = len(texts)
 
     # 句式长度（使用共享分句函数）

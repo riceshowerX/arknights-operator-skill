@@ -44,20 +44,17 @@
 
 import argparse
 import importlib
-import json
 import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from constants import SLUG_RE
 from shared_utils import setup_logging, validate_slug
 
 logger = setup_logging("pipeline")
@@ -214,7 +211,7 @@ class PipelineConfig:
     mode: str = MODE_SUBPROCESS        # 执行模式: subprocess / function
     skip_fetch: bool = False           # 跳过 PRTS 数据获取
     chapters: list[str] = field(default_factory=list)  # 手动指定的章节
-    discover: Optional[str] = None     # 自动发现的页面前缀
+    discover: str | None = None     # 自动发现的页面前缀
     resume: bool = False               # 断点续传
     dry_run: bool = False              # 仅打印计划
 
@@ -314,6 +311,8 @@ class PipelineRunner:
         logger.info("  slug: %s", cfg.slug)
         logger.info("  输出: %s", cfg.output_dir)
         logger.info("  模式: %s", cfg.mode)
+        if cfg.strict:
+            logger.info("  严格模式: 已启用（降级情况将视为失败）")
 
         if cfg.dry_run:
             logger.info("（dry-run 模式，不执行实际操作）")
@@ -370,6 +369,9 @@ class PipelineRunner:
             return True
 
         if not run_tool("story_extractor", story_args, f"提取 {cfg.name} 的剧情对话"):
+            if cfg.strict:
+                logger.error("剧情提取失败（--strict 模式：视为失败）")
+                return False
             logger.warning("剧情提取失败，但不阻断流程")
 
         return True
@@ -390,10 +392,14 @@ class PipelineRunner:
             return True
 
         if not Path(knowledge_md).exists():
-            logger.warning(
+            msg = (
                 "knowledge.md 不存在，跳过语境标注。"
                 "请先使用 AI Agent 根据 prompts/knowledge_builder.md 生成 knowledge.md"
             )
+            if cfg.strict:
+                logger.error(msg + "（--strict 模式：视为失败）")
+                return False
+            logger.warning(msg)
             return True
 
         args = [
@@ -415,7 +421,11 @@ class PipelineRunner:
         context_json = str(Path(cfg.output_dir) / "context.json")
 
         if not Path(context_json).exists():
-            logger.warning("context.json 不存在，跳过分析步骤")
+            msg = "context.json 不存在，跳过分析步骤"
+            if cfg.strict:
+                logger.error(msg + "（--strict 模式：视为失败）")
+                return False
+            logger.warning(msg)
             return True
 
         tools = [
@@ -425,9 +435,15 @@ class PipelineRunner:
             ("temporal_slicer", ["--context-json", context_json], "时序切片分析"),
         ]
 
+        failed_tools = []
         for tool_name, args, desc in tools:
             if not run_tool(tool_name, args, desc):
                 logger.warning("%s 失败，继续执行后续步骤", desc)
+                failed_tools.append(tool_name)
+
+        if failed_tools and cfg.strict:
+            logger.error("以下分析工具失败（--strict 模式：视为失败）: %s", failed_tools)
+            return False
 
         return True
 
@@ -571,6 +587,11 @@ def main():
     )
     parser.add_argument("--dry-run", action="store_true", help="仅打印计划，不执行")
     parser.add_argument(
+        "--strict", action="store_true",
+        help="严格模式：将原本只 warning 的降级情况（如剧情提取失败、knowledge.md 缺失、"
+             "分析工具失败）视为失败，用于 CI 和自动化场景暴露隐藏问题",
+    )
+    parser.add_argument(
         "--discover",
         help="自动发现剧情页面的前缀（如 DM、BB、SV），自动搜索所有匹配页面",
     )
@@ -594,6 +615,7 @@ def main():
             discover=args.discover,
             resume=args.resume,
             dry_run=args.dry_run,
+            strict=args.strict,
         )
     except ValueError as e:
         logger.error("配置验证失败: %s", e)
@@ -601,10 +623,7 @@ def main():
 
     runner = PipelineRunner(cfg)
 
-    if args.step == "full":
-        success = runner.run_full()
-    else:
-        success = runner.run_step(args.step)
+    success = runner.run_full() if args.step == "full" else runner.run_step(args.step)
 
     if not success:
         sys.exit(1)

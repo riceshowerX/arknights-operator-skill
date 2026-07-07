@@ -4,10 +4,10 @@
 
 明日方舟角色蒸馏工具，将游戏角色转化为结构化 AI Skill。采用 Knowledge + Persona 双轨分离架构，五层优先级 Persona 结构，支持资料导入、语境化分析、对话纠正和版本管理。
 
-**版本**: 3.4.0（单一来源：pyproject.toml）
+**版本**: 3.5.0（单一来源：pyproject.toml）
 **技术栈**: Python 3 (标准库), Markdown, JSON
 **已验证角色**: 特蕾西娅 (operators/te-lei-xi-ya/), W (operators/w/)
-**冒烟测试**: `python3 -m pytest tests/test_smoke.py -v` (98 项通过)
+**测试**: `python3 -m pytest tests/ -v` (246 项通过，含多阵营泛化测试)
 **工程配置**: `pyproject.toml` (含 ruff、mypy、pytest 配置)
 
 ## 核心架构
@@ -100,19 +100,20 @@ shared_utils.py  ←── 所有工具
 
 | 工具 | 用途 | 关键参数 |
 |------|------|---------|
-| `pipeline.py` | **一键蒸馏编排器** | `--name {角色名} --full` |
+| `pipeline.py` | **一键蒸馏编排器** | `--name {角色名} --full`（`--strict` 严格模式） |
 | `game_data_parser.py` | PRTS Wiki 数据获取 | `--source prts --name {角色名}` |
 | `story_extractor.py` | 剧情页面提取 | `--chapter {页面名} --character {角色名}` |
 | `phase_inferrer.py` | 多层级时期自动推断 | `--operator {干员名}` / `--chapter {章节名}` |
 | `context_annotator.py` | 语境化标注枢纽 | `--operator-json --story-json --knowledge-md --output` |
 | `speech_act_analyzer.py` | 话语行为分类 | `--context-json` (语境化模式) |
-| `dialogue_fingerprint.py` | 7维语言指纹 | `--context-json` (语境化模式) |
+| `dialogue_fingerprint.py` | 8维语言指纹 | `--context-json` (语境化模式) |
 | `relationship_graph.py` | 关系图谱 + 时序轨迹 | `--context-json` (语境化模式) |
 | `temporal_slicer.py` | 时序切片分析 | `--context-json` (语境化模式) |
 | `persona_validator.py` | 多切片一致性验证 | `--persona --context-json` (语境化模式) |
 | `canon_checker.py` | 设定交叉验证 | `--sources` |
 | `skill_writer.py` | 文件管理 | `--action {list/create/delete} --slug` |
 | `version_manager.py` | 版本管理 | `backup / rollback / list` |
+| `semantic_matcher.py` | 语义匹配原型（v3.5） | `search / cluster / duplicates`（探索性，未接入主管线） |
 
 ## 关键字段映射
 
@@ -220,7 +221,7 @@ shared_utils.py  ←── 所有工具
 - context_annotator: ✅ 160 条标注数据，unknown 从 152 降至 0（添加 DM 映射后）
 - phase_inferrer: ✅ 自动推断"W"→ babel（PRTS分类: 属于巴别塔的干员）
 - 下游工具: ✅ fingerprint / speech_act / temporal_slicer 全部通过
-- 注意: W 的 persona.md 尚未创建，persona_validator 报 FileNotFound 是预期行为
+- 注意: W 的 persona.md 已创建（v3.4 后），persona_validator 可正常运行
 
 ## 环境变量
 

@@ -27,8 +27,8 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from constants import ACT_TYPE_LABELS, ACT_TYPE_ALIASES
-from shared_utils import setup_logging, atomic_write_json
+from constants import ACT_TYPE_ALIASES, ACT_TYPE_LABELS
+from shared_utils import atomic_write_json, setup_logging
 
 logger = setup_logging("speech_act_analyzer")
 
@@ -112,7 +112,7 @@ def _load_speech_act_rules(filepath: str | None = None) -> list[tuple]:
         return _SPEECH_ACT_RULES_BUILTIN
 
     if not isinstance(raw, list):
-        print(f"警告：话语行为规则文件应为 JSON 数组，使用内建规则", file=sys.stderr)
+        print("警告：话语行为规则文件应为 JSON 数组，使用内建规则", file=sys.stderr)
         return _SPEECH_ACT_RULES_BUILTIN
 
     result = []
@@ -490,7 +490,7 @@ def detect_behavioral_patterns(profile: dict) -> list[dict]:
             act_label = ACT_TYPE_LABELS.get(dominant_act, dominant_act)
             patterns.append({
                 "pattern": f"interlocutor_{dominant_act}",
-                "rule": f"对{person}的对话中，{act_label}行为占比最高（{dominant_pct:.0%}）——用{act_label}的方式回应{person}",
+                "rule": f"对{person}的对话中，{act_label}行为占比最高（{dominant_pct:.0%}）——用{act_label}的方式回应{person}",  # noqa: E501  (中文消息折行破坏可读性)
                 "layer": 4,
                 "confidence": min(dominant_pct, 0.9),
             })

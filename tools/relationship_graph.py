@@ -29,7 +29,6 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
@@ -37,7 +36,7 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import PHASE_ORDER
-from shared_utils import setup_logging, atomic_write_json
+from shared_utils import atomic_write_json, setup_logging
 
 logger = setup_logging("relationship_graph")
 
@@ -157,7 +156,7 @@ def _load_operator_db_from_json(json_path: Path) -> tuple[dict, dict]:
         return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
     if not isinstance(raw, dict):
-        print(f"警告：角色名库文件格式错误（应为对象），使用内建名库", file=sys.stderr)
+        print("警告：角色名库文件格式错误（应为对象），使用内建名库", file=sys.stderr)
         return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
     db = dict(_OPERATOR_DB_BUILTIN)
@@ -211,7 +210,7 @@ def _fetch_operators_from_prts() -> dict | None:
         return None
 
 
-def load_operator_db(filepath: Optional[str] = None) -> tuple[dict, dict]:
+def load_operator_db(filepath: str | None = None) -> tuple[dict, dict]:
     """
     加载角色名库和别名映射
 
@@ -284,7 +283,7 @@ RELATIONSHIP_PATTERNS = [
 ]
 
 
-def normalize_name(name: str, operator_db: Optional[dict] = None, alias_map: Optional[dict] = None) -> Optional[str]:
+def normalize_name(name: str, operator_db: dict | None = None, alias_map: dict | None = None) -> str | None:
     """将名称标准化为中文名"""
     db = operator_db or _OPERATOR_DB_BUILTIN
     aliases = alias_map or _ALIAS_MAP_BUILTIN
@@ -356,7 +355,7 @@ class _AhoCorasick:
         """构建失败链接（BFS）"""
         from collections import deque
         queue: deque[int] = deque()
-        for ch, s in self._goto[0].items():
+        for _ch, s in self._goto[0].items():
             self._fail[s] = 0
             queue.append(s)
         while queue:
@@ -408,7 +407,7 @@ def _build_ac_automaton(db: dict, aliases: dict) -> _AhoCorasick:
     return _ac_cache[cache_key]
 
 
-def extract_entities(text: str, operator_db: Optional[dict] = None, alias_map: Optional[dict] = None) -> list[str]:
+def extract_entities(text: str, operator_db: dict | None = None, alias_map: dict | None = None) -> list[str]:
     """从文本中提取出现的角色名
 
     使用 Aho-Corasick 多模式匹配，单次遍历文本即可检测所有角色名，
@@ -443,8 +442,8 @@ def extract_entities(text: str, operator_db: Optional[dict] = None, alias_map: O
 def extract_relationships_from_text(
     text: str,
     source_label: str = "",
-    operator_db: Optional[dict] = None,
-    alias_map: Optional[dict] = None,
+    operator_db: dict | None = None,
+    alias_map: dict | None = None,
 ) -> list[dict]:
     """
     从一段文本中提取关系
@@ -596,7 +595,7 @@ def _extract_context(text: str, e1: str, e2: str, rel_pattern: str) -> str:
 # 关系图谱合并与去重
 # ──────────────────────────────────────────────
 
-def merge_relationships(all_rels: list[dict], operator_db: Optional[dict] = None) -> dict:
+def merge_relationships(all_rels: list[dict], operator_db: dict | None = None) -> dict:
     """
     合并来自多个来源的关系，去重并计算综合可信度
 
@@ -697,13 +696,12 @@ def compute_relationship_strength(
 def enrich_edges_with_strength(
     graph: dict,
     all_texts: list[str],
-    operator_db: Optional[dict] = None,
+    operator_db: dict | None = None,
 ) -> dict:
     """为图谱中的每条边计算关系强度
 
     在 merge_relationships 的输出基础上，为每条边添加 strength 字段。
     """
-    db = operator_db or _OPERATOR_DB_BUILTIN
     total_lines = len(all_texts)
 
     # 情感词集合（用于检测共现段落中的情感密度）
@@ -756,10 +754,9 @@ def detect_relationship_evolution(
         return []
 
     # 按时序排列时期
-    if phase_order:
-        phases_sorted = [p for p in phase_order if p in phase_graphs]
-    else:
-        phases_sorted = sorted(phase_graphs.keys())
+    phases_sorted = (
+        [p for p in phase_order if p in phase_graphs] if phase_order else sorted(phase_graphs.keys())
+    )
 
     # 收集所有边
     all_edge_keys: set[tuple[str, str, str]] = set()
@@ -845,8 +842,8 @@ def load_text(filepath: str, fmt: str = "markdown") -> list[tuple[str, str]]:
 
 def generate_contextual_relationships(
     context: dict,
-    operator_db: Optional[dict] = None,
-    alias_map: Optional[dict] = None,
+    operator_db: dict | None = None,
+    alias_map: dict | None = None,
 ) -> dict:
     """
     从 context.json 提取时序关系图谱
@@ -858,7 +855,7 @@ def generate_contextual_relationships(
     aliases = alias_map or _ALIAS_MAP_BUILTIN
 
     lines = context.get("annotated_lines", [])
-    character = context.get("character", "unknown")
+    context.get("character", "unknown")
 
     # 按时期分组文本
     phase_texts: dict[str, list[str]] = defaultdict(list)
@@ -985,7 +982,7 @@ def compute_relation_trajectories(
         global_edges[key] = edge
 
     # 对每条全局边，检查在各时期的表现
-    for key, global_edge in global_edges.items():
+    for key, _global_edge in global_edges.items():
         from_name, to_name, rel_type = key
 
         # 收集该关系在各时期的出现情况

@@ -21,7 +21,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 # 确保 tools 目录在 import 路径中，支持从任意位置运行
 _TOOLS_DIR = Path(__file__).parent
@@ -30,9 +29,9 @@ if str(_TOOLS_DIR) not in sys.path:
 
 from constants import (
     PRTS_API_URL,
-    PRTS_USER_AGENT,
-    PRTS_REQUEST_TIMEOUT,
     PRTS_REQUEST_INTERVAL,
+    PRTS_REQUEST_TIMEOUT,
+    PRTS_USER_AGENT,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,9 +62,7 @@ def _is_retryable_error(exc: Exception) -> bool:
     """判断异常是否可重试"""
     if isinstance(exc, urllib.error.HTTPError):
         return exc.code >= 500  # 5xx 可重试，4xx 不可
-    if isinstance(exc, (urllib.error.URLError, TimeoutError, OSError)):
-        return True
-    return False
+    return bool(isinstance(exc, (urllib.error.URLError, TimeoutError, OSError)))
 
 
 # ──────────────────────────────────────────────
@@ -89,7 +86,7 @@ def prts_api_get(params: dict, timeout: int = PRTS_REQUEST_TIMEOUT) -> dict:
     params["format"] = "json"
     url = f"{PRTS_API_URL}?{urllib.parse.urlencode(params)}"
 
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
     for attempt in range(_MAX_RETRIES):
         _rate_limit()
         try:
@@ -227,7 +224,7 @@ def rate_limited_urlopen(req: urllib.request.Request, timeout: int = PRTS_REQUES
     对超时和 5xx 错误自动指数退避重试。
     返回响应对象，调用方负责读取和关闭。
     """
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
     for attempt in range(_MAX_RETRIES):
         _rate_limit()
         try:

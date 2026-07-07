@@ -5,8 +5,8 @@ Skill 文件管理器 - 用于列出和管理已创建的角色 Skill
 
 import json
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # 确保 tools 目录在 import 路径中，支持从任意位置运行
 _TOOLS_DIR = Path(__file__).parent
@@ -21,12 +21,12 @@ def list_skills(base_dir: str = "./operators") -> dict:
     列出所有已创建的 Skill
     """
     base_path = Path(base_dir)
-    
+
     if not base_path.exists():
         return {"success": True, "skills": []}
-    
+
     skills = []
-    
+
     for skill_dir in sorted(base_path.iterdir()):
         if not skill_dir.is_dir():
             continue
@@ -40,15 +40,15 @@ def list_skills(base_dir: str = "./operators") -> dict:
             continue
 
         meta_path = skill_dir / "meta.json"
-        
+
         if meta_path.exists():
             try:
-                with open(meta_path, "r", encoding="utf-8") as f:
+                with open(meta_path, encoding="utf-8") as f:
                     meta = json.load(f)
             except (json.JSONDecodeError, OSError) as e:
                 print(f"警告：无法读取 {meta_path}: {e}", file=sys.stderr)
                 meta = {}
-            
+
             skills.append({
                 "name": meta.get("name", skill_dir.name),
                 "slug": meta.get("slug", skill_dir.name),
@@ -67,7 +67,7 @@ def list_skills(base_dir: str = "./operators") -> dict:
                 "version": "unknown",
                 "path": str(skill_dir)
             })
-    
+
     return {"success": True, "skills": skills}
 
 
@@ -95,30 +95,30 @@ def delete_skill(slug: str, base_dir: str = "./operators", force: bool = False) 
 
     slug = validate_slug(slug)
     skill_dir = Path(base_dir) / slug
-    
+
     if not skill_dir.exists():
         return {"success": False, "error": f"Skill {slug} 不存在"}
-    
+
     # 校验目录结构，记录完整性状态
     missing = _validate_skill_dir(skill_dir)
-    
+
     if not force:
         return {
             "success": False,
             "error": "需要 --force 参数确认删除",
             "confirm_required": True
         }
-    
+
     # 删除目录
     shutil.rmtree(skill_dir)
-    
+
     result = {
         "success": True,
         "deleted": slug
     }
     if missing:
         result["note"] = f"删除前目录不完整，缺少: {', '.join(missing)}"
-    
+
     return result
 
 
@@ -129,13 +129,13 @@ def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str 
     slug = validate_slug(slug)
     skill_dir = Path(base_dir) / slug
     versions_dir = skill_dir / "versions"
-    
+
     # 创建目录
     skill_dir.mkdir(exist_ok=True)
     versions_dir.mkdir(exist_ok=True)
-    
+
     now = datetime.now().isoformat()
-    
+
     # 创建默认 meta.json
     meta = {
         "name": name,
@@ -160,11 +160,11 @@ def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str 
         "knowledge_sources": [],
         "corrections_count": 0
     }
-    
+
     meta_path = skill_dir / "meta.json"
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
-    
+
     # 创建默认 SKILL.md
     skill_md_path = skill_dir / "SKILL.md"
     if not skill_md_path.exists():
@@ -195,13 +195,13 @@ def create_default_skill(slug: str, name: str, name_en: str = "", base_dir: str 
     }
     if missing:
         result["warnings"] = [f"缺少必要文件/目录: {m}" for m in missing]
-    
+
     return result
 
 
 def main():
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="角色 Skill 文件管理器")
     parser.add_argument("--action", choices=["list", "delete", "create"], required=True)
     parser.add_argument("--slug", help="Skill slug")
@@ -209,9 +209,9 @@ def main():
     parser.add_argument("--name-en", default="", help="角色英文名称")
     parser.add_argument("--base-dir", default="./operators", help="基础目录")
     parser.add_argument("--force", action="store_true", help="强制删除")
-    
+
     args = parser.parse_args()
-    
+
     if args.action == "list":
         result = list_skills(args.base_dir)
     elif args.action == "delete":
@@ -224,7 +224,7 @@ def main():
             print("错误：需要指定 --slug 和 --name")
             sys.exit(1)
         result = create_default_skill(args.slug, args.name, args.name_en, args.base_dir)
-    
+
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

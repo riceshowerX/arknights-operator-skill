@@ -23,7 +23,7 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Optional, TypedDict
+from typing import TypedDict
 from urllib.parse import quote
 
 # 确保 tools 目录在 import 路径中
@@ -31,8 +31,8 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from constants import SLUG_RE
-from prts_client import prts_api_get, fetch_page_wikitext as _prts_fetch_wikitext
+from prts_client import fetch_page_wikitext as _prts_fetch_wikitext
+from prts_client import prts_api_get
 from shared_utils import setup_logging
 
 logger = setup_logging("game_data_parser")
@@ -103,7 +103,7 @@ OPERATOR_SCHEMA = {
 # PRTS API 请求（委托给 prts_client）
 # ──────────────────────────────────────────────
 
-def _get_page_wikitext(title: str) -> Optional[str]:
+def _get_page_wikitext(title: str) -> str | None:
     """通过 prts_client 获取页面 wikitext 内容
 
     Args:
@@ -126,7 +126,7 @@ def _get_page_wikitext(title: str) -> Optional[str]:
         "rvlimit": "1",
     })
     pages = data.get("query", {}).get("pages", {})
-    for page_id, page in pages.items():
+    for _page_id, page in pages.items():
         if "missing" in page:
             return None
         revisions = page.get("revisions", [])
@@ -140,7 +140,7 @@ def _get_page_wikitext(title: str) -> Optional[str]:
 # 文本清洗
 # ──────────────────────────────────────────────
 
-def _extract_template_body(wikitext: str, template_name: str) -> Optional[str]:
+def _extract_template_body(wikitext: str, template_name: str) -> str | None:
     """从 wikitext 中提取指定模板的主体内容，正确处理嵌套 {{}}
 
     与简单的正则不同，此函数通过计数大括号深度来匹配模板边界，
@@ -292,9 +292,9 @@ def _extract_charinfo(wikitext: str) -> dict:
     }
 
     # 预编译清洗正则，避免循环内重复编译
-    _COLOR_RE = re.compile(r"\{\{color\|[^|]*\|([^}]*)\}\}")
-    _TEMPLATE_RE = re.compile(r"\{\{[^{}]*\}\}")
-    _WIKILINK_RE = re.compile(r"\[\[([^|\]]*\|)?([^\]]*)\]\]")
+    _COLOR_RE = re.compile(r"\{\{color\|[^|]*\|([^}]*)\}\}")  # noqa: N806  (模块常量风格)
+    _TEMPLATE_RE = re.compile(r"\{\{[^{}]*\}\}")  # noqa: N806  (模块常量风格)
+    _WIKILINK_RE = re.compile(r"\[\[([^|\]]*\|)?([^\]]*)\]\]")  # noqa: N806  (模块常量风格)
 
     for line in fields.split("\n"):
         line = line.strip()
@@ -439,7 +439,7 @@ def _extract_voice_lines(wikitext: str) -> list[dict]:
     """
     lines = []
 
-    for m in re.finditer(r"\|标题(\d+)\s*=\s*([^\n|]+)\s*\n\s*\|台词\1\s*=\s*(.*?)(?=\n\s*\|标题\d+=|\n\s*\|语音\d+=|$)", wikitext, re.DOTALL):
+    for m in re.finditer(r"\|标题(\d+)\s*=\s*([^\n|]+)\s*\n\s*\|台词\1\s*=\s*(.*?)(?=\n\s*\|标题\d+=|\n\s*\|语音\d+=|$)", wikitext, re.DOTALL):  # noqa: E501  (中文消息折行破坏可读性)
         label = m.group(2).strip()
         raw_text = m.group(3).strip()
         text = _clean_voice_line(raw_text)
@@ -857,7 +857,7 @@ def to_slug(name: str) -> str:
                 safe_slug += PINYIN_MAP[ch]
             else:
                 # 不再使用冗长的 Unicode 编码，改用简短标记
-                safe_slug += f"?"
+                safe_slug += "?"
         safe_slug = re.sub(r"\?+", "", safe_slug)  # 移除未知字符标记
         safe_slug = re.sub(r"\s+", "-", safe_slug).strip("-")
         if not safe_slug:
@@ -968,7 +968,7 @@ def main():
     _output(result, args.output)
 
 
-def _output(data: dict, filepath: Optional[str] = None):
+def _output(data: dict, filepath: str | None = None):
     """输出 JSON 数据"""
     text = json.dumps(data, ensure_ascii=False, indent=2)
     if filepath:
