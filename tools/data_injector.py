@@ -30,70 +30,95 @@ def load_json(path: Path) -> dict | list | None:
         return None
 
 
+def _get_fingerprint_dim(data: dict, dim_key: str) -> dict:
+    """从对话指纹数据中提取某个维度，兼容两种结构：
+    - 嵌套结构（context 模式输出）：data["global"]["dimensions"]["1_sentence_length"]
+    - 扁平结构（传统模式输出）：data["sentence_length"]
+    """
+    # 嵌套结构
+    global_data = data.get("global", {})
+    dimensions = global_data.get("dimensions", {})
+    if dim_key in dimensions:
+        return dimensions[dim_key]
+    # 按数字前缀匹配（如 "1_sentence_length"）
+    for k, v in dimensions.items():
+        if k.endswith(dim_key) or dim_key in k:
+            return v if isinstance(v, dict) else {}
+    # 扁平结构
+    flat = data.get(dim_key, {})
+    return flat if isinstance(flat, dict) else {}
+
+
 def format_fingerprint(data: dict) -> str:
-    """格式化对话指纹数据"""
+    """格式化对话指纹数据（兼容嵌套与扁平两种结构）"""
     if not data:
         return "（对话指纹数据不可用）"
 
     lines = ["### 对话指纹数据（来自 dialogue_fingerprint 8 维度分析）\n"]
 
     # 维度 1: 句式长度
-    sl = data.get("sentence_length", {})
+    sl = _get_fingerprint_dim(data, "sentence_length")
     if sl:
+        p = sl.get("percentiles", {}) or {}
         lines.append(f"- **句式长度**：{sl.get('type', '未知')}，"
-                      f"中位数 {sl.get('median', '?')} 字，"
-                      f"P25={sl.get('p25', '?')} / P75={sl.get('p75', '?')}，"
+                      f"中位数 {sl.get('median', p.get('p50', '?'))} 字，"
+                      f"P25={p.get('p25', '?')} / P75={p.get('p75', '?')}，"
                       f"变异系数 CV={sl.get('cv', '?')}（节奏{sl.get('rhythm', '?')}）")
 
     # 维度 2: 停顿习惯
-    pm = data.get("pause_markers", {})
+    pm = _get_fingerprint_dim(data, "pause_markers")
     if pm:
         lines.append(f"- **停顿习惯**：省略号频率 {pm.get('ellipsis_pct', 0)}%，"
                       f"感叹号频率 {pm.get('exclamation_pct', 0)}%，"
                       f"问号频率 {pm.get('question_pct', 0)}%")
 
     # 维度 3: 自称模式
-    sr = data.get("self_reference", {})
+    sr = _get_fingerprint_dim(data, "self_reference")
     if sr:
         primary = sr.get("primary", "未知")
         freq = sr.get("frequency_per_line", 0)
         lines.append(f"- **自称**：主要使用「{primary}」，频率 {freq} 次/句")
 
     # 维度 4: 情感光谱
-    em = data.get("emotion", {})
+    em = _get_fingerprint_dim(data, "emotion_vocabulary")
+    if not em:
+        em = _get_fingerprint_dim(data, "emotion")
     if em:
         dominant = em.get("dominant", "未知")
         breadth = em.get("breadth", 0)
-        spectrum = em.get("spectrum", {})
-        top3 = sorted(spectrum.items(), key=lambda x: x[1], reverse=True)[:3]
-        top3_str = "、".join(f"{k}({v}次)" for k, v in top3)
+        spectrum = em.get("spectrum", {}) or em.get("spectrum_pct", {})
+        top3 = sorted(spectrum.items(), key=lambda x: x[1], reverse=True)[:3] if spectrum else []
+        top3_str = "、".join(f"{k}({v})" for k, v in top3) if top3 else "无"
         lines.append(f"- **情感光谱**：主导情感「{dominant}」，"
                       f"情感谱系宽度 {breadth}，"
                       f"Top3: {top3_str}")
 
     # 维度 5: 修辞偏好
-    rh = data.get("rhetoric", {})
+    rh = _get_fingerprint_dim(data, "rhetoric_patterns")
+    if not rh:
+        rh = _get_fingerprint_dim(data, "rhetoric")
     if rh:
         lines.append(f"- **修辞偏好**：反问 {rh.get('rhetorical_question_pct', 0)}%，"
                       f"比喻 {rh.get('metaphor_pct', 0)}%，"
                       f"排比 {rh.get('parallelism_pct', 0)}%")
 
     # 维度 6: 称呼模式
-    addr = data.get("address_patterns", {})
+    addr = _get_fingerprint_dim(data, "address_pattern")
+    if not addr:
+        addr = _get_fingerprint_dim(data, "address_patterns")
     if addr:
-        primary_addr = addr.get("primary", "未知")
-        lines.append(f"- **称呼模式**：主要称呼方式「{primary_addr}」")
+        primary_addr = addr.get("pattern", addr.get("primary", "未知"))
+        lines.append(f"- **称呼模式**：{primary_addr}")
 
     # 维度 7: 自然意象
-    ni = data.get("nature_imagery", {})
+    ni = _get_fingerprint_dim(data, "natural_imagery")
     if ni:
-        dominant_img = ni.get("dominant", "无")
-        freq = ni.get("frequency_per_line", 0)
-        lines.append(f"- **自然意象**：主导意象「{dominant_img}」，"
-                      f"频率 {freq} 次/句")
+        density = ni.get("density_per_line", 0)
+        level = ni.get("density_level", "未知")
+        lines.append(f"- **自然意象**：密度{level}（{density}个/句）")
 
     # 维度 8: 口头禅
-    cp = data.get("catchphrases", {})
+    cp = _get_fingerprint_dim(data, "catchphrases")
     if cp:
         phrases = cp.get("signature_phrases", [])
         if phrases:
@@ -102,9 +127,16 @@ def format_fingerprint(data: dict) -> str:
             lines.append(f"- **口头禅/标志性短语**：{phrases_str}")
 
     # 综合摘要
-    summary = data.get("summary", {})
+    summary = data.get("summary")
+    if not summary:
+        summary = data.get("global", {}).get("summary")
     if summary:
-        lines.append(f"\n**综合画像**：{summary.get('overall_description', '')}")
+        if isinstance(summary, str):
+            lines.append(f"\n**综合画像**：{summary}")
+        elif isinstance(summary, dict):
+            desc = summary.get("overall_description", "") or summary.get("description", "")
+            if desc:
+                lines.append(f"\n**综合画像**：{desc}")
 
     return "\n".join(lines)
 
@@ -147,74 +179,102 @@ def format_speech_acts(data: dict) -> str:
 
 
 def format_relationships(data: dict) -> str:
-    """格式化关系图谱数据"""
+    """格式化关系图谱数据
+
+    兼容两种数据来源：
+    - context.json 的 annotated_relations / relation_trajectories（语境化模式）
+    - 独立 relationships.json 的 relations / evolutions（传统模式，旧测试兼容）
+    """
     if not data:
         return "（关系图谱数据不可用）"
 
     lines = ["### 关系图谱数据（来自 relationship_graph）\n"]
 
-    # 关系列表
-    relations = data.get("relations", [])
+    # 关系列表：优先 annotated_relations，回退 relations
+    relations = data.get("annotated_relations", []) or data.get("relations", [])
     if relations:
         lines.append("**核心关系**：")
         for r in relations[:10]:
-            target = r.get("target", "未知")
-            rel_type = r.get("type", "未知")
+            target = r.get("target", r.get("name", "未知"))
+            rel_type = r.get("type", r.get("relation_type", "未知"))
             strength = r.get("strength", 0)
-            evidence = r.get("evidence_count", 0)
+            evidence = r.get("evidence_count", r.get("count", 0))
             lines.append(f"- **{target}**：{rel_type}（强度 {strength:.2f}，"
                           f"{evidence} 条证据）")
 
-    # 关系演变
-    evolutions = data.get("evolutions", [])
+    # 关系演变：优先 relation_trajectories，回退 evolutions
+    evolutions = data.get("relation_trajectories", []) or data.get("evolutions", [])
     if evolutions:
         lines.append("\n**关系演变**：")
         for e in evolutions[:5]:
-            pair = e.get("pair", "")
-            direction = e.get("direction", "")
-            delta = e.get("delta", 0)
-            from_phase = e.get("from_phase", "")
-            to_phase = e.get("to_phase", "")
-            lines.append(f"- {pair}：{from_phase} → {to_phase}，"
-                          f"关系{direction}（变化量 {delta:+.2f}）")
+            # 旧格式 evolutions: {pair, direction, delta, from_phase, to_phase}
+            if "pair" in e or "direction" in e:
+                pair = e.get("pair", e.get("target", e.get("name", "")))
+                direction = e.get("direction", "")
+                delta = e.get("delta", 0)
+                from_phase = e.get("from_phase", "")
+                to_phase = e.get("to_phase", "")
+                lines.append(f"- {pair}：{from_phase} → {to_phase}，"
+                              f"关系{direction}（变化量 {delta:+.2f}）")
+            # 新格式 relation_trajectories: {target, trajectory: [{phase, strength}]}
+            else:
+                target = e.get("target", e.get("name", ""))
+                trajectory = e.get("trajectory", [])
+                if trajectory:
+                    traj_str = " → ".join(
+                        f"{t.get('phase','?')}({t.get('strength', 0):.2f})"
+                        for t in trajectory
+                    )
+                    lines.append(f"- {target}：{traj_str}")
+
+    if not relations and not evolutions:
+        lines.append("- （未检测到显著关系，建议补充剧情数据）")
 
     return "\n".join(lines)
 
 
 def format_temporal(data: dict) -> str:
-    """格式化时序切片数据"""
+    """格式化时序切片数据（匹配 temporal_slicer 实际输出结构）"""
     if not data:
         return "（时序切片数据不可用）"
 
     lines = ["### 时序演变数据（来自 temporal_slicer）\n"]
 
     # 情感弧线
-    arc = data.get("emotion_arc", {})
-    if arc:
+    arc = data.get("emotion_arc")
+    if arc and isinstance(arc, dict):
         arc_type = arc.get("arc", "未知")
+        desc = arc.get("description", "")
         trajectory = arc.get("trajectory", [])
         lines.append(f"- **情感弧线**：{arc_type}")
+        if desc:
+            lines.append(f"  {desc}")
         if trajectory:
             traj_str = " → ".join(f"{v:.2f}" for v in trajectory)
             lines.append(f"  轨迹：{traj_str}")
+    else:
+        lines.append("- **情感弧线**：数据不足或未检测")
 
     # 时序规则
     rules = data.get("temporal_rules", [])
     if rules:
         lines.append("\n**时序演变规则**：")
         for rule in rules[:8]:
-            desc = rule.get("description", "")
-            if desc:
-                lines.append(f"- {desc}")
+            rule_text = rule.get("rule", rule.get("description", ""))
+            confidence = rule.get("confidence", 0)
+            if rule_text:
+                lines.append(f"- {rule_text}（置信度 {confidence:.2f}）")
 
-    # 切片指标
-    metrics = data.get("slice_metrics", {})
-    if metrics:
+    # 切片指标：slices 是 {phase: {metrics, line_count}} 结构
+    slices = data.get("slices", {})
+    if slices:
         lines.append("\n**各时期关键指标**：")
-        for phase, m in metrics.items():
+        for phase, sdata in slices.items():
+            m = sdata.get("metrics", {}) if isinstance(sdata, dict) else {}
             ellipsis = m.get("ellipsis_pct", 0)
-            avg_len = m.get("avg_length", 0)
-            lines.append(f"- {phase}：省略号 {ellipsis}%，平均句长 {avg_len} 字")
+            avg_len = m.get("avg_sentence_length", m.get("avg_length", 0))
+            line_count = sdata.get("line_count", 0) if isinstance(sdata, dict) else 0
+            lines.append(f"- {phase}：{line_count} 条对话，省略号 {ellipsis}%，平均句长 {avg_len} 字")
 
     return "\n".join(lines)
 
@@ -264,9 +324,9 @@ def generate_data_context(slug: str, base_dir: str = "./operators",
 
     all_sections = {
         "fingerprint": ("fingerprint.json", format_fingerprint),
-        "speech_acts": ("speech_acts.json", format_speech_acts),
-        "relationships": ("relationships.json", format_relationships),
-        "temporal": ("temporal.json", format_temporal),
+        "speech_acts": ("speech_act_profile.json", format_speech_acts),
+        "relationships": ("context.json", format_relationships),
+        "temporal": ("temporal_slices.json", format_temporal),
         "context": ("context.json", format_context),
     }
 
@@ -278,11 +338,19 @@ def generate_data_context(slug: str, base_dir: str = "./operators",
 
     parts = [header]
 
+    # relationships 与 context 都读 context.json，避免重复输出
+    seen_files: set[str] = set()
     for section_name in sections:
         if section_name not in all_sections:
             continue
         filename, formatter = all_sections[section_name]
+        # relationships section 从 context.json 提取，跳过以避免与 context section 重复
+        if section_name == "relationships" and "context" in sections:
+            continue
         filepath = operator_dir / filename
+        if str(filepath) in seen_files and section_name != "relationships":
+            continue
+        seen_files.add(str(filepath))
         data = load_json(filepath)
         if data:
             parts.append(formatter(data))

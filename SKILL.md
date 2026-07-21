@@ -2,7 +2,7 @@
 name: create-operator
 description: "Distill an Arknights operator into an AI Skill. Generate Knowledge + Persona with 5-layer structure, evolution support. | 将明日方舟角色蒸馏成AI Skill，生成知识库+5层人格，支持持续进化。"
 argument-hint: "[operator-name-or-slug]"
-version: "3.4.0"
+version: "3.5.1"
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
 ---
@@ -264,11 +264,13 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 6. **数据注入到 Prompt**：
    ```bash
    python3 ${OPERATOR_SKILL_DIR}/tools/data_injector.py \
-     --fingerprint operators/{slug}/fingerprint.json \
-     --relationships operators/{slug}/context.json \
-     --slices operators/{slug}/temporal_slices.json \
-     --output operators/{slug}/injected_prompts/
+     --slug {slug} \
+     --base-dir operators \
+     --output operators/{slug}/data_context.md
    ```
+   data_injector 会自动读取 `operators/{slug}/` 下的 `fingerprint.json`、
+   `speech_act_profile.json`、`context.json`、`temporal_slices.json`，
+   汇总为可直接嵌入 `persona_builder.md` / `knowledge_builder.md` 的 Markdown 数据上下文。
 
 7. **注入 Persona/Knowledge**：
    - 按照 `persona_builder.md` 的"数据驱动约束"规则，将分析结果注入 Persona 各层

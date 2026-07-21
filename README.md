@@ -13,7 +13,7 @@ Knowledge · Persona 双轨分离 ─ 五层优先级人格结构 ─ 语境化�
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![AgentSkills](https://img.shields.io/badge/compatible-AgentSkills-green.svg)](https://github.com/perkfly/ex-skill)
-[![Tests](https://img.shields.io/badge/tests-246%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-269%20passed-brightgreen.svg)](tests/)
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](.github/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-42%25-yellow.svg)](tests/COVERAGE.md)
 [![Ruff](https://img.shields.io/badge/ruff-0%20errors-brightgreen.svg)](https://docs.astral.sh/ruff/)
@@ -74,7 +74,7 @@ git clone https://github.com/riceshowerX/arknights-operator-skill ~/.openclaw/sk
 核心工具链仅依赖 Python 3.10+ 标准库。无需额外安装——就像罗德岛的基建，自给自足。
 
 ```bash
-# 运行全部测试（224 个用例）
+# 运行全部测试（269 个用例）
 python -m pytest tests/ -v
 ```
 
@@ -276,6 +276,7 @@ arknights-operator-skill/
 │   ├── test_comprehensive.py      #   全面测试（126 个用例）
 │   ├── test_multi_faction.py      #   多阵营泛化测试（10 个用例，v3.5）
 │   ├── test_semantic_matcher.py   #   语义匹配器测试（12 个用例，v3.5）
+│   ├── test_regression_v351.py    #   v3.5.1 回归测试（23 个用例，v3.5.1）
 │   └── COVERAGE.md                #   覆盖率报告说明
 ├── requirements.txt               #   核心依赖——仅标准库
 ├── requirements-optional.txt      #   可选依赖（pypinyin）
@@ -403,7 +404,32 @@ arknights-operator-skill/
 
 ## ◇ 协议变更日志
 
-### v3.5.0 — 当前版本
+### v3.5.1 — 当前版本
+
+**代码审查缺陷修复**（基于全方位审查发现的 6 个问题，全部修复）：
+
+🔴 严重缺陷修复
+- **`pipeline.py --strict` CLI 崩溃**：`PipelineConfig` dataclass 缺少 `strict` 字段，但 `main()` 传入 `strict=args.strict` 且 6 处引用 `cfg.strict`，导致 `TypeError: __init__() got an unexpected keyword argument 'strict'`。v3.5.0 宣称的严格模式实际无法从 CLI 启用——现已补全字段
+- **`relationship_graph.py` 引用不存在的 `PRTSClient` 类**：`prts_client.py` 只导出函数（`prts_api_get`/`fetch_page_wikitext` 等），并无 `PRTSClient` 类，导致 `_fetch_operators_from_prts()` 永远失败并被 `except Exception` 静默吞掉——现已改为调用 `fetch_page_wikitext("干员一览")`，PRTS 动态拉取角色名库功能恢复
+
+🟠 数据产物修复
+- **特蕾西娅 `context.json` 为空**：`operator_data.json` 从错误的 PRTS 页面获取（只有基础元信息，无 `voice_lines`），导致 `annotated_lines` 为 0 条，但 AGENTS.md 声称"60 条标注数据"。下游 `fingerprint.json`/`temporal_slices.json` 是陈旧产物——现已从「魔王」页重新获取 38 条语音行 + 9 份档案，重新生成全部产物（47 条标注，`character` 修正为"特蕾西娅"）
+- **W 的 `context.json` timeline id 与 phase 值语言不一致**：`timeline[].id` 为中文（"早期"、"巴别塔时期"），但 `annotated_lines[].context.phase` 为英文（"early"、"babel"），导致 `temporal_slicer.detect_emotion_arc` 的 `timeline_order` 与 `slice_metrics` 键全失配，返回 `insufficient_data`，时序分析完全失效——现已新增 `PHASE_LABEL_MAP` 常量，`load_timeline` 自动将中文标签映射为英文 id
+- **DM 章节时期映射错误**：`CHAPTER_PHASE_MAP["DM-"]` 误映射为 "early"，但「生于黑夜」讲述的是 W 在巴别塔时期的故事——现已修正为 "babel"，W 的 `phase_distribution` 从 `{early: 152}` 变为 `{early: 38, babel: 114}`，`temporal_slices.rule_count` 从 0 变为 5
+
+🟡 工程质量修复
+- **`data_injector.py` 文件名映射与实际产物不符**：映射为 `speech_acts.json`/`relationships.json`/`temporal.json`，但实际产物是 `speech_act_profile.json`/`context.json`/`temporal_slices.json`——现已修正映射
+- **`data_injector.format_fingerprint` 不兼容嵌套结构**：函数读取 `data["sentence_length"]` 等扁平键，但语境化模式输出的是 `data["global"]["dimensions"]["1_sentence_length"]` 嵌套结构，导致格式化结果为空——现已新增 `_get_fingerprint_dim()` 兼容两种结构
+- **`data_injector.format_fingerprint` 对字符串 summary 抛 AttributeError**：`summary` 字段可能是字符串而非 dict，`.get()` 调用会崩溃——现已兼容 str/dict 两种类型
+- **`SKILL.md` 中 data_injector 调用方式错误**：文档写 `--fingerprint/--relationships/--slices`，但实际 CLI 是 `--slug/--base-dir/--output`——现已修正
+- **`PipelineConfig.__post_init__` 异常捕获过宽**：`except (ImportError, Exception)` 等价于 `except Exception`，会吞掉 `to_slug` 内部的真实 bug——现已收窄为 `except ImportError`
+
+🟢 测试增强
+- 新增 `tests/test_regression_v351.py`（23 用例）：覆盖上述全部修复点，包括 `PipelineConfig.strict` 字段、`PRTSClient` 幻觉引用、timeline/phase 一致性、data_injector 文件映射与结构兼容、示例角色档案数据健康度校验
+- 修正 `test_smoke.py::test_infer_phase_from_chapter`：DM 映射预期从 "early" 改为 "babel"
+- 测试总数：246 → 269（+23），全部通过，ruff 0 错误
+
+### v3.5.0
 
 **工程质量全面修复**（基于代码审查的 4 个优先级改进）：
 
@@ -427,6 +453,8 @@ arknights-operator-skill/
 - 新增 `tools/semantic_matcher.py` 原型：可插拔语义后端（TF-IDF 基线 + Embedding 接口），探索关键词匹配的语义增强替代（见 `docs/SEMANTIC_MATCHER_DESIGN.md`）
 
 测试：224 → 246 用例（+22），全部通过
+
+> v3.5.1 修复了代码审查发现的 6 个缺陷，测试增至 269 用例，详见 v3.5.1 变更日志
 
 ### v3.4.0
 

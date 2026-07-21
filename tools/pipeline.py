@@ -214,13 +214,15 @@ class PipelineConfig:
     discover: str | None = None     # 自动发现的页面前缀
     resume: bool = False               # 断点续传
     dry_run: bool = False              # 仅打印计划
+    strict: bool = False               # 严格模式：降级 warning 视为失败
 
     def __post_init__(self) -> None:
         if not self.slug:
             try:
                 from game_data_parser import to_slug
                 self.slug = to_slug(self.name)
-            except (ImportError, Exception):
+            except ImportError:
+                # game_data_parser 不可用时降级为简单 slug
                 self.slug = self.name.lower().replace(" ", "-")
 
         validate_slug(self.slug)

@@ -4,10 +4,10 @@
 
 明日方舟角色蒸馏工具，将游戏角色转化为结构化 AI Skill。采用 Knowledge + Persona 双轨分离架构，五层优先级 Persona 结构，支持资料导入、语境化分析、对话纠正和版本管理。
 
-**版本**: 3.5.0（单一来源：pyproject.toml）
+**版本**: 3.5.1（单一来源：pyproject.toml）
 **技术栈**: Python 3 (标准库), Markdown, JSON
 **已验证角色**: 特蕾西娅 (operators/te-lei-xi-ya/), W (operators/w/)
-**测试**: `python3 -m pytest tests/ -v` (246 项通过，含多阵营泛化测试)
+**测试**: `python3 -m pytest tests/ -v` (269 项通过，含多阵营泛化测试与 v3.5.1 回归测试)
 **工程配置**: `pyproject.toml` (含 ruff、mypy、pytest 配置)
 
 ## 核心架构
@@ -209,18 +209,20 @@ shared_utils.py  ←── 所有工具
 ## 管线验证记录
 
 ### 特蕾西娅 (operators/te-lei-xi-ya/)
-- game_data_parser: ✅ 从 PRTS 获取"魔王"数据，38 条语音行
+- game_data_parser: ✅ 从 PRTS 获取"魔王"页面，38 条语音行 + 9 份档案（v3.5.1 重新获取，修复了 v3.5.0 的空数据问题）
 - story_extractor: ✅ BB-ST-3 提取 85 条对话（特蕾西娅 0 条，W 不在此章）
-- context_annotator: ✅ 60 条标注数据，unknown 从 37 降至 0（OPERATOR_DEFAULT_PHASE 修复后）
+- context_annotator: ✅ 47 条标注数据（38 语音 + 9 档案），unknown 0%（v3.5.1 重新生成，修复了 v3.5.0 context.json 为空的问题）
+- character 字段: ✅ "特蕾西娅"（v3.5.1 修正，v3.5.0 错误显示为 "魔王"）
 - phase_inferrer: ✅ 自动推断"魔王"→ resurrected（PRTS分类: 属于罗德岛的干员）
-- 下游工具: ✅ fingerprint / speech_act / temporal_slicer / persona_validator 全部通过
+- 下游工具: ✅ fingerprint / speech_act / temporal_slicer / persona_validator 全部重新生成并通过
 
 ### W (operators/w/)
 - game_data_parser: ✅ 从 PRTS 获取 W 数据，38 条语音行 + 8 份档案
-- story_extractor: ✅ DM-ST-1 求生/NBT 提取 239 条对话（W 114 条）
-- context_annotator: ✅ 160 条标注数据，unknown 从 152 降至 0（添加 DM 映射后）
+- story_extractor: ✅ DM-ST-1 求生/NBT 提取 239 条对话（W 114 条），phase 全部为 babel（v3.5.1 修正 DM 映射从 early → babel）
+- context_annotator: ✅ 160 条标注数据，phase_distribution: {early: 38, babel: 114}（v3.5.1 修正，v3.5.0 全部为 early）
+- timeline id 一致性: ✅ timeline id 全部为英文 ['early','babel','integration']（v3.5.1 修正，v3.5.0 为中文导致 temporal_slicer 失效）
 - phase_inferrer: ✅ 自动推断"W"→ babel（PRTS分类: 属于巴别塔的干员）
-- 下游工具: ✅ fingerprint / speech_act / temporal_slicer 全部通过
+- 下游工具: ✅ fingerprint / speech_act / temporal_slicer 全部通过，temporal_slices.rule_count=5（v3.5.1 修正，v3.5.0 为 0）
 - 注意: W 的 persona.md 已创建（v3.4 后），persona_validator 可正常运行
 
 ## 环境变量

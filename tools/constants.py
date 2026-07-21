@@ -18,6 +18,27 @@ import re
 # 已知的时期列表（按时序排列）
 PHASE_ORDER: list[str] = ["early", "babel", "resurrected"]
 
+# 中文时期标签 → 规范化英文 id 映射
+# 用于从 knowledge.md 的 timeline 标题（如 "### 893-898 早期"）生成标准化 id
+# 确保 context.json 的 timeline[].id 与 annotated_lines[].context.phase 一致
+PHASE_LABEL_MAP: dict[str, str] = {
+    "早期": "early",
+    "巴别塔": "babel",
+    "巴别塔时期": "babel",
+    "复活后": "resurrected",
+    "复活": "resurrected",
+    "复活时期": "resurrected",
+    "伦蒂尼姆": "resurrected",
+    "伦蒂尼姆时期": "resurrected",
+    # 角色个人时间线中的非标准时期（保留为有效 id，不映射到 PHASE_ORDER）
+    "整合运动": "integration",
+    "整合运动时期": "integration",
+    "罗德岛": "rhodes",
+    "罗德岛时期": "rhodes",
+    "切尔诺伯格": "chernobog",
+    "切尔诺伯格时期": "chernobog",
+}
+
 # 内容精确匹配（正则）— 优先级最高
 PHASE_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"魔王.{0,10}(?:卡兹戴尔|回归|归来)"), "babel"),
@@ -53,7 +74,7 @@ CHAPTER_PHASE_MAP: dict[str, str] = {
     "H11-": "resurrected",
     "H12-": "resurrected",
     "H14-": "resurrected",
-    "DM-": "early",
+    "DM-": "babel",
     "WD-": "early",
     "CC-": "unknown",
 }
@@ -63,7 +84,7 @@ ACTIVITY_PHASE_MAP: dict[str, str] = {
     "巴别塔": "babel",
     "慈悲灯塔": "resurrected",
     "伦蒂尼姆": "resurrected",
-    "生于黑夜": "early",
+    "生于黑夜": "babel",
     "切尔诺伯格": "early",
     "遗尘漫步": "early",
 }

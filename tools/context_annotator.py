@@ -39,6 +39,7 @@ if str(_TOOLS_DIR) not in sys.path:
 from constants import (
     OPERATOR_DEFAULT_PHASE,
     PHASE_KEYWORDS,
+    PHASE_LABEL_MAP,
     PHASE_PATTERNS,
     TIMELINE_RE,
     VOICE_INTERLOCUTOR_MAP,
@@ -99,7 +100,13 @@ def load_story_data(path: str) -> list[dict]:
 
 
 def load_timeline(knowledge_path: str) -> list[dict]:
-    """从 knowledge.md 中提取时间线定义"""
+    """从 knowledge.md 中提取时间线定义
+
+    使用 PHASE_LABEL_MAP 将中文时期标签（如"早期"、"巴别塔时期"）映射为
+    规范化英文 id（如 "early"、"babel"），确保 timeline[].id 与
+    annotated_lines[].context.phase 值一致，使下游 temporal_slicer 的
+    跨期比较能正确匹配。
+    """
     try:
         safe_path = _validate_path(knowledge_path)
         text = Path(safe_path).read_text(encoding='utf-8')
@@ -108,9 +115,12 @@ def load_timeline(knowledge_path: str) -> list[dict]:
 
     timeline = []
     for match in TIMELINE_RE.finditer(text):
+        label = match.group(3).strip()
+        # 通过 PHASE_LABEL_MAP 将中文标签映射为英文 id
+        phase_id = PHASE_LABEL_MAP.get(label, label.replace(" ", "_").lower())
         timeline.append({
-            "id": match.group(3).strip().replace(" ", "_").lower(),
-            "label": match.group(3).strip(),
+            "id": phase_id,
+            "label": label,
             "range": f"{match.group(1)}-{match.group(2)}",
             "summary": ""
         })

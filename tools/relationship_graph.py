@@ -185,17 +185,15 @@ def _fetch_operators_from_prts() -> dict | None:
         角色信息 dict，或 None（拉取失败时）
     """
     try:
-        from prts_client import PRTSClient
-        client = PRTSClient()
+        from prts_client import fetch_page_wikitext
         # 拉取干员列表页（分类页面包含所有干员链接）
-        result = client.fetch_page_content("干员一览")
-        if not result:
+        wikitext = fetch_page_wikitext("干员一览")
+        if not wikitext:
             return None
 
-        # 从页面提取角色名（简单提取链接文本）
-        import re
-        names = re.findall(r'\[\[([^\]|]+?)(?:\|[^\]]+?)?\]\]', result)
-        operators = {}
+        # 从 wikitext 提取角色名（[[角色名]] 或 [[角色名|显示名]] 链接）
+        names = re.findall(r'\[\[([^\]|]+?)(?:\|[^\]]+?)?\]\]', wikitext)
+        operators: dict[str, dict] = {}
         for name in names:
             name = name.strip()
             # 过滤非角色页面

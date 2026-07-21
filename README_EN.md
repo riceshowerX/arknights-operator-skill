@@ -13,7 +13,7 @@ Knowledge · Persona Dual-Track Separation ─ Five-Layer Priority Persona Struc
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![AgentSkills](https://img.shields.io/badge/compatible-AgentSkills-green.svg)](https://github.com/perkfly/ex-skill)
-[![Tests](https://img.shields.io/badge/tests-224%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-269%20passed-brightgreen.svg)](tests/)
 
 </div>
 
@@ -70,7 +70,7 @@ git clone https://github.com/riceshowerX/arknights-operator-skill ~/.openclaw/sk
 The core toolchain depends only on the Python 3.10+ standard library. No additional installation required — self-sufficient, like the Rhodes Island infrastructure.
 
 ```bash
-# Run all tests (224 cases)
+# Run all tests (269 cases)
 python -m pytest tests/ -v
 ```
 

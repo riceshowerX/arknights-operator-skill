@@ -1,117 +1,80 @@
 {
   "global": {
-    "commit": 0.273,
-    "evade": 0.455,
-    "soothe": 0.03,
-    "affirm_presence": 0.152,
-    "promise_remember": 0.03,
-    "farewell": 0.061
+    "commit": 0.474,
+    "evade": 0.158,
+    "comfort": 0.053,
+    "presence": 0.316
   },
   "global_raw": {
     "commit": 9,
-    "evade": 15,
-    "soothe": 1,
-    "affirm_presence": 5,
-    "promise_remember": 1,
-    "farewell": 2
+    "evade": 3,
+    "comfort": 1,
+    "presence": 6
   },
   "by_situation": {
     "casual": {
       "commit": 9,
-      "soothe": 1,
-      "evade": 13,
-      "affirm_presence": 4,
-      "promise_remember": 1,
-      "farewell": 2
+      "comfort": 1,
+      "evade": 2,
+      "presence": 5
     },
     "comfort": {
       "evade": 1,
-      "affirm_presence": 1
-    },
-    "reminisce": {
-      "evade": 1
+      "presence": 1
     }
   },
   "by_interlocutor": {
     "博士": {
       "commit": 2,
-      "affirm_presence": 1,
-      "evade": 3
+      "presence": 1
     },
     "unknown": {
-      "evade": 6,
-      "soothe": 1,
-      "affirm_presence": 4,
-      "commit": 7,
-      "promise_remember": 1,
-      "farewell": 1
-    },
-    "？？？": {
-      "evade": 2
-    },
-    "预言家": {
-      "evade": 4,
-      "farewell": 1
+      "evade": 3,
+      "comfort": 1,
+      "presence": 5,
+      "commit": 7
     }
   },
   "by_phase": {
     "babel": {
-      "commit": 1,
-      "evade": 12,
-      "farewell": 2
-    },
-    "resurrected": {
-      "commit": 8,
+      "commit": 9,
       "evade": 3,
-      "soothe": 1,
-      "affirm_presence": 5,
-      "promise_remember": 1
+      "comfort": 1,
+      "presence": 6
     }
   },
-  "total_acts": 33,
-  "lines_with_acts": 25,
+  "total_acts": 19,
+  "lines_with_acts": 15,
   "behavioral_patterns": [
     {
+      "pattern": "interlocutor_commit",
+      "rule": "对博士的对话中，承诺/表态行为占比最高（67%）——用承诺/表态的方式回应博士",
+      "layer": 4,
+      "confidence": 0.6666666666666666
+    },
+    {
       "pattern": "high_evade",
-      "rule": "在被追问时倾向回避直接回答（回避行为占比46%），常用省略号结尾或反问代替回答",
+      "rule": "在被追问时倾向回避直接回答（回避行为占比16%），常用省略号结尾或反问代替回答",
       "layer": 0,
-      "confidence": 1.0
+      "confidence": 0.474
     },
     {
-      "pattern": "interlocutor_evade",
-      "rule": "对？？？的对话中，回避行为占比最高（100%）——用回避的方式回应？？？",
-      "layer": 4,
-      "confidence": 0.9
-    },
-    {
-      "pattern": "interlocutor_evade",
-      "rule": "对预言家的对话中，回避行为占比最高（80%）——用回避的方式回应预言家",
-      "layer": 4,
-      "confidence": 0.8
-    },
-    {
-      "pattern": "phase_shift_babel_evade",
-      "rule": "babel时期，回避行为显著增多（偏移34%）",
+      "pattern": "chain_commit_presence_presence",
+      "rule": "存在重复行为链「承诺/表态 → 存在表达 → 存在表达」（出现2次）——体现角色在特定场景中的固定行为序列",
       "layer": 2,
-      "confidence": 0.6900000000000001
+      "confidence": 0.4
     },
     {
-      "pattern": "phase_shift_resurrected_evade",
-      "rule": "resurrected时期，回避行为显著减少（偏移29%）",
+      "pattern": "chain_presence_presence_commit",
+      "rule": "存在重复行为链「存在表达 → 存在表达 → 承诺/表态」（出现2次）——体现角色在特定场景中的固定行为序列",
       "layer": 2,
-      "confidence": 0.5766666666666667
+      "confidence": 0.4
     },
     {
-      "pattern": "interlocutor_evade",
-      "rule": "对博士的对话中，回避行为占比最高（50%）——用回避的方式回应博士",
-      "layer": 4,
-      "confidence": 0.5
-    },
-    {
-      "pattern": "phase_shift_resurrected_commit",
-      "rule": "resurrected时期，承诺行为显著增多（偏移17%）",
+      "pattern": "chain_commit_presence_presence_commit",
+      "rule": "存在重复行为链「承诺/表态 → 存在表达 → 存在表达 → 承诺/表态」（出现2次）——体现角色在特定场景中的固定行为序列",
       "layer": 2,
-      "confidence": 0.3428888888888888
+      "confidence": 0.4
     }
   ]
 }

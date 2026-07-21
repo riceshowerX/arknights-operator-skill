@@ -180,8 +180,9 @@ class TestStoryExtractor(unittest.TestCase):
         self.assertEqual(infer_phase("", "BB-ST-3 灵魂尽头/NBT"), "babel")
         self.assertEqual(infer_phase("", "第8章/怒号光明"), "babel")
         self.assertEqual(infer_phase("", "第14章/慈悲灯塔"), "resurrected")
-        # DM 系列 = 生于黑夜（W 的活动）
-        self.assertEqual(infer_phase("", "DM-ST-1 求生/NBT"), "early")
+        # DM 系列 = 生于黑夜（W 的活动，讲述卡兹戴尔内战时期的巴别塔故事）
+        # v3.5.1 修正：DM 映射从 early 改为 babel（生于黑夜发生在巴别塔时期）
+        self.assertEqual(infer_phase("", "DM-ST-1 求生/NBT"), "babel")
 
     def test_infer_phase_from_scene(self):
         from story_extractor import infer_phase
