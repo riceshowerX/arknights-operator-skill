@@ -1,0 +1,95 @@
+name: Bug 报告
+description: 报告可复现的错误（不是角色还原度问题）
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量给出**可复现**的最小步骤——没有复现路径的 Issue 通常只能挂着。
+
+        如果是安全漏洞，请不要在这里发，改走 [SECURITY.md](https://github.com/riceshowerX/arknights-operator-skill/blob/main/SECURITY.md)。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 出问题的部分
+      options:
+        - 抓取 / 剧情提取（game_data_parser, story_extractor）
+        - 语境标注（context_annotator）
+        - 分析工具（speech_act / fingerprint / relationship / temporal）
+        - 验证（canon_checker, persona_validator）
+        - 写入与版本（skill_writer, version_manager）
+        - 流水线编排 / CLI 参数 / 退出码
+        - 打包安装（pip / wheel / 导入路径）
+        - 文档（README / SKILL.md / AGENTS.md）
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 运行 `pip show arknights-operator-skill` 或查看 `pyproject.toml`
+      placeholder: "3.6.0"
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 操作系统 + Python 版本
+      placeholder: "Windows 11 / Python 3.12.4；或 Ubuntu 24.04 / Python 3.11.9"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: 执行的命令
+      description: 完整命令，含所有参数
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 贴完整报错或日志尾部（请去掉个人信息与本地绝对路径）
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 如果是数据相关问题，请附最小 JSON/文本片段，或说明用的是哪个角色
+      placeholder: |
+        1. cp -r operators/w /tmp/w-demo
+        2. arknights-distill --name W --slug w --output-dir /tmp/w-demo --step analyze
+        3. 观察 relationship_graph.json 为空
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索过现有 Issue，确认不是重复
+          required: true
+        - label: 我已升级到最新版本并复现
+          required: false
+        - label: 我使用的是公开 Wiki 数据，不涉及账号或私有内容
+          required: true

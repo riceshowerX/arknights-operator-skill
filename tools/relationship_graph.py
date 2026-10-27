@@ -35,8 +35,11 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
+import assets
+import cli
 from constants import PHASE_ORDER
-from shared_utils import atomic_write_json, setup_logging
+from shared_utils import atomic_write_json, atomic_write_text, read_text_utf8, setup_logging
+from shared_utils import split_sentences as _shared_split_sentences
 
 logger = setup_logging("relationship_graph")
 
@@ -45,8 +48,8 @@ logger = setup_logging("relationship_graph")
 # 明日方舟角色名库（用于文本中的实体识别）
 # ──────────────────────────────────────────────
 
-# 内建默认角色名库（仅作 fallback，优先从 data/operator_db.json 加载）
-# 要扩展名库，编辑 data/operator_db.json 或使用 --operator-db 指定自定义文件。
+# 内建默认角色名库（仅作 fallback，优先从资产目录的 operator_db.json 加载）
+# 要扩展名库，编辑 tools/_data/operator_db.json 或使用 --operator-db 指定自定义文件。
 
 _OPERATOR_DB_BUILTIN = {
     # 巴别塔/罗德岛核心
@@ -140,6 +143,10 @@ _ALIAS_MAP_BUILTIN = {
 }
 
 
+# 角色名库「读不出来」的哨兵值（用于区分「解析失败」与「合法空对象」）
+_OPERATOR_DB_PAIR_SENTINEL: object = object()
+
+
 def _load_operator_db_from_json(json_path: Path) -> tuple[dict, dict]:
     """从 JSON 文件加载角色名库和别名映射。
 
@@ -149,14 +156,14 @@ def _load_operator_db_from_json(json_path: Path) -> tuple[dict, dict]:
         "aliases": {"Theresa": "特蕾西娅", ...}
     }
     """
-    try:
-        raw = json.loads(json_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        print(f"警告：角色名库文件解析失败 {json_path}: {e}，使用内建名库", file=sys.stderr)
+    # 读 + 解析（失败回退内建名库）统一走 assets.load_json_or
+    raw = assets.load_json_or(json_path, _OPERATOR_DB_PAIR_SENTINEL, kind="角色名库")
+    if raw is _OPERATOR_DB_PAIR_SENTINEL:
+        # 文件不存在（无告警）或解析失败（已告警）：直接使用内建名库
         return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
     if not isinstance(raw, dict):
-        print("警告：角色名库文件格式错误（应为对象），使用内建名库", file=sys.stderr)
+        logger.warning("角色名库文件格式错误（应为对象）%s，使用内建名库", json_path)
         return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
     db = dict(_OPERATOR_DB_BUILTIN)
@@ -214,7 +221,7 @@ def load_operator_db(filepath: str | None = None) -> tuple[dict, dict]:
 
     加载优先级：
     1. --operator-db 指定的自定义 JSON 文件
-    2. data/operator_db.json（项目内置外置文件）
+    2. 资产目录下的 operator_db.json（包内 tools/_data/，或仓库根 data/ 覆盖位）
     3. 尝试从 PRTS API 动态拉取（仅补充名称，不覆盖内建详情）
     4. 内建硬编码名库（最终 fallback）
 
@@ -228,8 +235,8 @@ def load_operator_db(filepath: str | None = None) -> tuple[dict, dict]:
         print(f"警告：角色名库文件不存在 {filepath}，使用内置名库", file=sys.stderr)
         return _OPERATOR_DB_BUILTIN, _ALIAS_MAP_BUILTIN
 
-    # 优先级 2：默认 data/operator_db.json
-    default_path = Path(__file__).parent.parent / "data" / "operator_db.json"
+    # 优先级 2：默认资产目录下的 operator_db.json（tools/_data，或仓库根 data/ 覆盖位）
+    default_path = assets.data_file("operator_db.json")
     if default_path.exists():
         return _load_operator_db_from_json(default_path)
 
@@ -411,6 +418,13 @@ def extract_entities(text: str, operator_db: dict | None = None, alias_map: dict
     使用 Aho-Corasick 多模式匹配，单次遍历文本即可检测所有角色名，
     时间复杂度从 O(n×m) 降为 O(n + m + 匹配数)。
     匹配后仍应用边界检查（CJK/英文边界）过滤误匹配。
+
+    确定性：Aho-Corasick 的 `search()` 返回 ``set[str]``，直接迭代会让实体顺序
+    随 ``PYTHONHASHSEED`` 变化（v3.5.1 起的既存缺陷）。此处按**模式标签字典序**
+    迭代，使同一输入在任何进程/任何 seed 下返回完全相同的实体顺序。
+
+    Returns:
+        去重后的角色名列表（顺序由模式标签字典序决定，稳定可复现）。
     """
     db = operator_db or _OPERATOR_DB_BUILTIN
     aliases = alias_map or _ALIAS_MAP_BUILTIN
@@ -421,7 +435,8 @@ def extract_entities(text: str, operator_db: dict | None = None, alias_map: dict
     found: list[str] = []
     seen: set[str] = set()
 
-    for candidate in candidates:
+    # sorted()：消除 set 迭代顺序对实体顺序（进而对关系列表顺序）的影响
+    for candidate in sorted(candidates):
         if candidate.startswith("alias:"):
             alias = candidate[6:]
             cn_name = aliases[alias]
@@ -450,10 +465,18 @@ def extract_relationships_from_text(
     1. 识别文本中出现的所有角色名
     2. 对每对共现的角色，检查关系关键词
     3. 对每个识别出的关系，标注来源和可信度
+
+    性能：全文分句 **1 次** + 「实体 → 句号集合」倒排索引 **1 次**，
+    之后每对实体只做 O(1) 集合运算，不再重复全文 split
+    （原实现为 O(E²·N)，E=30 时 10k 字约 480 ms；现为 O(N·E)）。
+    分句标点集、共现谓词、关系模式匹配、方向判定、可信度计算**全部保持原样**。
     """
     entities = extract_entities(text, operator_db, alias_map)
     if len(entities) < 2:
         return []
+
+    sentences = _split_sentences(text)
+    index = _build_sentence_index(sentences, entities)
 
     relationships = []
 
@@ -461,7 +484,7 @@ def extract_relationships_from_text(
         for j in range(i + 1, len(entities)):
             e1, e2 = entities[i], entities[j]
 
-            relevant_segments = _find_relevant_segments(text, e1, e2)
+            relevant_segments = _segments_from_index(sentences, index, e1, e2)
 
             for rel_pattern, rel_type in RELATIONSHIP_PATTERNS:
                 matched_in_segment = False
@@ -490,8 +513,11 @@ def extract_relationships_from_text(
     return relationships
 
 
-# 预编译分句正则，避免每次调用重复编译
-_SENTENCE_SPLIT_RE = re.compile(r"[。！？\n]+")
+# 本模块的分句符集合（与 3.x 的 `re.split(r"[。！？\n]+", text)` 完全一致）
+_SENTENCE_DELIMITERS = "。！？\n"
+
+# 预编译分句正则（供 `_extract_context` 保留「不 strip、不过滤空串」的旧行为）
+_SENTENCE_SPLIT_RE = re.compile("[" + _SENTENCE_DELIMITERS + "]+")
 
 _NEGATION_MARKERS = frozenset(["≠", "不是", "并非", "不等于", "误解", "错误", "没有", "不曾", "未尝", "并不"])
 
@@ -500,17 +526,36 @@ def _is_negation_context(s: str) -> bool:
     return any(marker in s for marker in _NEGATION_MARKERS)
 
 
-def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> list[str]:
-    """从文本中提取同时包含两个角色名的句子/段落"""
-    sentences = _SENTENCE_SPLIT_RE.split(text)
-    sentences = [s.strip() for s in sentences if s.strip()]
+def _split_sentences(text: str) -> list[str]:
+    """按本模块原有标点集分句（委托 `shared_utils.split_sentences`，标点集不变）"""
+    return _shared_split_sentences(text, keep=_SENTENCE_DELIMITERS)
 
-    joint_sentences = [s for s in sentences if e1 in s and e2 in s and not _is_negation_context(s)]
+
+def _build_sentence_index(sentences: list[str], entities: list[str] | tuple[str, ...]) -> dict[str, set[int]]:
+    """构建倒排索引：实体名 → 包含该实体的句子下标集合（每个实体只扫一遍全文）"""
+    return {entity: {i for i, s in enumerate(sentences) if entity in s} for entity in entities}
+
+
+def _segments_from_index(
+    sentences: list[str],
+    index: dict[str, set[int]],
+    e1: str,
+    e2: str,
+    max_gap: int = 80,
+) -> list[str]:
+    """用预计算的句子列表与倒排索引，取出与实体对相关的句子/段落。
+
+    谓词与遍历顺序与旧实现 `_find_relevant_segments` 完全一致
+    （`e1_indices` / `e2_indices` 仍是按句子顺序插入的整数集合），
+    因此返回列表的内容与顺序逐项相同。
+    """
+    e1_indices = index.get(e1, set())
+    e2_indices = index.get(e2, set())
+
+    joint = e1_indices & e2_indices
+    joint_sentences = [s for i, s in enumerate(sentences) if i in joint and not _is_negation_context(s)]
     if joint_sentences:
         return joint_sentences
-
-    e1_indices = {i for i, s in enumerate(sentences) if e1 in s}
-    e2_indices = {i for i, s in enumerate(sentences) if e2 in s}
 
     merged = []
     for i1 in e1_indices:
@@ -525,6 +570,17 @@ def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> l
                     merged.append(segment)
 
     return merged
+
+
+def _find_relevant_segments(text: str, e1: str, e2: str, max_gap: int = 80) -> list[str]:
+    """从文本中提取同时包含两个角色名的句子/段落（兼容包装）
+
+    保留给外部与测试调用；批量场景请改用
+    :func:`_build_sentence_index` + :func:`_segments_from_index`，避免重复全文分句。
+    """
+    sentences = _split_sentences(text)
+    index = _build_sentence_index(sentences, (e1, e2))
+    return _segments_from_index(sentences, index, e1, e2, max_gap)
 
 
 def _detect_direction(text: str, e1: str, e2: str, rel_pattern: str) -> str:
@@ -727,7 +783,9 @@ def enrich_edges_with_strength(
                     if sw in text:
                         sentiment_found.append(sw)
                 # 检测是否有直接对话（引号内的交互）
-                if '"' in text or '"' in text or '「' in text:
+                # 注意：原实现两个操作数相同（'"' in text 判断两次），
+                # 中文弯引号/书名号永远不命中 → dialogue_count 恒 0 → 强度偏低。
+                if any(q in text for q in ('"', '\u201c', '\u201d', '\u300c', '\u300e')):
                     dialogue_count += 1
 
         edge["strength"] = compute_relationship_strength(
@@ -817,7 +875,7 @@ def load_text(filepath: str, fmt: str = "markdown") -> list[tuple[str, str]]:
     if not path.exists():
         raise FileNotFoundError(f"文件不存在: {filepath}")
 
-    content = path.read_text(encoding="utf-8")
+    content = read_text_utf8(path)
     source_label = path.name
 
     if fmt == "markdown":
@@ -963,7 +1021,7 @@ def compute_relation_trajectories(
     trajectories = []
 
     # 按时序排列时期（而非字母序）
-    # 使用从 phase_inferrer import 的预定义时间顺序，未知时期排在最后
+    # 使用 constants.PHASE_ORDER 的预定义时间顺序，未知时期排在最后
     phases_sorted = []
     for p in PHASE_ORDER:
         if p in phase_graphs:
@@ -972,6 +1030,9 @@ def compute_relation_trajectories(
     for p in sorted(phase_graphs.keys()):
         if p not in phases_sorted:
             phases_sorted.append(p)
+
+    # 时序最靠前的时期（用于判断「新出现」还是「出现后消失」）
+    earliest_phase = phases_sorted[0] if phases_sorted else ""
 
     # 收集所有边的全局信息
     global_edges = {}
@@ -1006,7 +1067,7 @@ def compute_relation_trajectories(
 
         if len(present_phases) == 1 and len(absent_phases) >= 1:
             only_phase = present_phases[0]
-            if phases_sorted.index(only_phase) > 0:
+            if only_phase != earliest_phase:
                 evolution = f"在{only_phase}时期新出现"
             else:
                 evolution = f"仅在{only_phase}时期出现后消失"
@@ -1056,6 +1117,8 @@ def compute_relation_trajectories(
 # ──────────────────────────────────────────────
 
 def main():
+    cli.require_assets()
+
     parser = argparse.ArgumentParser(
         description="关系图谱构建器 — 从文本中自动提取角色关系网络（支持语境化模式）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1096,8 +1159,7 @@ def main():
 
     if args.context_json:
         # 语境化模式
-        with open(args.context_json, encoding='utf-8') as f:
-            context = json.load(f)
+        context = json.loads(read_text_utf8(args.context_json))
 
         result = generate_contextual_relationships(context, operator_db, alias_map)
 
@@ -1120,8 +1182,7 @@ def main():
 
         text = json.dumps(report, ensure_ascii=False, indent=2)
         if args.output:
-            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-            Path(args.output).write_text(text, encoding="utf-8")
+            atomic_write_text(args.output, text)
             print(f"语境化关系图谱已写入 {args.output}", file=sys.stderr)
             print(f"annotated_relations 已回写 {args.context_json}", file=sys.stderr)
         else:
@@ -1148,8 +1209,7 @@ def main():
 
         text = json.dumps(graph, ensure_ascii=False, indent=2)
         if args.output:
-            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-            Path(args.output).write_text(text, encoding="utf-8")
+            atomic_write_text(args.output, text)
             print(f"关系图谱已写入 {args.output}", file=sys.stderr)
         else:
             print(text)

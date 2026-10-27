@@ -3,40 +3,40 @@
   "mode": "contextual",
   "global": {
     "operator": "特蕾西娅",
-    "dialogue_count": 38,
+    "dialogue_count": 20,
     "dimensions": {
       "1_sentence_length": {
         "type": "中句型",
-        "avg_length": 18.0,
-        "median": 15.0,
-        "stdev": 11.0,
-        "cv": 0.73,
+        "avg_length": 19.7,
+        "median": 16.5,
+        "stdev": 12.4,
+        "cv": 0.75,
         "rhythm": "极端交替",
         "percentiles": {
-          "p25": 11.2,
-          "p50": 15.0,
-          "p75": 23.8
+          "p25": 12.0,
+          "p50": 16.5,
+          "p75": 24.2
         },
-        "min": 1,
+        "min": 5,
         "max": 80,
         "distribution_pct": {
-          "short_pct": 25.0,
-          "medium_pct": 50.0,
-          "long_pct": 25.0
+          "short_pct": 30.4,
+          "medium_pct": 45.7,
+          "long_pct": 23.9
         },
-        "sample_count": 76
+        "sample_count": 46
       },
       "2_pause_markers": {
-        "ellipsis_pct": 21.1,
-        "ellipsis_start_pct": 5.3,
+        "ellipsis_pct": 35.0,
+        "ellipsis_start_pct": 10.0,
         "dash_pct": 0.0,
-        "exclamation_pct": 2.6,
-        "question_pct": 34.2,
-        "interpretation": "几乎不用感叹号，语气极度克制"
+        "exclamation_pct": 0.0,
+        "question_pct": 40.0,
+        "interpretation": "频繁停顿，善于沉默；几乎不用感叹号，语气极度克制"
       },
       "3_self_reference": {
         "primary": "我",
-        "frequency_per_line": 1.16,
+        "frequency_per_line": 1.55,
         "distribution_pct": {
           "我": 100.0
         },
@@ -44,17 +44,16 @@
       },
       "4_emotion_vocabulary": {
         "dominant": "希望",
-        "breadth": "宽谱",
-        "active_emotion_count": 5,
+        "breadth": "中谱",
+        "active_emotion_count": 3,
         "spectrum_pct": {
-          "希望": 28.3,
-          "悲伤": 21.1,
-          "孤独": 16.0,
-          "坚定": 11.8,
-          "信任": 10.1,
-          "温柔": 6.3,
-          "自豪": 3.4,
-          "眷恋": 3.0
+          "希望": 30.5,
+          "悲伤": 26.5,
+          "信任": 15.9,
+          "孤独": 12.6,
+          "自豪": 5.3,
+          "坚定": 4.6,
+          "眷恋": 4.6
         },
         "examples": {
           "悲伤": [
@@ -63,8 +62,6 @@
             "失去"
           ],
           "坚定": [
-            "一定",
-            "一定",
             "一定"
           ],
           "希望": [
@@ -80,32 +77,27 @@
           ],
           "孤独": [
             "孤独",
-            "一个人",
             "一个人"
           ],
           "信任": [
             "同行",
             "在一起",
             "相信"
-          ],
-          "温柔": [
-            "注视",
-            "温柔"
           ]
         },
-        "interpretation": "主导情感为'希望'，情感谱系宽谱（活跃情感5种）"
+        "interpretation": "主导情感为'希望'，情感谱系中谱（活跃情感3种）"
       },
       "5_rhetoric_patterns": {
-        "rhetorical_question_pct": 2.6,
+        "rhetorical_question_pct": 5.0,
         "metaphor_pct": 0.0,
         "parallelism_pct": 0.0,
-        "negation_pct": 28.9,
-        "interpretation": "修辞风格平实直白"
+        "negation_pct": 45.0,
+        "interpretation": "频繁使用否定句式，倾向从反面界定"
       },
       "6_address_pattern": {
         "pattern": "亲昵型",
         "honorific_pct": 0.0,
-        "intimate_pct": 18.4,
+        "intimate_pct": 30.0,
         "examples": {
           "honorific": [],
           "intimate": [
@@ -118,7 +110,7 @@
         }
       },
       "7_natural_imagery": {
-        "density_per_line": 0.03,
+        "density_per_line": 0.05,
         "density_level": "低频",
         "category_distribution": {
           "时间": 100.0
@@ -126,102 +118,102 @@
         "top_5_words": {
           "黎明": 1
         },
-        "interpretation": "自然意象密度低频（0.03个/句），偏好时间意象"
+        "interpretation": "自然意象密度低频（0.05个/句），偏好时间意象"
       },
       "8_catchphrases": {
         "signature_phrases": [
           {
             "phrase": ".....",
-            "count": 18,
-            "frequency_per_line": 0.474,
-            "significance": 157.9
-          },
-          {
-            "phrase": "博士",
-            "count": 13,
-            "frequency_per_line": 0.342,
-            "significance": 114.0
+            "count": 16,
+            "frequency_per_line": 0.8,
+            "significance": 266.7
           },
           {
             "phrase": "罗德岛",
-            "count": 12,
-            "frequency_per_line": 0.316,
-            "significance": 105.3
-          },
-          {
-            "phrase": "可以",
-            "count": 9,
-            "frequency_per_line": 0.237,
-            "significance": 78.9
+            "count": 8,
+            "frequency_per_line": 0.4,
+            "significance": 133.3
           },
           {
             "phrase": "阿米娅",
-            "count": 8,
-            "frequency_per_line": 0.211,
-            "significance": 70.2
+            "count": 7,
+            "frequency_per_line": 0.35,
+            "significance": 116.7
+          },
+          {
+            "phrase": "博士",
+            "count": 7,
+            "frequency_per_line": 0.35,
+            "significance": 116.7
           },
           {
             "phrase": "特蕾西娅",
-            "count": 6,
-            "frequency_per_line": 0.158,
-            "significance": 52.6
+            "count": 5,
+            "frequency_per_line": 0.25,
+            "significance": 83.3
+          },
+          {
+            "phrase": "记得",
+            "count": 4,
+            "frequency_per_line": 0.2,
+            "significance": 66.7
           },
           {
             "phrase": "过去",
-            "count": 6,
-            "frequency_per_line": 0.158,
-            "significance": 52.6
+            "count": 4,
+            "frequency_per_line": 0.2,
+            "significance": 66.7
           },
           {
-            "phrase": "我会",
-            "count": 6,
-            "frequency_per_line": 0.158,
-            "significance": 52.6
+            "phrase": "不是",
+            "count": 4,
+            "frequency_per_line": 0.2,
+            "significance": 66.7
           }
         ],
-        "total_unique_ngrams": 3858,
-        "interpretation": "标志性短语：\".....\"(18次)、\"博士\"(13次)、\"罗德岛\"(12次)"
+        "total_unique_ngrams": 2621,
+        "interpretation": "标志性短语：\".....\"(16次)、\"罗德岛\"(8次)、\"阿米娅\"(7次)"
       }
     },
-    "summary": "句式中句型，平均18.0字，节奏极端交替；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系宽谱（活跃情感5种）；修辞风格平实直白；自然意象密度低频（0.03个/句），偏好时间意象；标志性短语：\".....\"(18次)、\"博士\"(13次)、\"罗德岛\"(12次)"
+    "summary": "句式中句型，平均19.7字，节奏极端交替；频繁停顿，善于沉默；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系中谱（活跃情感3种）；频繁使用否定句式，倾向从反面界定；自然意象密度低频（0.05个/句），偏好时间意象；标志性短语：\".....\"(16次)、\"罗德岛\"(8次)、\"阿米娅\"(7次)"
   },
   "slices": {
     "situation:casual": {
       "operator": "特蕾西娅",
-      "dialogue_count": 34,
+      "dialogue_count": 17,
       "dimensions": {
         "1_sentence_length": {
           "type": "中句型",
-          "avg_length": 17.1,
-          "median": 15,
-          "stdev": 10.9,
-          "cv": 0.73,
+          "avg_length": 18.3,
+          "median": 15.0,
+          "stdev": 12.8,
+          "cv": 0.85,
           "rhythm": "极端交替",
           "percentiles": {
-            "p25": 10.0,
+            "p25": 12.0,
             "p50": 15.0,
-            "p75": 22.0
+            "p75": 21.8
           },
-          "min": 1,
+          "min": 5,
           "max": 80,
           "distribution_pct": {
-            "short_pct": 26.2,
-            "medium_pct": 52.3,
-            "long_pct": 21.5
+            "short_pct": 33.3,
+            "medium_pct": 41.7,
+            "long_pct": 25.0
           },
-          "sample_count": 65
+          "sample_count": 36
         },
         "2_pause_markers": {
-          "ellipsis_pct": 20.6,
-          "ellipsis_start_pct": 5.9,
+          "ellipsis_pct": 35.3,
+          "ellipsis_start_pct": 11.8,
           "dash_pct": 0.0,
-          "exclamation_pct": 2.9,
-          "question_pct": 32.4,
-          "interpretation": "几乎不用感叹号，语气极度克制"
+          "exclamation_pct": 0.0,
+          "question_pct": 35.3,
+          "interpretation": "频繁停顿，善于沉默；几乎不用感叹号，语气极度克制"
         },
         "3_self_reference": {
           "primary": "我",
-          "frequency_per_line": 1.15,
+          "frequency_per_line": 1.59,
           "distribution_pct": {
             "我": 100.0
           },
@@ -230,16 +222,14 @@
         "4_emotion_vocabulary": {
           "dominant": "希望",
           "breadth": "中谱",
-          "active_emotion_count": 4,
+          "active_emotion_count": 3,
           "spectrum_pct": {
-            "希望": 33.0,
-            "悲伤": 19.7,
-            "坚定": 13.8,
-            "信任": 11.8,
-            "孤独": 9.4,
-            "温柔": 4.9,
-            "自豪": 3.9,
-            "眷恋": 3.4
+            "希望": 37.7,
+            "悲伤": 24.6,
+            "信任": 19.7,
+            "自豪": 6.6,
+            "坚定": 5.7,
+            "眷恋": 5.7
           },
           "examples": {
             "悲伤": [
@@ -248,8 +238,6 @@
               "悲伤"
             ],
             "坚定": [
-              "一定",
-              "一定",
               "一定"
             ],
             "希望": [
@@ -267,41 +255,33 @@
               "同行",
               "在一起",
               "相信"
-            ],
-            "孤独": [
-              "一个人",
-              "孤独"
-            ],
-            "温柔": [
-              "温柔"
             ]
           },
-          "interpretation": "主导情感为'希望'，情感谱系中谱（活跃情感4种）"
+          "interpretation": "主导情感为'希望'，情感谱系中谱（活跃情感3种）"
         },
         "5_rhetoric_patterns": {
           "rhetorical_question_pct": 0.0,
           "metaphor_pct": 0.0,
           "parallelism_pct": 0.0,
-          "negation_pct": 26.5,
-          "interpretation": "修辞风格平实直白"
+          "negation_pct": 41.2,
+          "interpretation": "频繁使用否定句式，倾向从反面界定"
         },
         "6_address_pattern": {
           "pattern": "亲昵型",
           "honorific_pct": 0.0,
-          "intimate_pct": 14.7,
+          "intimate_pct": 23.5,
           "examples": {
             "honorific": [],
             "intimate": [
               "特蕾西娅已经永远离开了，现在留在这里的我，只是一个存在于“魔王”之中的程序。因为阿米娅的情感，我才会",
               "我会陪在阿米娅身边，也会陪着罗德岛的大家，虽然这也算不上对过去时光的补偿......博士，我不是PR",
               "“罗德岛制药公司”，注册地是阿米娅的故乡呢。这些药物都是凯尔希研制的吗......怎么会遗憾？巴别塔",
-              "......我是不是在作战画面里看到了阿米娅？",
-              "阿米娅，站到我身后来。"
+              "......我是不是在作战画面里看到了阿米娅？"
             ]
           }
         },
         "7_natural_imagery": {
-          "density_per_line": 0.03,
+          "density_per_line": 0.06,
           "density_level": "低频",
           "category_distribution": {
             "时间": 100.0
@@ -309,101 +289,101 @@
           "top_5_words": {
             "黎明": 1
           },
-          "interpretation": "自然意象密度低频（0.03个/句），偏好时间意象"
+          "interpretation": "自然意象密度低频（0.06个/句），偏好时间意象"
         },
         "8_catchphrases": {
           "signature_phrases": [
             {
               "phrase": ".....",
-              "count": 14,
-              "frequency_per_line": 0.412,
-              "significance": 137.3
+              "count": 12,
+              "frequency_per_line": 0.706,
+              "significance": 235.3
             },
             {
               "phrase": "罗德岛",
-              "count": 12,
-              "frequency_per_line": 0.353,
-              "significance": 117.6
+              "count": 8,
+              "frequency_per_line": 0.471,
+              "significance": 156.9
             },
             {
-              "phrase": "博士",
-              "count": 10,
+              "phrase": "特蕾西娅",
+              "count": 5,
               "frequency_per_line": 0.294,
               "significance": 98.0
             },
             {
-              "phrase": "可以",
-              "count": 7,
-              "frequency_per_line": 0.206,
-              "significance": 68.6
-            },
-            {
-              "phrase": "特蕾西娅",
-              "count": 6,
-              "frequency_per_line": 0.176,
-              "significance": 58.8
-            },
-            {
-              "phrase": "我会",
-              "count": 6,
-              "frequency_per_line": 0.176,
-              "significance": 58.8
-            },
-            {
-              "phrase": "我们",
-              "count": 6,
-              "frequency_per_line": 0.176,
-              "significance": 58.8
+              "phrase": "博士",
+              "count": 5,
+              "frequency_per_line": 0.294,
+              "significance": 98.0
             },
             {
               "phrase": "阿米娅",
-              "count": 5,
-              "frequency_per_line": 0.147,
-              "significance": 49.0
+              "count": 4,
+              "frequency_per_line": 0.235,
+              "significance": 78.4
+            },
+            {
+              "phrase": "不会",
+              "count": 4,
+              "frequency_per_line": 0.235,
+              "significance": 78.4
+            },
+            {
+              "phrase": "记得",
+              "count": 3,
+              "frequency_per_line": 0.176,
+              "significance": 58.8
+            },
+            {
+              "phrase": "间会",
+              "count": 3,
+              "frequency_per_line": 0.176,
+              "significance": 58.8
             }
           ],
-          "total_unique_ngrams": 3131,
-          "interpretation": "标志性短语：\".....\"(14次)、\"罗德岛\"(12次)、\"博士\"(10次)"
+          "total_unique_ngrams": 1893,
+          "interpretation": "标志性短语：\".....\"(12次)、\"罗德岛\"(8次)、\"特蕾西娅\"(5次)"
         }
       },
-      "summary": "句式中句型，平均17.1字，节奏极端交替；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系中谱（活跃情感4种）；修辞风格平实直白；自然意象密度低频（0.03个/句），偏好时间意象；标志性短语：\".....\"(14次)、\"罗德岛\"(12次)、\"博士\"(10次)"
+      "summary": "句式中句型，平均18.3字，节奏极端交替；频繁停顿，善于沉默；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系中谱（活跃情感3种）；频繁使用否定句式，倾向从反面界定；自然意象密度低频（0.06个/句），偏好时间意象；标志性短语：\".....\"(12次)、\"罗德岛\"(8次)、\"特蕾西娅\"(5次)"
     },
     "situation:comfort": {
       "operator": "特蕾西娅",
-      "dialogue_count": 4,
+      "dialogue_count": 3,
       "dimensions": {
         "1_sentence_length": {
           "type": "中句型",
-          "avg_length": 23.4,
-          "median": 24,
-          "stdev": 10.4,
-          "cv": 0.43,
-          "rhythm": "多变",
+          "avg_length": 24.8,
+          "median": 26.0,
+          "stdev": 9.7,
+          "cv": 0.37,
+          "rhythm": "稳定",
           "percentiles": {
-            "p25": 12.0,
-            "p50": 24.0,
-            "p75": 32.0
+            "p25": 15.0,
+            "p50": 26.0,
+            "p75": 32.5
           },
-          "min": 9,
+          "min": 11,
           "max": 40,
           "distribution_pct": {
-            "short_pct": 27.3,
-            "medium_pct": 54.5,
-            "long_pct": 18.2
+            "short_pct": 20.0,
+            "medium_pct": 60.0,
+            "long_pct": 20.0
           },
-          "sample_count": 11
+          "sample_count": 10
         },
         "2_pause_markers": {
-          "ellipsis_pct": 25.0,
+          "ellipsis_pct": 33.3,
           "ellipsis_start_pct": 0.0,
           "dash_pct": 0.0,
           "exclamation_pct": 0.0,
-          "question_pct": 50.0,
-          "interpretation": "几乎不用感叹号，语气极度克制"
+          "question_pct": 66.7,
+          "interpretation": "频繁停顿，善于沉默；几乎不用感叹号，语气极度克制"
         },
         "3_self_reference": {
           "primary": "我",
-          "frequency_per_line": 1.25,
+          "frequency_per_line": 1.33,
           "distribution_pct": {
             "我": 100.0
           },
@@ -414,9 +394,8 @@
           "breadth": "窄谱",
           "active_emotion_count": 0,
           "spectrum_pct": {
-            "孤独": 55.9,
-            "悲伤": 29.4,
-            "温柔": 14.7
+            "孤独": 65.5,
+            "悲伤": 34.5
           },
           "examples": {
             "孤独": [
@@ -425,24 +404,21 @@
             ],
             "悲伤": [
               "失去"
-            ],
-            "温柔": [
-              "注视"
             ]
           },
           "interpretation": "主导情感为'孤独'，情感谱系窄谱（活跃情感0种）"
         },
         "5_rhetoric_patterns": {
-          "rhetorical_question_pct": 25.0,
+          "rhetorical_question_pct": 33.3,
           "metaphor_pct": 0.0,
           "parallelism_pct": 0.0,
-          "negation_pct": 50.0,
+          "negation_pct": 66.7,
           "interpretation": "善用反问引导思考；频繁使用否定句式，倾向从反面界定"
         },
         "6_address_pattern": {
           "pattern": "亲昵型",
           "honorific_pct": 0.0,
-          "intimate_pct": 50.0,
+          "intimate_pct": 66.7,
           "examples": {
             "honorific": [],
             "intimate": [
@@ -460,70 +436,64 @@
             {
               "phrase": ".....",
               "count": 4,
-              "frequency_per_line": 1.0,
-              "significance": 333.3
+              "frequency_per_line": 1.333,
+              "significance": 444.4
             },
             {
               "phrase": "阿米娅",
               "count": 3,
-              "frequency_per_line": 0.75,
-              "significance": 250.0
-            },
-            {
-              "phrase": "博士",
-              "count": 3,
-              "frequency_per_line": 0.75,
-              "significance": 250.0
+              "frequency_per_line": 1.0,
+              "significance": 333.3
             },
             {
               "phrase": "记忆",
               "count": 3,
-              "frequency_per_line": 0.75,
-              "significance": 250.0
+              "frequency_per_line": 1.0,
+              "significance": 333.3
             }
           ],
-          "total_unique_ngrams": 794,
-          "interpretation": "标志性短语：\".....\"(4次)、\"阿米娅\"(3次)、\"博士\"(3次)"
+          "total_unique_ngrams": 775,
+          "interpretation": "标志性短语：\".....\"(4次)、\"阿米娅\"(3次)、\"记忆\"(3次)"
         }
       },
-      "summary": "句式中句型，平均23.4字，节奏多变；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'孤独'，情感谱系窄谱（活跃情感0种）；善用反问引导思考；频繁使用否定句式，倾向从反面界定；极少使用自然意象；标志性短语：\".....\"(4次)、\"阿米娅\"(3次)、\"博士\"(3次)"
+      "summary": "句式中句型，平均24.8字，节奏稳定；频繁停顿，善于沉默；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'孤独'，情感谱系窄谱（活跃情感0种）；善用反问引导思考；频繁使用否定句式，倾向从反面界定；极少使用自然意象；标志性短语：\".....\"(4次)、\"阿米娅\"(3次)、\"记忆\"(3次)"
     },
     "interlocutor:博士": {
       "operator": "特蕾西娅",
-      "dialogue_count": 4,
+      "dialogue_count": 3,
       "dimensions": {
         "1_sentence_length": {
           "type": "中句型",
-          "avg_length": 16.1,
-          "median": 15,
-          "stdev": 5.8,
-          "cv": 0.39,
+          "avg_length": 16.7,
+          "median": 15.0,
+          "stdev": 5.7,
+          "cv": 0.38,
           "rhythm": "稳定",
           "percentiles": {
-            "p25": 11.0,
+            "p25": 12.0,
             "p50": 15.0,
-            "p75": 22.0
+            "p75": 22.5
           },
           "min": 9,
           "max": 25,
           "distribution_pct": {
-            "short_pct": 23.1,
-            "medium_pct": 53.8,
-            "long_pct": 23.1
+            "short_pct": 33.3,
+            "medium_pct": 41.7,
+            "long_pct": 25.0
           },
-          "sample_count": 13
+          "sample_count": 12
         },
         "2_pause_markers": {
-          "ellipsis_pct": 50.0,
+          "ellipsis_pct": 66.7,
           "ellipsis_start_pct": 0.0,
           "dash_pct": 0.0,
           "exclamation_pct": 0.0,
-          "question_pct": 50.0,
+          "question_pct": 66.7,
           "interpretation": "频繁停顿，善于沉默；几乎不用感叹号，语气极度克制"
         },
         "3_self_reference": {
           "primary": "我",
-          "frequency_per_line": 1.5,
+          "frequency_per_line": 1.67,
           "distribution_pct": {
             "我": 100.0
           },
@@ -534,12 +504,11 @@
           "breadth": "窄谱",
           "active_emotion_count": 1,
           "spectrum_pct": {
-            "希望": 44.4,
-            "悲伤": 22.2,
-            "自豪": 9.9,
-            "坚定": 8.6,
-            "眷恋": 8.6,
-            "温柔": 6.2
+            "希望": 47.4,
+            "悲伤": 23.7,
+            "自豪": 10.5,
+            "坚定": 9.2,
+            "眷恋": 9.2
           },
           "examples": {
             "悲伤": [
@@ -559,9 +528,6 @@
             ],
             "眷恋": [
               "故乡"
-            ],
-            "温柔": [
-              "注视"
             ]
           },
           "interpretation": "主导情感为'希望'，情感谱系窄谱（活跃情感1种）"
@@ -570,13 +536,13 @@
           "rhetorical_question_pct": 0.0,
           "metaphor_pct": 0.0,
           "parallelism_pct": 0.0,
-          "negation_pct": 50.0,
+          "negation_pct": 66.7,
           "interpretation": "频繁使用否定句式，倾向从反面界定"
         },
         "6_address_pattern": {
           "pattern": "亲昵型",
           "honorific_pct": 0.0,
-          "intimate_pct": 25.0,
+          "intimate_pct": 33.3,
           "examples": {
             "honorific": [],
             "intimate": [
@@ -585,7 +551,7 @@
           }
         },
         "7_natural_imagery": {
-          "density_per_line": 0.25,
+          "density_per_line": 0.33,
           "density_level": "低频",
           "category_distribution": {
             "时间": 100.0
@@ -593,125 +559,111 @@
           "top_5_words": {
             "黎明": 1
           },
-          "interpretation": "自然意象密度低频（0.25个/句），偏好时间意象"
+          "interpretation": "自然意象密度低频（0.33个/句），偏好时间意象"
         },
         "8_catchphrases": {
           "signature_phrases": [
             {
               "phrase": ".....",
               "count": 4,
-              "frequency_per_line": 1.0,
-              "significance": 333.3
+              "frequency_per_line": 1.333,
+              "significance": 444.4
             },
             {
               "phrase": "罗德岛",
               "count": 3,
-              "frequency_per_line": 0.75,
-              "significance": 250.0
+              "frequency_per_line": 1.0,
+              "significance": 333.3
             }
           ],
-          "total_unique_ngrams": 650,
+          "total_unique_ngrams": 630,
           "interpretation": "标志性短语：\".....\"(4次)、\"罗德岛\"(3次)"
         }
       },
-      "summary": "句式中句型，平均16.1字，节奏稳定；频繁停顿，善于沉默；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系窄谱（活跃情感1种）；频繁使用否定句式，倾向从反面界定；自然意象密度低频（0.25个/句），偏好时间意象；标志性短语：\".....\"(4次)、\"罗德岛\"(3次)"
+      "summary": "句式中句型，平均16.7字，节奏稳定；频繁停顿，善于沉默；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系窄谱（活跃情感1种）；频繁使用否定句式，倾向从反面界定；自然意象密度低频（0.33个/句），偏好时间意象；标志性短语：\".....\"(4次)、\"罗德岛\"(3次)"
     },
     "interlocutor:unknown": {
       "operator": "特蕾西娅",
-      "dialogue_count": 34,
+      "dialogue_count": 17,
       "dimensions": {
         "1_sentence_length": {
           "type": "中句型",
-          "avg_length": 18.4,
-          "median": 16,
-          "stdev": 11.8,
-          "cv": 0.74,
+          "avg_length": 20.8,
+          "median": 17.5,
+          "stdev": 13.9,
+          "cv": 0.8,
           "rhythm": "极端交替",
           "percentiles": {
-            "p25": 11.0,
-            "p50": 16.0,
-            "p75": 24.0
+            "p25": 12.0,
+            "p50": 17.5,
+            "p75": 27.2
           },
-          "min": 1,
+          "min": 5,
           "max": 80,
           "distribution_pct": {
-            "short_pct": 25.4,
-            "medium_pct": 50.8,
-            "long_pct": 23.8
+            "short_pct": 29.4,
+            "medium_pct": 47.1,
+            "long_pct": 23.5
           },
-          "sample_count": 63
+          "sample_count": 34
         },
         "2_pause_markers": {
-          "ellipsis_pct": 17.6,
-          "ellipsis_start_pct": 5.9,
+          "ellipsis_pct": 29.4,
+          "ellipsis_start_pct": 11.8,
           "dash_pct": 0.0,
-          "exclamation_pct": 2.9,
-          "question_pct": 32.4,
+          "exclamation_pct": 0.0,
+          "question_pct": 35.3,
           "interpretation": "几乎不用感叹号，语气极度克制"
         },
         "3_self_reference": {
           "primary": "我",
-          "frequency_per_line": 1.12,
+          "frequency_per_line": 1.53,
           "distribution_pct": {
             "我": 100.0
           },
           "interpretation": "常用'我'，表达直接"
         },
         "4_emotion_vocabulary": {
-          "dominant": "孤独",
-          "breadth": "宽谱",
-          "active_emotion_count": 5,
+          "dominant": "信任",
+          "breadth": "窄谱",
+          "active_emotion_count": 2,
           "spectrum_pct": {
-            "孤独": 24.4,
-            "悲伤": 20.5,
-            "希望": 19.9,
-            "信任": 15.4,
-            "坚定": 13.5,
-            "温柔": 6.4
+            "信任": 32.0,
+            "悲伤": 29.3,
+            "孤独": 25.3,
+            "希望": 13.3
           },
           "examples": {
             "孤独": [
               "孤独",
-              "一个人",
               "一个人"
             ],
             "悲伤": [
               "失去",
-              "悲伤",
-              "痛"
+              "悲伤"
             ],
             "希望": [
-              "希望",
-              "信念",
               "希望"
             ],
             "信任": [
               "同行",
               "在一起",
               "相信"
-            ],
-            "坚定": [
-              "一定",
-              "一定",
-              "一定"
-            ],
-            "温柔": [
-              "温柔"
             ]
           },
-          "interpretation": "主导情感为'孤独'，情感谱系宽谱（活跃情感5种）"
+          "interpretation": "主导情感为'信任'，情感谱系窄谱（活跃情感2种）"
         },
         "5_rhetoric_patterns": {
-          "rhetorical_question_pct": 2.9,
+          "rhetorical_question_pct": 5.9,
           "metaphor_pct": 0.0,
           "parallelism_pct": 0.0,
-          "negation_pct": 26.5,
-          "interpretation": "修辞风格平实直白"
+          "negation_pct": 41.2,
+          "interpretation": "频繁使用否定句式，倾向从反面界定"
         },
         "6_address_pattern": {
           "pattern": "亲昵型",
           "honorific_pct": 0.0,
-          "intimate_pct": 17.6,
+          "intimate_pct": 29.4,
           "examples": {
             "honorific": [],
             "intimate": [
@@ -731,125 +683,125 @@
           "signature_phrases": [
             {
               "phrase": ".....",
-              "count": 14,
+              "count": 12,
+              "frequency_per_line": 0.706,
+              "significance": 235.3
+            },
+            {
+              "phrase": "博士",
+              "count": 7,
               "frequency_per_line": 0.412,
               "significance": 137.3
             },
             {
-              "phrase": "博士",
-              "count": 12,
+              "phrase": "阿米娅",
+              "count": 6,
               "frequency_per_line": 0.353,
               "significance": 117.6
             },
             {
               "phrase": "罗德岛",
-              "count": 9,
-              "frequency_per_line": 0.265,
-              "significance": 88.2
+              "count": 5,
+              "frequency_per_line": 0.294,
+              "significance": 98.0
             },
             {
-              "phrase": "可以",
-              "count": 8,
+              "phrase": "过去",
+              "count": 4,
               "frequency_per_line": 0.235,
               "significance": 78.4
             },
             {
-              "phrase": "阿米娅",
-              "count": 7,
-              "frequency_per_line": 0.206,
-              "significance": 68.6
+              "phrase": "不是",
+              "count": 4,
+              "frequency_per_line": 0.235,
+              "significance": 78.4
             },
             {
-              "phrase": "过去",
-              "count": 6,
+              "phrase": "是不",
+              "count": 4,
+              "frequency_per_line": 0.235,
+              "significance": 78.4
+            },
+            {
+              "phrase": "不会",
+              "count": 4,
+              "frequency_per_line": 0.235,
+              "significance": 78.4
+            },
+            {
+              "phrase": "特蕾",
+              "count": 3,
               "frequency_per_line": 0.176,
               "significance": 58.8
             },
             {
-              "phrase": "我会",
-              "count": 5,
-              "frequency_per_line": 0.147,
-              "significance": 49.0
-            },
-            {
-              "phrase": "不会",
-              "count": 5,
-              "frequency_per_line": 0.147,
-              "significance": 49.0
-            },
-            {
-              "phrase": "我们",
-              "count": 5,
-              "frequency_per_line": 0.147,
-              "significance": 49.0
-            },
-            {
-              "phrase": "特蕾",
-              "count": 4,
-              "frequency_per_line": 0.118,
-              "significance": 39.2
-            },
-            {
               "phrase": "蕾西",
-              "count": 4,
-              "frequency_per_line": 0.118,
-              "significance": 39.2
+              "count": 3,
+              "frequency_per_line": 0.176,
+              "significance": 58.8
             },
             {
               "phrase": "西娅",
-              "count": 4,
-              "frequency_per_line": 0.118,
-              "significance": 39.2
+              "count": 3,
+              "frequency_per_line": 0.176,
+              "significance": 58.8
+            },
+            {
+              "phrase": "记得",
+              "count": 3,
+              "frequency_per_line": 0.176,
+              "significance": 58.8
             },
             {
               "phrase": "去的",
-              "count": 4,
-              "frequency_per_line": 0.118,
-              "significance": 39.2
+              "count": 3,
+              "frequency_per_line": 0.176,
+              "significance": 58.8
             }
           ],
-          "total_unique_ngrams": 3282,
-          "interpretation": "标志性短语：\".....\"(14次)、\"博士\"(12次)、\"罗德岛\"(9次)"
+          "total_unique_ngrams": 2053,
+          "interpretation": "标志性短语：\".....\"(12次)、\"博士\"(7次)、\"阿米娅\"(6次)"
         }
       },
-      "summary": "句式中句型，平均18.4字，节奏极端交替；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'孤独'，情感谱系宽谱（活跃情感5种）；修辞风格平实直白；极少使用自然意象；标志性短语：\".....\"(14次)、\"博士\"(12次)、\"罗德岛\"(9次)"
+      "summary": "句式中句型，平均20.8字，节奏极端交替；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'信任'，情感谱系窄谱（活跃情感2种）；频繁使用否定句式，倾向从反面界定；极少使用自然意象；标志性短语：\".....\"(12次)、\"博士\"(7次)、\"阿米娅\"(6次)"
     },
     "phase:babel": {
       "operator": "特蕾西娅",
-      "dialogue_count": 38,
+      "dialogue_count": 20,
       "dimensions": {
         "1_sentence_length": {
           "type": "中句型",
-          "avg_length": 18.0,
-          "median": 15.0,
-          "stdev": 11.0,
-          "cv": 0.73,
+          "avg_length": 19.7,
+          "median": 16.5,
+          "stdev": 12.4,
+          "cv": 0.75,
           "rhythm": "极端交替",
           "percentiles": {
-            "p25": 11.2,
-            "p50": 15.0,
-            "p75": 23.8
+            "p25": 12.0,
+            "p50": 16.5,
+            "p75": 24.2
           },
-          "min": 1,
+          "min": 5,
           "max": 80,
           "distribution_pct": {
-            "short_pct": 25.0,
-            "medium_pct": 50.0,
-            "long_pct": 25.0
+            "short_pct": 30.4,
+            "medium_pct": 45.7,
+            "long_pct": 23.9
           },
-          "sample_count": 76
+          "sample_count": 46
         },
         "2_pause_markers": {
-          "ellipsis_pct": 21.1,
-          "ellipsis_start_pct": 5.3,
+          "ellipsis_pct": 35.0,
+          "ellipsis_start_pct": 10.0,
           "dash_pct": 0.0,
-          "exclamation_pct": 2.6,
-          "question_pct": 34.2,
-          "interpretation": "几乎不用感叹号，语气极度克制"
+          "exclamation_pct": 0.0,
+          "question_pct": 40.0,
+          "interpretation": "频繁停顿，善于沉默；几乎不用感叹号，语气极度克制"
         },
         "3_self_reference": {
           "primary": "我",
-          "frequency_per_line": 1.16,
+          "frequency_per_line": 1.55,
           "distribution_pct": {
             "我": 100.0
           },
@@ -857,17 +809,16 @@
         },
         "4_emotion_vocabulary": {
           "dominant": "希望",
-          "breadth": "宽谱",
-          "active_emotion_count": 5,
+          "breadth": "中谱",
+          "active_emotion_count": 3,
           "spectrum_pct": {
-            "希望": 28.3,
-            "悲伤": 21.1,
-            "孤独": 16.0,
-            "坚定": 11.8,
-            "信任": 10.1,
-            "温柔": 6.3,
-            "自豪": 3.4,
-            "眷恋": 3.0
+            "希望": 30.5,
+            "悲伤": 26.5,
+            "信任": 15.9,
+            "孤独": 12.6,
+            "自豪": 5.3,
+            "坚定": 4.6,
+            "眷恋": 4.6
           },
           "examples": {
             "悲伤": [
@@ -876,8 +827,6 @@
               "失去"
             ],
             "坚定": [
-              "一定",
-              "一定",
               "一定"
             ],
             "希望": [
@@ -893,32 +842,27 @@
             ],
             "孤独": [
               "孤独",
-              "一个人",
               "一个人"
             ],
             "信任": [
               "同行",
               "在一起",
               "相信"
-            ],
-            "温柔": [
-              "注视",
-              "温柔"
             ]
           },
-          "interpretation": "主导情感为'希望'，情感谱系宽谱（活跃情感5种）"
+          "interpretation": "主导情感为'希望'，情感谱系中谱（活跃情感3种）"
         },
         "5_rhetoric_patterns": {
-          "rhetorical_question_pct": 2.6,
+          "rhetorical_question_pct": 5.0,
           "metaphor_pct": 0.0,
           "parallelism_pct": 0.0,
-          "negation_pct": 28.9,
-          "interpretation": "修辞风格平实直白"
+          "negation_pct": 45.0,
+          "interpretation": "频繁使用否定句式，倾向从反面界定"
         },
         "6_address_pattern": {
           "pattern": "亲昵型",
           "honorific_pct": 0.0,
-          "intimate_pct": 18.4,
+          "intimate_pct": 30.0,
           "examples": {
             "honorific": [],
             "intimate": [
@@ -931,7 +875,7 @@
           }
         },
         "7_natural_imagery": {
-          "density_per_line": 0.03,
+          "density_per_line": 0.05,
           "density_level": "低频",
           "category_distribution": {
             "时间": 100.0
@@ -939,64 +883,64 @@
           "top_5_words": {
             "黎明": 1
           },
-          "interpretation": "自然意象密度低频（0.03个/句），偏好时间意象"
+          "interpretation": "自然意象密度低频（0.05个/句），偏好时间意象"
         },
         "8_catchphrases": {
           "signature_phrases": [
             {
               "phrase": ".....",
-              "count": 18,
-              "frequency_per_line": 0.474,
-              "significance": 157.9
-            },
-            {
-              "phrase": "博士",
-              "count": 13,
-              "frequency_per_line": 0.342,
-              "significance": 114.0
+              "count": 16,
+              "frequency_per_line": 0.8,
+              "significance": 266.7
             },
             {
               "phrase": "罗德岛",
-              "count": 12,
-              "frequency_per_line": 0.316,
-              "significance": 105.3
-            },
-            {
-              "phrase": "可以",
-              "count": 9,
-              "frequency_per_line": 0.237,
-              "significance": 78.9
+              "count": 8,
+              "frequency_per_line": 0.4,
+              "significance": 133.3
             },
             {
               "phrase": "阿米娅",
-              "count": 8,
-              "frequency_per_line": 0.211,
-              "significance": 70.2
+              "count": 7,
+              "frequency_per_line": 0.35,
+              "significance": 116.7
+            },
+            {
+              "phrase": "博士",
+              "count": 7,
+              "frequency_per_line": 0.35,
+              "significance": 116.7
             },
             {
               "phrase": "特蕾西娅",
-              "count": 6,
-              "frequency_per_line": 0.158,
-              "significance": 52.6
+              "count": 5,
+              "frequency_per_line": 0.25,
+              "significance": 83.3
+            },
+            {
+              "phrase": "记得",
+              "count": 4,
+              "frequency_per_line": 0.2,
+              "significance": 66.7
             },
             {
               "phrase": "过去",
-              "count": 6,
-              "frequency_per_line": 0.158,
-              "significance": 52.6
+              "count": 4,
+              "frequency_per_line": 0.2,
+              "significance": 66.7
             },
             {
-              "phrase": "我会",
-              "count": 6,
-              "frequency_per_line": 0.158,
-              "significance": 52.6
+              "phrase": "不是",
+              "count": 4,
+              "frequency_per_line": 0.2,
+              "significance": 66.7
             }
           ],
-          "total_unique_ngrams": 3858,
-          "interpretation": "标志性短语：\".....\"(18次)、\"博士\"(13次)、\"罗德岛\"(12次)"
+          "total_unique_ngrams": 2621,
+          "interpretation": "标志性短语：\".....\"(16次)、\"罗德岛\"(8次)、\"阿米娅\"(7次)"
         }
       },
-      "summary": "句式中句型，平均18.0字，节奏极端交替；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系宽谱（活跃情感5种）；修辞风格平实直白；自然意象密度低频（0.03个/句），偏好时间意象；标志性短语：\".....\"(18次)、\"博士\"(13次)、\"罗德岛\"(12次)"
+      "summary": "句式中句型，平均19.7字，节奏极端交替；频繁停顿，善于沉默；几乎不用感叹号，语气极度克制；常用'我'，表达直接；主导情感为'希望'，情感谱系中谱（活跃情感3种）；频繁使用否定句式，倾向从反面界定；自然意象密度低频（0.05个/句），偏好时间意象；标志性短语：\".....\"(16次)、\"罗德岛\"(8次)、\"阿米娅\"(7次)"
     }
   },
   "shifts": {
@@ -1009,34 +953,34 @@
       },
       {
         "dimension": "negation",
-        "global_pct": 28.9,
-        "slice_pct": 50.0,
+        "global_pct": 45.0,
+        "slice_pct": 66.7,
         "shift": "更多否定",
-        "magnitude": 0.73
+        "magnitude": 0.48
       }
     ],
     "interlocutor:博士": [
       {
         "dimension": "ellipsis",
-        "global_pct": 21.1,
-        "slice_pct": 50.0,
+        "global_pct": 35.0,
+        "slice_pct": 66.7,
         "shift": "更多沉默",
-        "magnitude": 1.37
+        "magnitude": 0.91
       },
       {
         "dimension": "negation",
-        "global_pct": 28.9,
-        "slice_pct": 50.0,
+        "global_pct": 45.0,
+        "slice_pct": 66.7,
         "shift": "更多否定",
-        "magnitude": 0.73
+        "magnitude": 0.48
       }
     ],
     "interlocutor:unknown": [
       {
         "dimension": "emotion_dominant",
         "global_dominant": "希望",
-        "slice_dominant": "孤独",
-        "shift": "从'希望'偏移到'孤独'"
+        "slice_dominant": "信任",
+        "shift": "从'希望'偏移到'信任'"
       }
     ]
   }

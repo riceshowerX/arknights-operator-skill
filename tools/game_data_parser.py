@@ -18,10 +18,12 @@
 """
 
 import argparse
+import hashlib
 import json
 import re
 import sys
 import time
+import urllib.error
 from pathlib import Path
 from typing import TypedDict
 from urllib.parse import quote
@@ -31,9 +33,11 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
+import assets
+import cli
 from prts_client import fetch_page_wikitext as _prts_fetch_wikitext
 from prts_client import prts_api_get
-from shared_utils import setup_logging
+from shared_utils import atomic_write_text, load_json_safe, read_text_utf8, setup_logging
 
 logger = setup_logging("game_data_parser")
 
@@ -690,7 +694,8 @@ def extract_operator_data_from_wikitext(wikitext: str, name: str) -> dict:
             f"wikitext 过短或为空（{len(wikitext)} 字符），可能无法提取有效数据"
         )
         data["_parse_report"] = report
-        report["missing_fields"] = expected_fields
+        # 拷贝一份，避免后续 report["missing_fields"].append(...) 污染 expected_fields
+        report["missing_fields"] = list(expected_fields)
         return data
 
     # 检测是否包含标准信息框
@@ -783,7 +788,7 @@ def parse_local_file(filepath: str) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"文件不存在: {filepath}")
 
-    content = path.read_text(encoding="utf-8")
+    content = read_text_utf8(path)
     data = {"source": "local", "filename": path.name}
 
     # 尝试提取 YAML frontmatter
@@ -812,11 +817,12 @@ def parse_local_file(filepath: str) -> dict:
 # ──────────────────────────────────────────────
 
 # 角色名拼音映射表（从外部配置文件加载）
-_PINYIN_MAP_PATH = Path(__file__).parent.parent / "data" / "pinyin_map.json"
+_PINYIN_MAP_PATH = assets.data_file("pinyin_map.json")
 PINYIN_MAP: dict[str, str] = {}
 if _PINYIN_MAP_PATH.exists():
-    with open(_PINYIN_MAP_PATH, encoding="utf-8") as _f:
-        PINYIN_MAP = json.load(_f)
+    _pinyin_map_data = load_json_safe(_PINYIN_MAP_PATH)
+    if isinstance(_pinyin_map_data, dict):
+        PINYIN_MAP = _pinyin_map_data
 
 
 def to_slug(name: str) -> str:
@@ -861,11 +867,13 @@ def to_slug(name: str) -> str:
         safe_slug = re.sub(r"\?+", "", safe_slug)  # 移除未知字符标记
         safe_slug = re.sub(r"\s+", "-", safe_slug).strip("-")
         if not safe_slug:
-            safe_slug = f"op-{hash(name) % 10000:04d}"
-        logger.warning(
+            # 兜底 slug 必须跨进程稳定：不能用内置 hash()（受 PYTHONHASHSEED 影响），
+            # 否则同一次蒸馏在不同进程会落到不同目录，--resume / 版本链全部失效。
+            safe_slug = f"op-{hashlib.sha1(name.encode('utf-8')).hexdigest()[:8]}"
+        logger.error(
             "角色名 '%s' 无法自动转为 URL-safe slug，"
             "已使用 fallback '%s'，"
-            "建议手动指定英文 slug 或 pip install pypinyin",
+            "建议显式指定 --slug（或 pip install pypinyin）",
             name, safe_slug,
         )
         return safe_slug
@@ -877,6 +885,8 @@ def to_slug(name: str) -> str:
 # ──────────────────────────────────────────────
 
 def main():
+    cli.require_assets()
+
     parser = argparse.ArgumentParser(
         description="明日方舟角色资料解析器",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -953,8 +963,10 @@ def main():
             # 完整解析模式
             try:
                 result = fetch_and_parse_prts(args.name, args.lang)
-            except RuntimeError as e:
-                # 网络不可用时降级为元数据模式
+            except (urllib.error.URLError, OSError) as e:
+                # 网络不可用（DNS/连接/超时/HTTP 错误）时降级为元数据模式
+                # 注：3.x 此处捕获的是 RuntimeError，但取数链路从不会抛该异常（死分支），
+                # 导致断网时直接崩溃而非降级；v3.6.0 改为捕获真实的网络异常类型。
                 result = {
                     **parse_prts_operator_name(args.name),
                     "lang": args.lang,
@@ -972,7 +984,7 @@ def _output(data: dict, filepath: str | None = None):
     """输出 JSON 数据"""
     text = json.dumps(data, ensure_ascii=False, indent=2)
     if filepath:
-        Path(filepath).write_text(text, encoding="utf-8")
+        atomic_write_text(filepath, text)
     else:
         print(text)
 

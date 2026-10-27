@@ -36,7 +36,7 @@ from constants import (
     PHASE_PATTERNS,
 )
 from prts_client import fetch_page_categories as _fetch_page_categories
-from shared_utils import setup_logging
+from shared_utils import read_text_utf8, setup_logging
 
 logger = setup_logging("phase_inferrer")
 
@@ -62,13 +62,17 @@ class PhaseInferenceResult:
     def __init__(self, phase: str, source: str, confidence: str = "low"):
         """
         Args:
-            phase: 推断的时期 (early/babel/resurrected/unknown)
+            phase: 推断的时期 (early/integration/chernobog/babel/resurrected/rhodes/unknown)
             source: 推断来源描述
             confidence: 置信度 (high/medium/low)
         """
         self.phase = phase
         self.source = source
         self.confidence = confidence
+        # 证据链与投票分布：在 __init__ 中显式声明，
+        # 避免调用方 hasattr/getattr 探测时行为不一致（此前仅部分构造路径会设置）。
+        self.evidence: list[dict] = []
+        self.votes: dict[str, int] = {}
 
     def to_dict(self) -> dict:
         return {
@@ -578,18 +582,18 @@ def generate_inference_report(
 
     unknown_pct = (unknown_count / total * 100) if total > 0 else 0
 
-    # 建议
+    # 建议（文案只用 GBK 可编码字符：警告 emoji 在中文 Windows 控制台会 UnicodeEncodeError）
     suggestions = []
     if unknown_pct > 50:
         suggestions.append(
-            f"⚠️  {unknown_pct:.0f}% 的数据时期为 unknown，建议：\n"
+            f"[!]  {unknown_pct:.0f}% 的数据时期为 unknown，建议：\n"
             "   1. 检查角色相关活动是否在 CHAPTER_PHASE_MAP 中\n"
             "   2. 运行 context_annotator.py --interactive 启用交互式推断\n"
             "   3. 在 knowledge.md 中补充更详细的时间线"
         )
     if by_confidence.get("low", 0) > total * 0.3:
         suggestions.append(
-            f"⚠️  {by_confidence.get('low', 0)} 条推断置信度为 low，"
+            f"[!]  {by_confidence.get('low', 0)} 条推断置信度为 low，"
             "建议审查推断结果"
         )
 
@@ -647,8 +651,7 @@ def main():
         print(f"  置信度: {result.confidence}")
 
     if args.context_json:
-        with open(args.context_json, encoding="utf-8") as f:
-            ctx = json.load(f)
+        ctx = json.loads(read_text_utf8(args.context_json))
         results = []
         for line in ctx.get("annotated_lines", []):
             results.append({

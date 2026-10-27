@@ -10,7 +10,7 @@
 
 用法：
     # 一键蒸馏（从 PRTS 数据到最终 Skill 文件）
-    python3 pipeline.py --name 特蕾西娅 --full
+    python3 pipeline.py --name 特蕾西娅 --step full
 
     # 分步执行
     python3 pipeline.py --name 特蕾西娅 --step fetch    # 仅获取 PRTS 数据
@@ -18,13 +18,13 @@
     python3 pipeline.py --name 特蕾西娅 --step write    # 仅写入 Skill
 
     # 使用函数调用模式（同进程，便于调试和测试）
-    python3 pipeline.py --name 特蕾西娅 --full --mode function
+    python3 pipeline.py --name 特蕾西娅 --step full --mode function
 
     # 指定输出目录
-    python3 pipeline.py --name 特蕾西娅 --full --output-dir ./my_operators
+    python3 pipeline.py --name 特蕾西娅 --step full --output-dir ./my_operators
 
     # 跳过 PRTS 请求（使用已有数据）
-    python3 pipeline.py --name 特蕾西娅 --full --skip-fetch
+    python3 pipeline.py --name 特蕾西娅 --step full --skip-fetch
 
 步骤说明：
     1. fetch:    game_data_parser → story_extractor → 获取原始数据
@@ -55,6 +55,9 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
+import assets
+import cli
+from artifacts import ANALYZE_TOOLS, ARTIFACT, STEP_ARTIFACTS, TOOL_LABELS
 from shared_utils import setup_logging, validate_slug
 
 logger = setup_logging("pipeline")
@@ -66,19 +69,29 @@ TOOLS_DIR = Path(__file__).parent
 MODE_SUBPROCESS = "subprocess"
 MODE_FUNCTION = "function"
 
+# 单个工具子进程的默认超时（秒）。默认值取宽松值，避免长任务被误杀；
+# 可通过 PipelineConfig(tool_timeout=...) 覆盖。
+DEFAULT_TOOL_TIMEOUT = 1800
+
 
 # ──────────────────────────────────────────────
 # 执行模式：subprocess（原有逻辑）
 # ──────────────────────────────────────────────
 
 
-def run_tool_subprocess(tool_name: str, args: list[str], description: str = "") -> bool:
+def run_tool_subprocess(
+    tool_name: str,
+    args: list[str],
+    description: str = "",
+    timeout: int = DEFAULT_TOOL_TIMEOUT,
+) -> bool:
     """以子进程方式运行一个工具脚本
 
     Args:
         tool_name: 工具脚本名（不含 .py）
         args: 命令行参数列表
         description: 步骤描述
+        timeout: 超时秒数（超时视为该步骤失败）
 
     Returns:
         是否成功
@@ -92,7 +105,24 @@ def run_tool_subprocess(tool_name: str, args: list[str], description: str = "") 
     logger.info("执行: %s", " ".join(cmd))
 
     start = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        # encoding/errors 显式指定：子进程输出在 GBK 控制台下不再解码崩溃
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        elapsed = time.time() - start
+        logger.error("超时 (%.1fs > %ss): %s", elapsed, timeout, tool_name)
+        return False
+    except OSError as e:
+        elapsed = time.time() - start
+        logger.error("启动失败 (%.1fs): %s — %s", elapsed, tool_name, e)
+        return False
 
     elapsed = time.time() - start
 
@@ -179,6 +209,9 @@ def run_tool_function(tool_name: str, args: list[str], description: str = "") ->
 # 当前执行模式（全局状态，供 step_* 函数使用）
 _current_mode: str = MODE_SUBPROCESS
 
+# 当前子进程超时（由 PipelineRunner 依据 PipelineConfig.tool_timeout 设置）
+_current_timeout: int = DEFAULT_TOOL_TIMEOUT
+
 
 def run_tool(tool_name: str, args: list[str], description: str = "") -> bool:
     """运行一个工具脚本（根据当前模式选择执行方式）
@@ -193,7 +226,7 @@ def run_tool(tool_name: str, args: list[str], description: str = "") -> bool:
     """
     if _current_mode == MODE_FUNCTION:
         return run_tool_function(tool_name, args, description)
-    return run_tool_subprocess(tool_name, args, description)
+    return run_tool_subprocess(tool_name, args, description, timeout=_current_timeout)
 
 
 # ──────────────────────────────────────────────
@@ -215,6 +248,7 @@ class PipelineConfig:
     resume: bool = False               # 断点续传
     dry_run: bool = False              # 仅打印计划
     strict: bool = False               # 严格模式：降级 warning 视为失败
+    tool_timeout: int = DEFAULT_TOOL_TIMEOUT  # 单工具子进程超时（秒）
 
     def __post_init__(self) -> None:
         if not self.slug:
@@ -228,7 +262,8 @@ class PipelineConfig:
         validate_slug(self.slug)
 
         if not self.output_dir:
-            self.output_dir = str(Path("operators") / self.slug)
+            # 默认输出到项目根的 operators/<slug>（不再依赖 CWD）
+            self.output_dir = str(assets.default_base_dir() / self.slug)
 
 
 # ──────────────────────────────────────────────
@@ -237,13 +272,8 @@ class PipelineConfig:
 
 
 # 每个步骤的中间产物文件（用于 --resume 检测）
-_STEP_ARTIFACTS: dict[str, list[str]] = {
-    "fetch": ["operator_data.json"],
-    "annotate": ["context.json"],
-    "analyze": ["context.json"],  # analyze 会回写 context.json（添加 speech_acts 等字段）
-    "validate": [],  # validate 输出到 stdout，无特定文件产物
-    "write": ["meta.json"],  # skill_writer --action create 生成 meta.json
-}
+# 唯一来源：artifacts.STEP_ARTIFACTS（见 tools/artifacts.py）
+_STEP_ARTIFACTS: dict[str, list[str]] = STEP_ARTIFACTS
 
 
 def _step_completed(output_dir: str, step_name: str) -> bool:
@@ -272,11 +302,12 @@ class PipelineRunner:
         self._set_mode(config.mode)
 
     def _set_mode(self, mode: str) -> None:
-        """设置全局执行模式"""
-        global _current_mode
+        """设置全局执行模式与子进程超时"""
+        global _current_mode, _current_timeout
         if mode not in (MODE_SUBPROCESS, MODE_FUNCTION):
             raise ValueError(f"不支持的执行模式: {mode}，可选: {MODE_SUBPROCESS}, {MODE_FUNCTION}")
         _current_mode = mode
+        _current_timeout = self.config.tool_timeout
 
     def run_step(self, step_name: str) -> bool:
         """执行指定步骤
@@ -345,7 +376,7 @@ class PipelineRunner:
             logger.info("跳过 fetch 步骤（--skip-fetch）")
             return True
 
-        operator_json = str(Path(cfg.output_dir) / "operator_data.json")
+        operator_json = str(Path(cfg.output_dir) / ARTIFACT.OPERATOR_DATA)
 
         # 1a. 从 PRTS 获取角色数据
         if not run_tool(
@@ -356,7 +387,7 @@ class PipelineRunner:
             return False
 
         # 1b. 提取剧情对话
-        story_json = str(Path(cfg.output_dir) / "story_data.json")
+        story_json = str(Path(cfg.output_dir) / ARTIFACT.STORY)
         story_args = ["--character", cfg.name, "--output", story_json]
 
         if cfg.discover:
@@ -385,12 +416,12 @@ class PipelineRunner:
         在全自动 pipeline 中此文件可能不存在。如果不存在，跳过此步骤并提示用户手动生成。
         """
         cfg = self.config
-        operator_json = str(Path(cfg.output_dir) / "operator_data.json")
+        operator_json = str(Path(cfg.output_dir) / ARTIFACT.OPERATOR_DATA)
         knowledge_md = str(Path(cfg.output_dir) / "knowledge.md")
-        context_json = str(Path(cfg.output_dir) / "context.json")
+        context_json = str(Path(cfg.output_dir) / ARTIFACT.CONTEXT)
 
         if not Path(operator_json).exists():
-            logger.warning("operator_data.json 不存在，跳过语境标注")
+            logger.warning("%s 不存在，跳过语境标注", ARTIFACT.OPERATOR_DATA)
             return True
 
         if not Path(knowledge_md).exists():
@@ -410,17 +441,31 @@ class PipelineRunner:
             "--output", context_json,
         ]
 
-        # 添加 story JSON（如果存在）
-        story_json = Path(cfg.output_dir) / "story.json"
+        # 添加 story JSON（双读：新文件名优先，旧 story.json 兜底并告警）
+        story_json = Path(cfg.output_dir) / ARTIFACT.STORY
         if story_json.exists():
             args.extend(["--story-json", str(story_json)])
+        else:
+            legacy_story_json = Path(cfg.output_dir) / ARTIFACT.STORY_LEGACY
+            if legacy_story_json.exists():
+                logger.warning(
+                    "使用旧文件名 %s（应为 %s），建议重跑 fetch 步骤生成 %s",
+                    ARTIFACT.STORY_LEGACY,
+                    ARTIFACT.STORY,
+                    ARTIFACT.STORY,
+                )
+                args.extend(["--story-json", str(legacy_story_json)])
 
         return run_tool("context_annotator", args, f"语境化标注: {cfg.name}")
 
     def step_analyze(self) -> bool:
-        """步骤 3: 分析"""
+        """步骤 3: 分析
+
+        每个分析工具都会把结果落盘到 output_dir（文件名取自 artifacts.ARTIFACT），
+        否则下游 data_injector 无法读取（会退化为「数据不可用」）。
+        """
         cfg = self.config
-        context_json = str(Path(cfg.output_dir) / "context.json")
+        context_json = str(Path(cfg.output_dir) / ARTIFACT.CONTEXT)
 
         if not Path(context_json).exists():
             msg = "context.json 不存在，跳过分析步骤"
@@ -430,48 +475,79 @@ class PipelineRunner:
             logger.warning(msg)
             return True
 
-        tools = [
-            ("speech_act_analyzer", ["--context-json", context_json], "话语行为分析"),
-            ("dialogue_fingerprint", ["--context-json", context_json], "语言指纹分析"),
-            ("relationship_graph", ["--context-json", context_json], "关系图谱构建"),
-            ("temporal_slicer", ["--context-json", context_json], "时序切片分析"),
-        ]
+        failed_tools: list[str] = []
+        for tool_name, output_args, artifact_name in ANALYZE_TOOLS:
+            desc = TOOL_LABELS.get(tool_name, tool_name)
+            out_path = Path(cfg.output_dir) / artifact_name
+            args = ["--context-json", context_json] + list(output_args) + [str(out_path)]
 
-        failed_tools = []
-        for tool_name, args, desc in tools:
             if not run_tool(tool_name, args, desc):
                 logger.warning("%s 失败，继续执行后续步骤", desc)
                 failed_tools.append(tool_name)
+                continue
 
-        if failed_tools and cfg.strict:
-            logger.error("以下分析工具失败（--strict 模式：视为失败）: %s", failed_tools)
-            return False
+            # 产物存在性 + 非空校验（信号：工具退出码为 0 但什么都没写）
+            if not out_path.exists() or out_path.stat().st_size == 0:
+                logger.error("%s 产物缺失或为空: %s", desc, out_path)
+                failed_tools.append(tool_name)
+
+        if failed_tools:
+            if cfg.strict:
+                logger.error("以下分析工具失败（--strict 模式：视为失败）: %s", failed_tools)
+                return False
+            logger.warning("以下分析工具未产出有效结果: %s", failed_tools)
 
         return True
 
     def step_validate(self) -> bool:
-        """步骤 3b: 验证"""
+        """步骤 3b: 验证
+
+        两个校验工具的输出都会落盘（validation.json / persona_validation.json），
+        并且收集它们的返回值：--strict 下任一失败即整步失败。
+        """
         cfg = self.config
         persona_md = str(Path(cfg.output_dir) / "persona.md")
         knowledge_md = str(Path(cfg.output_dir) / "knowledge.md")
-        context_json = str(Path(cfg.output_dir) / "context.json")
+        context_json = str(Path(cfg.output_dir) / ARTIFACT.CONTEXT)
+
+        results: list[tuple[str, bool]] = []
 
         # canon_checker: 使用 --sources 交叉验证 knowledge.md 和 persona.md
         sources = [p for p in [knowledge_md, persona_md] if Path(p).exists()]
         if sources:
-            run_tool(
+            results.append((
                 "canon_checker",
-                ["--sources"] + sources,
-                "设定一致性校验",
-            )
+                run_tool(
+                    "canon_checker",
+                    ["--sources"] + sources + [
+                        "--output", str(Path(cfg.output_dir) / ARTIFACT.VALIDATION),
+                    ],
+                    "设定一致性校验",
+                ),
+            ))
 
         # persona_validator: 使用 --persona + --context-json
         if Path(persona_md).exists() and Path(context_json).exists():
-            run_tool(
+            results.append((
                 "persona_validator",
-                ["--persona", persona_md, "--context-json", context_json],
-                "Persona 一致性验证",
-            )
+                run_tool(
+                    "persona_validator",
+                    [
+                        "--persona", persona_md,
+                        "--context-json", context_json,
+                        "--output", str(Path(cfg.output_dir) / ARTIFACT.PERSONA_VALIDATION),
+                    ],
+                    "Persona 一致性验证",
+                ),
+            ))
+
+        failed = [name for name, ok in results if not ok]
+        if failed:
+            logger.error("校验工具失败: %s", failed)
+            if cfg.strict:
+                logger.error("校验失败（--strict 模式：视为失败）")
+                return False
+            logger.warning("校验失败，但不阻断流程")
 
         return True
 
@@ -564,6 +640,8 @@ def step_write(name: str, output_dir: str, slug: str) -> bool:
 
 
 def main():
+    cli.require_assets()
+
     parser = argparse.ArgumentParser(
         description="明日方舟角色蒸馏流水线 —— 一键从 PRTS 数据生成 AI Skill",
     )

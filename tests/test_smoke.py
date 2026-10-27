@@ -229,7 +229,8 @@ class TestContextAnnotator(unittest.TestCase):
 
     def test_build_context_json(self):
         from context_annotator import build_context_json, load_timeline
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False,
+                                         encoding='utf-8') as f:
             f.write(SAMPLE_KNOWLEDGE_MD)
             f.flush()
             timeline = load_timeline(f.name)
@@ -357,7 +358,8 @@ class TestPersonaValidator(unittest.TestCase):
 
     def test_parse_persona(self):
         from persona_validator import parse_persona
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False,
+                                         encoding='utf-8') as f:
             f.write("""# Test — Persona
 
 ## Layer 0：核心性格（最高优先级）
@@ -432,9 +434,15 @@ class TestSkillWriter(unittest.TestCase):
     """skill_writer.py 冒烟测试"""
 
     def test_list_skills(self):
-        from skill_writer import list_skills
-        result = list_skills(base_dir="/workspace/projects/operators")
-        self.assertIn("skills", result)
+        from skill_writer import create_default_skill, list_skills
+        with tempfile.TemporaryDirectory() as tmpdir:
+            create_default_skill("list-op", "列表角色", "List Operator", base_dir=tmpdir)
+            result = list_skills(base_dir=tmpdir)
+            self.assertTrue(result["success"])
+            slugs = [s["slug"] for s in result["skills"]]
+            # 只有一个 Skill 目录，且 slug 必须精确匹配（避免「空列表也算过」）
+            self.assertEqual(slugs, ["list-op"])
+            self.assertEqual(result["skills"][0]["name"], "列表角色")
 
     def test_create_default_skill_dry_run(self):
         from skill_writer import create_default_skill
@@ -550,7 +558,8 @@ class TestEndToEndPipeline(unittest.TestCase):
         from speech_act_analyzer import classify_speech_acts
 
         # 1. 构建 context.json
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False,
+                                         encoding='utf-8') as f:
             f.write(SAMPLE_KNOWLEDGE_MD)
             f.flush()
             timeline = load_timeline(f.name)
@@ -641,9 +650,9 @@ class TestPipelineFileIO(unittest.TestCase):
 
     def test_operator_data_complete_products(self):
         """验证特蕾西娅的完整产物文件存在且可解析"""
-        base = Path("/workspace/projects/operators/te-lei-xi-ya")
-        if not base.exists():
-            self.skipTest("特蕾西娅角色目录不存在")
+        # 用项目相对路径定位，避免硬编码绝对路径导致的「永久跳过」
+        base = Path(__file__).parent.parent / "operators" / "te-lei-xi-ya"
+        self.assertTrue(base.is_dir(), f"角色目录不存在: {base}")
 
         required_files = [
             "knowledge.md",
@@ -663,9 +672,8 @@ class TestPipelineFileIO(unittest.TestCase):
 
     def test_w_persona_md_exists(self):
         """验证 W 的 persona.md 存在且包含核心结构"""
-        persona_path = Path("/workspace/projects/operators/w/persona.md")
-        if not persona_path.exists():
-            self.skipTest("W 的 persona.md 不存在")
+        persona_path = Path(__file__).parent.parent / "operators" / "w" / "persona.md"
+        self.assertTrue(persona_path.is_file(), f"persona.md 不存在: {persona_path}")
 
         content = persona_path.read_text(encoding="utf-8")
         # 验证五层结构

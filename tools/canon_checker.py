@@ -32,7 +32,9 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from shared_utils import analyze_regex_safety, setup_logging
+import assets
+import cli
+from shared_utils import analyze_regex_safety, atomic_write_text, read_text_utf8, setup_logging
 
 logger = setup_logging("canon_checker")
 
@@ -102,7 +104,7 @@ def _validate_all_patterns_safety(
 # 误解库加载与通用检测模式
 # ──────────────────────────────────────────────
 
-# 内置误解库（作为 fallback，优先从 data/misconceptions.json 加载）
+# 内置误解库（作为 fallback，优先从资产目录的 misconceptions.json 加载）
 BUILTIN_MISCONCEPTIONS: list[dict] = []
 
 # 通用误解检测模式（适用于所有角色）
@@ -154,47 +156,44 @@ GENERIC_MISCONCEPTION_PATTERNS = [
 
 
 def _load_builtin_misconceptions() -> list[dict]:
-    """从 data/misconceptions.json 加载内置误解库，失败则返回空列表"""
-    data_dir = Path(__file__).parent.parent / "data"
-    json_path = data_dir / "misconceptions.json"
+    """从资产目录的 misconceptions.json 加载内置误解库，失败则返回空列表"""
+    json_path = assets.data_file("misconceptions.json")
 
-    if not json_path.exists():
+    # 读 + 解析（失败回退空列表）统一走 assets.load_json_or
+    raw = assets.load_json_or(json_path, None, kind="内置误解库")
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        logger.warning("内置误解库格式错误（应为 JSON 数组）%s，忽略", json_path)
         return []
 
-    try:
-        raw = json.loads(json_path.read_text(encoding="utf-8"))
-        if not isinstance(raw, list):
-            return []
-
-        # 归一化格式
-        result = []
-        for item in raw:
-            if not isinstance(item, dict) or "id" not in item:
-                continue
-            patterns = item.get("check_patterns", [])
-            excludes = item.get("exclude_patterns", [])
-            norm_patterns = []
-            for p in patterns:
-                if isinstance(p, str):
-                    norm_patterns.append({"pattern": p, "warning": f"匹配到误解模式: {p}"})
-                elif isinstance(p, dict) and "pattern" in p:
-                    norm_patterns.append(p)
-            # 安全检查：同时验证 check_patterns 和 exclude_patterns
-            try:
-                _validate_all_patterns_safety(norm_patterns, excludes, item.get("id", "builtin"))
-            except ValueError as e:
-                print(f"警告：内置误解项 {item.get('id')} 的正则不安全，已跳过: {e}", file=sys.stderr)
-                continue
-            result.append({
-                "id": item["id"],
-                "wrong": item.get("wrong", ""),
-                "correct": item.get("correct", ""),
-                "check_patterns": norm_patterns,
-                "exclude_patterns": excludes,
-            })
-        return result
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return []
+    # 归一化格式
+    result = []
+    for item in raw:
+        if not isinstance(item, dict) or "id" not in item:
+            continue
+        patterns = item.get("check_patterns", [])
+        excludes = item.get("exclude_patterns", [])
+        norm_patterns = []
+        for p in patterns:
+            if isinstance(p, str):
+                norm_patterns.append({"pattern": p, "warning": f"匹配到误解模式: {p}"})
+            elif isinstance(p, dict) and "pattern" in p:
+                norm_patterns.append(p)
+        # 安全检查：同时验证 check_patterns 和 exclude_patterns
+        try:
+            _validate_all_patterns_safety(norm_patterns, excludes, item.get("id", "builtin"))
+        except ValueError as e:
+            logger.warning("内置误解项 %s 的正则不安全，已跳过: %s", item.get("id"), e)
+            continue
+        result.append({
+            "id": item["id"],
+            "wrong": item.get("wrong", ""),
+            "correct": item.get("correct", ""),
+            "check_patterns": norm_patterns,
+            "exclude_patterns": excludes,
+        })
+    return result
 
 
 # 初始化时加载
@@ -229,7 +228,7 @@ def load_misconceptions(filepath: str | None = None) -> list[dict]:
         return BUILTIN_MISCONCEPTIONS
 
     try:
-        custom = json.loads(path.read_text(encoding="utf-8"))
+        custom = json.loads(read_text_utf8(path))
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         print(f"警告：误解库文件格式错误 {filepath}：{e}，使用内置误解库", file=sys.stderr)
         return BUILTIN_MISCONCEPTIONS
@@ -684,7 +683,7 @@ def load_sources(filepaths: list[str]) -> list[tuple[str, str]]:
         if not path.exists():
             print(f"警告：文件不存在 {fp}，已跳过", file=sys.stderr)
             continue
-        content = path.read_text(encoding="utf-8")
+        content = read_text_utf8(path)
         sources.append((content, path.name))
     return sources
 
@@ -694,6 +693,8 @@ def load_sources(filepaths: list[str]) -> list[tuple[str, str]]:
 # ──────────────────────────────────────────────
 
 def main():
+    cli.require_assets()
+
     parser = argparse.ArgumentParser(
         description="设定交叉验证器 — 多来源交叉验证角色设定，标注矛盾和可信度",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -764,7 +765,7 @@ def main():
 
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.output:
-        Path(args.output).write_text(text, encoding="utf-8")
+        atomic_write_text(args.output, text)
         print(f"验证报告已写入 {args.output}", file=sys.stderr)
     else:
         print(text)

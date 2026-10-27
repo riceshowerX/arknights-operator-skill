@@ -45,9 +45,17 @@
 import argparse
 import math
 import re
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Protocol
+
+# 确保 tools 目录在 import 路径中（支持 `python3 tools/semantic_matcher.py` 与包导入两种方式）
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+from shared_utils import read_text_utf8
 
 # ──────────────────────────────────────────────
 # 后端接口定义
@@ -370,7 +378,7 @@ def main() -> None:
         ]
         print("（使用演示语料库）")
     else:
-        corpus = Path(args.corpus).read_text(encoding="utf-8").strip().split("\n")
+        corpus = read_text_utf8(Path(args.corpus)).strip().split("\n")
 
     matcher = SemanticMatcher(backend=TfidfBackend())
     matcher.fit(corpus)

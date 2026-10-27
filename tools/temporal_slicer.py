@@ -28,7 +28,7 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 from constants import ACT_TYPE_LABELS
-from shared_utils import atomic_write_json, setup_logging, split_sentences
+from shared_utils import atomic_write_json, read_text_utf8, setup_logging, split_sentences
 
 logger = setup_logging("temporal_slicer")
 
@@ -126,71 +126,139 @@ def compute_slice_metrics(lines: list[dict]) -> dict:
 # 跨切片比较
 # ──────────────────────────────────────────────
 
-def compare_metrics(baseline: dict, comparison: dict) -> list[dict]:
-    """比较两个切片的指标，返回显著差异"""
-    diffs = []
+def compare_metrics(
+    baseline: dict,
+    comparison: dict,
+    *,
+    with_significance: bool = False,
+    base_values: dict | None = None,
+    comp_values: dict | None = None,
+) -> list[dict]:
+    """比较两个切片的指标，返回显著差异。
+
+    ``with_significance=False``（默认）返回**旧字段集合**：每项含
+    ``metric/baseline/comparison/shift_pct/interpretation``（话语行为项为
+    ``metric/baseline_pct/comparison_pct/shift_pct/interpretation``），
+    与 3.x 的 ``compare_metrics`` 输出逐字段一致。
+
+    ``with_significance=True`` 额外附带 ``significance``/``p_value``/
+    ``effect_size``/``sample_warning``，即原 ``compare_metrics_v2`` 的输出。
+
+    阈值（句式 0.25 / 省略号 0.3 / 否定 0.3 / 话语行为 0.1）与显著性判定
+    全部沿用产品既有取值，本函数不含任何阈值改动。
+
+    Args:
+        baseline: 基准切片指标。
+        comparison: 对比切片指标。
+        with_significance: 是否附带统计显著性字段。
+        base_values: 基准切片原始数值（键名沿用旧实现 ``sentence_lengths``）。
+        comp_values: 对比切片原始数值。
+
+    Returns:
+        显著差异列表。顺序固定（三个连续指标在前，话语行为项按 type 字典序），
+        因此在任意 ``PYTHONHASHSEED`` 下同一输入输出顺序一致。
+    """
+    insufficient_sample = (
+        baseline.get("line_count", 0) < MIN_SAMPLE_SIZE
+        or comparison.get("line_count", 0) < MIN_SAMPLE_SIZE
+    )
+
+    diffs: list[dict] = []
+
+    def _continuous(
+        metric_name: str,
+        b_val: float,
+        c_val: float,
+        b_vals: list[float] | None,
+        c_vals: list[float] | None,
+        interpretation: str,
+    ) -> dict:
+        """构造连续指标差异项（按需附带统计检验字段）。"""
+        item: dict = {
+            "metric": metric_name,
+            "baseline": b_val,
+            "comparison": c_val,
+            "shift_pct": round((c_val - b_val) / b_val * 100, 1),
+            "interpretation": interpretation,
+        }
+        if not with_significance:
+            return item
+
+        p_value = 1.0
+        effect_size = 0.0
+        if b_vals and c_vals and len(b_vals) >= 2 and len(c_vals) >= 2:
+            _, p_value = _mann_whitney_u(b_vals, c_vals)
+            effect_size = _cohen_d(b_vals, c_vals)
+        elif not insufficient_sample:
+            # 无原始数据时，用大样本正态近似做粗估
+            pct_change = (c_val - b_val) / b_val
+            effect_size = abs(pct_change) * 0.5
+            p_value = 0.04 if abs(pct_change) > 0.4 else 0.15
+
+        item["significance"] = _classify_significance(p_value, effect_size, insufficient_sample)
+        item["p_value"] = round(p_value, 4)
+        item["effect_size"] = round(effect_size, 3)
+        item["sample_warning"] = insufficient_sample
+        return item
 
     # 句式长度偏移
     b_avg = baseline.get("avg_sentence_length", 0)
     c_avg = comparison.get("avg_sentence_length", 0)
     if b_avg > 0 and abs(c_avg - b_avg) / b_avg > 0.25:
         direction = "偏短" if c_avg < b_avg else "偏长"
-        diffs.append({
-            "metric": "avg_sentence_length",
-            "baseline": b_avg,
-            "comparison": c_avg,
-            "shift_pct": round((c_avg - b_avg) / b_avg * 100, 1),
-            "interpretation": f"句式{direction}（{b_avg}→{c_avg}字）",
-        })
+        diffs.append(_continuous(
+            "avg_sentence_length", b_avg, c_avg,
+            (base_values or {}).get("sentence_lengths", []),
+            (comp_values or {}).get("sentence_lengths", []),
+            f"句式{direction}（{b_avg}→{c_avg}字）",
+        ))
 
     # 省略号频率偏移
     b_ell = baseline.get("ellipsis_pct", 0)
     c_ell = comparison.get("ellipsis_pct", 0)
     if b_ell > 0 and abs(c_ell - b_ell) / b_ell > 0.3:
         direction = "增多" if c_ell > b_ell else "减少"
-        diffs.append({
-            "metric": "ellipsis_pct",
-            "baseline": b_ell,
-            "comparison": c_ell,
-            "shift_pct": round((c_ell - b_ell) / b_ell * 100, 1),
-            "interpretation": f"沉默/停顿{direction}（{b_ell}%→{c_ell}%）",
-        })
+        diffs.append(_continuous(
+            "ellipsis_pct", b_ell, c_ell, None, None,
+            f"沉默/停顿{direction}（{b_ell}%→{c_ell}%）",
+        ))
 
     # 否定句频率偏移
     b_neg = baseline.get("negation_pct", 0)
     c_neg = comparison.get("negation_pct", 0)
     if b_neg > 0 and abs(c_neg - b_neg) / b_neg > 0.3:
         direction = "增多" if c_neg > b_neg else "减少"
-        diffs.append({
-            "metric": "negation_pct",
-            "baseline": b_neg,
-            "comparison": c_neg,
-            "shift_pct": round((c_neg - b_neg) / b_neg * 100, 1),
-            "interpretation": f"否定表达{direction}（{b_neg}%→{c_neg}%）",
-        })
+        diffs.append(_continuous(
+            "negation_pct", b_neg, c_neg, None, None,
+            f"否定表达{direction}（{b_neg}%→{c_neg}%）",
+        ))
 
-    # 话语行为分布偏移
+    # 话语行为分布偏移（遍历顺序固定为 type 字典序，避免 set 迭代顺序随 PYTHONHASHSEED 波动）
     b_acts = baseline.get("speech_act_distribution", {})
     c_acts = comparison.get("speech_act_distribution", {})
     b_total = sum(b_acts.values()) or 1
     c_total = sum(c_acts.values()) or 1
 
-    act_labels = ACT_TYPE_LABELS
-
-    for act_type in set(list(b_acts.keys()) + list(c_acts.keys())):
+    for act_type in sorted(set(b_acts) | set(c_acts)):
         b_pct = b_acts.get(act_type, 0) / b_total
         c_pct = c_acts.get(act_type, 0) / c_total
         delta = c_pct - b_pct
         if abs(delta) > 0.1:
-            label = act_labels.get(act_type, act_type)
+            label = ACT_TYPE_LABELS.get(act_type, act_type)
             direction = "显著增多" if delta > 0 else "显著减少"
-            diffs.append({
+            item = {
                 "metric": f"speech_act:{act_type}",
                 "baseline_pct": round(b_pct * 100, 1),
                 "comparison_pct": round(c_pct * 100, 1),
                 "shift_pct": round(delta * 100, 1),
                 "interpretation": f"{label}行为{direction}（{round(b_pct*100,1)}%→{round(c_pct*100,1)}%）",
-            })
+            }
+            if with_significance:
+                item["significance"] = (
+                    "low" if insufficient_sample else "high" if abs(delta) > 0.2 else "medium"
+                )
+                item["sample_warning"] = insufficient_sample
+            diffs.append(item)
 
     return diffs
 
@@ -336,13 +404,16 @@ def _classify_significance(p_value: float, effect_size: float, insufficient: boo
 def compare_metrics_v2(baseline: dict, comparison: dict,
                        baseline_values: dict | None = None,
                        comparison_values: dict | None = None) -> list[dict]:
-    """带统计显著性的切片比较
+    """带统计显著性的切片比较（薄包装，委托 :func:`compare_metrics`）
 
-    改进点：
+    改进点（相对纯百分比比较）：
     1. 最小样本量门槛：样本太小时只报告差异但不生成规则
     2. Mann-Whitney U 检验：非参数检验，不假设正态分布
     3. Cohen's d 效应量：衡量实际差异大小
     4. 综合判定：p-value + 效应量 → significance 等级
+
+    实现上等价于 ``compare_metrics(..., with_significance=True,
+    base_values=..., comp_values=...)``；签名与返回结构保持 3.x 不变。
 
     Args:
         baseline: 基准切片指标
@@ -353,114 +424,13 @@ def compare_metrics_v2(baseline: dict, comparison: dict,
     Returns:
         显著差异列表，每项含 significance, p_value, effect_size 字段
     """
-    diffs = []
-
-    b_count = baseline.get("line_count", 0)
-    c_count = comparison.get("line_count", 0)
-
-    # 样本量不足标记
-    insufficient_sample = b_count < MIN_SAMPLE_SIZE or c_count < MIN_SAMPLE_SIZE
-
-    # --- 辅助：对连续指标做统计检验 ---
-    def _test_continuous(
-        metric_name: str, b_val: float, c_val: float,
-        b_vals: list[float] | None, c_vals: list[float] | None,
-        interpretation: str, threshold_pct: float = 0.25,
-    ) -> dict | None:
-        """对连续指标做百分比变化 + 统计检验"""
-        if b_val <= 0:
-            return None
-        pct_change = (c_val - b_val) / b_val
-        if abs(pct_change) <= threshold_pct:
-            return None
-
-        shift = round(pct_change * 100, 1)
-
-        # 统计检验（有原始数据时）
-        p_value = 1.0
-        effect_size = 0.0
-        if b_vals and c_vals and len(b_vals) >= 2 and len(c_vals) >= 2:
-            _, p_value = _mann_whitney_u(b_vals, c_vals)
-            effect_size = _cohen_d(b_vals, c_vals)
-        elif not insufficient_sample:
-            # 无原始数据时，用大样本正态近似做粗估
-            effect_size = abs(pct_change) * 0.5  # 粗估
-            p_value = 0.04 if abs(pct_change) > 0.4 else 0.15
-
-        return {
-            "metric": metric_name,
-            "baseline": b_val,
-            "comparison": c_val,
-            "shift_pct": shift,
-            "interpretation": interpretation,
-            "significance": _classify_significance(p_value, effect_size, insufficient_sample),
-            "p_value": round(p_value, 4),
-            "effect_size": round(effect_size, 3),
-            "sample_warning": insufficient_sample,
-        }
-
-    # 句式长度偏移
-    b_avg = baseline.get("avg_sentence_length", 0)
-    c_avg = comparison.get("avg_sentence_length", 0)
-    if b_avg > 0 and abs(c_avg - b_avg) / b_avg > 0.25:
-        direction = "偏短" if c_avg < b_avg else "偏长"
-        b_lens = (baseline_values or {}).get("sentence_lengths", [])
-        c_lens = (comparison_values or {}).get("sentence_lengths", [])
-        result = _test_continuous(
-            "avg_sentence_length", b_avg, c_avg, b_lens, c_lens,
-            f"句式{direction}（{b_avg}→{c_avg}字）", 0.25,
-        )
-        if result:
-            diffs.append(result)
-
-    # 省略号频率偏移
-    b_ell = baseline.get("ellipsis_pct", 0)
-    c_ell = comparison.get("ellipsis_pct", 0)
-    if b_ell > 0 and abs(c_ell - b_ell) / b_ell > 0.3:
-        direction = "增多" if c_ell > b_ell else "减少"
-        result = _test_continuous(
-            "ellipsis_pct", b_ell, c_ell, None, None,
-            f"沉默/停顿{direction}（{b_ell}%→{c_ell}%）", 0.3,
-        )
-        if result:
-            diffs.append(result)
-
-    # 否定句频率偏移
-    b_neg = baseline.get("negation_pct", 0)
-    c_neg = comparison.get("negation_pct", 0)
-    if b_neg > 0 and abs(c_neg - b_neg) / b_neg > 0.3:
-        direction = "增多" if c_neg > b_neg else "减少"
-        result = _test_continuous(
-            "negation_pct", b_neg, c_neg, None, None,
-            f"否定表达{direction}（{b_neg}%→{c_neg}%）", 0.3,
-        )
-        if result:
-            diffs.append(result)
-
-    # 话语行为分布偏移
-    b_acts = baseline.get("speech_act_distribution", {})
-    c_acts = comparison.get("speech_act_distribution", {})
-    b_total = sum(b_acts.values()) or 1
-    c_total = sum(c_acts.values()) or 1
-
-    for act_type in set(list(b_acts.keys()) + list(c_acts.keys())):
-        b_pct = b_acts.get(act_type, 0) / b_total
-        c_pct = c_acts.get(act_type, 0) / c_total
-        delta = c_pct - b_pct
-        if abs(delta) > 0.1:
-            label = ACT_TYPE_LABELS.get(act_type, act_type)
-            direction = "显著增多" if delta > 0 else "显著减少"
-            diffs.append({
-                "metric": f"speech_act:{act_type}",
-                "baseline_pct": round(b_pct * 100, 1),
-                "comparison_pct": round(c_pct * 100, 1),
-                "shift_pct": round(delta * 100, 1),
-                "interpretation": f"{label}行为{direction}（{round(b_pct*100,1)}%→{round(c_pct*100,1)}%）",
-                "significance": "low" if insufficient_sample else "high" if abs(delta) > 0.2 else "medium",
-                "sample_warning": insufficient_sample,
-            })
-
-    return diffs
+    return compare_metrics(
+        baseline,
+        comparison,
+        with_significance=True,
+        base_values=baseline_values,
+        comp_values=comparison_values,
+    )
 
 
 # ──────────────────────────────────────────────
@@ -658,8 +628,7 @@ def main():
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
     args = parser.parse_args()
 
-    with open(args.context_json, encoding='utf-8') as f:
-        context = json.load(f)
+    context = json.loads(read_text_utf8(args.context_json))
 
     # 构建切片
     slices = build_slices(context)

@@ -2,18 +2,37 @@ name: CI
 
 on:
   push:
-    branches-ignore: []
+    branches: [main]
   pull_request:
-    branches-ignore: []
+  workflow_dispatch:
+
+# 最小权限：CI 只读仓库
+permissions:
+  contents: read
+
+# 同一分支的新推送取消旧运行，省额度也省等待
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Windows 控制台默认 GBK：强制 UTF-8，避免中文产物/日志触发 UnicodeEncodeError
+  PYTHONUTF8: "1"
 
 jobs:
   test:
-    name: Test (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: Test (${{ matrix.os }} / Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        include:
+          # Windows 只跑一个版本：覆盖路径分隔符 / 控制台编码 / 文件锁差异
+          - os: windows-latest
+            python-version: "3.12"
 
     steps:
       - uses: actions/checkout@v4
@@ -27,14 +46,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pip install pytest-cov
 
       - name: Run tests with coverage
         run: |
-          python -m pytest tests/ --cov=tools --cov-report=xml --cov-report=term-missing
+          python -m pytest tests/ --cov=tools --cov-branch \
+            --cov-report=xml --cov-report=term-missing --cov-fail-under=44
 
       - name: Upload coverage to Codecov
-        if: matrix.python-version == "3.12"
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
@@ -43,6 +62,7 @@ jobs:
   lint:
     name: Lint (ruff + mypy)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +79,83 @@ jobs:
       - name: Run ruff
         run: ruff check tools/ tests/
 
-      - name: Run mypy
+      # 类型检查暂不阻断：存量 100+ 条告警需要分阶段清理
+      - name: Run mypy (non-blocking)
         run: mypy tools/
         continue-on-error: true
+
+  package:
+    name: Package (wheel + sdist)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+
+      - name: Check metadata (twine)
+        run: twine check dist/*
+
+      - name: Assert wheel ships tools/_data/*.json
+        run: |
+          python - <<'PY'
+          import glob
+          import zipfile
+
+          wheel = glob.glob("dist/*.whl")[0]
+          names = [n for n in zipfile.ZipFile(wheel).namelist() if n.startswith("tools/_data/")]
+          print("wheel:", wheel)
+          print("tools/_data entries:", len(names))
+          for name in names:
+              print("  -", name)
+          assert len(names) == 6, f"期望 6 个 tools/_data/*.json，实际 {len(names)}"
+          PY
+
+      - name: Assert sdist ships prompts/ and tools/_data/
+        run: |
+          python - <<'PY'
+          import glob
+          import tarfile
+
+          sdist = glob.glob("dist/*.tar.gz")[0]
+          names = tarfile.open(sdist).getnames()
+          prompts = [n for n in names if "/prompts/" in n and n.endswith(".md")]
+          data = [n for n in names if "/tools/_data/" in n and n.endswith(".json")]
+          print("sdist:", sdist)
+          print("prompts:", len(prompts), "| tools/_data:", len(data))
+          assert prompts, "sdist 缺少 prompts/*.md"
+          assert len(data) == 6, f"期望 6 个 tools/_data/*.json，实际 {len(data)}"
+          PY
+
+      - name: Install wheel into temp dir and assert runtime assets work
+        run: |
+          python - <<'PY'
+          import glob
+          import os
+          import subprocess
+          import sys
+          import tempfile
+
+          wheel = glob.glob("dist/*.whl")[0]
+          with tempfile.TemporaryDirectory() as target:
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-deps",
+                                     "--target", target, wheel])
+              code = (
+                  "import tools.assets as a;"
+                  "from tools.canon_checker import _load_builtin_misconceptions as f;"
+                  "print('data_dir=', a.data_dir());"
+                  "print('misconceptions=', len(f()));"
+                  "assert len(f()) == 4"
+              )
+              env = dict(os.environ)
+              env["PYTHONPATH"] = target
+              subprocess.check_call([sys.executable, "-c", code], cwd=target, env=env)
+          PY

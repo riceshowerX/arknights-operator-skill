@@ -25,9 +25,44 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from shared_utils import setup_logging
+from shared_utils import atomic_write_text, read_text_utf8, setup_logging
 
 logger = setup_logging("persona_validator")
+
+
+# ──────────────────────────────────────────────
+# 综合评分权重（单一来源，避免两处复制漂移）
+# ──────────────────────────────────────────────
+
+#: 六层评分权重（Layer 0 权重最高）。数值为产品决策，禁止随意调整。
+LAYER_WEIGHTS: dict[str, float] = {
+    "layer0": 0.35,
+    "layer1": 0.10,
+    "layer2": 0.20,
+    "layer3": 0.10,
+    "layer4": 0.05,
+    "layer5": 0.20,
+}
+
+
+def _weighted_overall_score(layer_results: dict[str, dict]) -> float:
+    """按 :data:`LAYER_WEIGHTS` 对六层评分加权求和。
+
+    Args:
+        layer_results: ``{"layer0": {"score": ...}, ...}`` 形式的各层结果。
+
+    Returns:
+        未取整的加权总分。
+
+    Note:
+        刻意用显式左到右累加，而不是 ``sum(...)``：CPython 3.12+ 的 ``sum()`` 对浮点
+        使用 Neumaier 补偿求和，结果与 3.x 的内联连加式可能有 1 ULP 差异。
+        逐项累加与旧表达式**逐位相同**。
+    """
+    total = 0.0
+    for layer, weight in LAYER_WEIGHTS.items():
+        total += layer_results[layer]["score"] * weight
+    return total
 
 
 # ──────────────────────────────────────────────
@@ -46,7 +81,7 @@ def parse_persona(filepath: str) -> dict:
         "corrections": [...]
     }
     """
-    content = Path(filepath).read_text(encoding="utf-8")
+    content = read_text_utf8(filepath)
 
     result: dict[str, Any] = {
         "layer0_rules": [],
@@ -170,7 +205,7 @@ def parse_persona(filepath: str) -> dict:
 def load_dialogues(filepath: str, fmt: str = "plain") -> list[str]:
     """加载对话文本列表"""
     path = Path(filepath)
-    content = path.read_text(encoding="utf-8")
+    content = read_text_utf8(path)
 
     if fmt == "prts-json":
         data = json.loads(content)
@@ -306,7 +341,11 @@ def _validate_negation_rules(dialogues: list[str], rules: list[str], layer_name:
         "total_rules": total,
         "testable_rules": testable,
         "passed": pass_count,
-        "violated": total - pass_count,
+        # 只统计「确实检出否定模式」的规则数。
+        # 原实现为 total - pass_count，把「不可自动检测」也算成违反，导致报告自相矛盾
+        # （score=100 时 violated>0）。
+        "violated": len(violations),
+        "untestable": untestable_count,
         "violations": violations,
         "pass_examples": passes[:5],
     }
@@ -514,6 +553,55 @@ def validate_layer5_taboos(dialogues: list[str], taboos: list[str]) -> dict:
 # 扩展验证维度
 # ──────────────────────────────────────────────
 
+# 风格一致性检查读取的 4 个维度：扁平 key（旧）←→ dimensions 内的嵌套 key（新）
+_STYLE_DIM_KEYS: dict[str, str] = {
+    "sentence_length": "1_sentence_length",
+    "pause_markers": "2_pause_markers",
+    "emotion": "4_emotion_vocabulary",
+    "rhetoric": "5_rhetoric_patterns",
+}
+
+
+def _resolve_style_dims(fingerprint: dict) -> tuple[dict[str, dict], bool]:
+    """双读指纹维度：新结构 dimensions["N_xxx"] 优先，扁平 key 兜底。
+
+    生产环境的 fingerprint.json 是 {"global": {"dimensions": {"1_sentence_length": ...}}}，
+    而旧实现只读扁平 key（fingerprint["sentence_length"]），取不到时四个维度全空
+    → 恒 100 分。此处先读新结构，再回退旧结构，阈值一律不变。
+
+    Args:
+        fingerprint: 指纹数据
+
+    Returns:
+        (维度字典, 是否全部缺失)；「全部缺失」为 True 时调用方应保持原行为（返回 skipped）
+    """
+    dimensions: dict = {}
+    global_part = fingerprint.get("global")
+    if isinstance(global_part, dict):
+        inner = global_part.get("dimensions")
+        if isinstance(inner, dict):
+            dimensions = inner
+    if not dimensions:
+        inner = fingerprint.get("dimensions")
+        if isinstance(inner, dict):
+            dimensions = inner
+
+    resolved: dict[str, dict] = {}
+    found = 0
+    for flat_key, nested_key in _STYLE_DIM_KEYS.items():
+        nested_value = dimensions.get(nested_key)
+        if isinstance(nested_value, dict) and nested_value:
+            resolved[flat_key] = nested_value
+            found += 1
+            continue
+        flat_value = fingerprint.get(flat_key)
+        resolved[flat_key] = flat_value if isinstance(flat_value, dict) else {}
+        if resolved[flat_key]:
+            found += 1
+
+    return resolved, found == 0
+
+
 def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
     """
     验证 Persona 描述与实际对话指纹的一致性
@@ -537,8 +625,13 @@ def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
     if not fingerprint:
         return {"score": 100, "checks": [], "issues": [], "note": "无指纹数据，跳过一致性检查"}
 
+    # 双读维度；四个 key 全缺失时保持原行为（score=100、无 checks），并标注 skipped
+    dims, all_missing = _resolve_style_dims(fingerprint)
+    if all_missing:
+        return {"score": 100, "checks": [], "issues": [], "skipped": True}
+
     # 1. 句式长度一致性
-    sentence_length = fingerprint.get("sentence_length", {})
+    sentence_length = dims["sentence_length"]
     if sentence_length:
         median_len = sentence_length.get("median", 0)
         sentence_length.get("rhythm", "")
@@ -565,7 +658,7 @@ def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
                 })
 
     # 2. 停顿习惯一致性
-    pause_markers = fingerprint.get("pause_markers", {})
+    pause_markers = dims["pause_markers"]
     if pause_markers:
         ellipsis_pct = pause_markers.get("ellipsis_pct", 0)
 
@@ -587,10 +680,18 @@ def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
             })
 
     # 3. 情感分布一致性
-    emotion = fingerprint.get("emotion", {})
+    emotion = dims["emotion"]
     if emotion:
         dominant = emotion.get("dominant", "")
         spectrum = emotion.get("spectrum", [])
+        # 防御：新结构的 4_emotion_vocabulary 用 spectrum_pct（dict），
+        # 若调用方传入 dict 形式的 spectrum，先转成 (名称, 比例) 列表再切片。
+        if not spectrum:
+            spectrum = emotion.get("spectrum_pct", [])
+        if isinstance(spectrum, dict):
+            spectrum = list(spectrum.items())
+        elif not isinstance(spectrum, list):
+            spectrum = []
 
         checks.append({
             "type": "emotion_dominant",
@@ -600,7 +701,7 @@ def validate_style_consistency(dialogues: list[str], fingerprint: dict) -> dict:
         })
 
     # 4. 修辞偏好一致性
-    rhetoric = fingerprint.get("rhetoric", {})
+    rhetoric = dims["rhetoric"]
     if rhetoric:
         rhetorical_q_pct = rhetoric.get("rhetorical_question_pct", 0)
         rhetoric.get("metaphor_pct", 0)
@@ -829,15 +930,15 @@ def validate(persona_path: str, dialogues_path: str, fmt: str = "plain") -> dict
     layer4_result = validate_layer4_relations(dialogues, persona["layer4_relations"])
     layer5_result = validate_layer5_taboos(dialogues, persona["layer5_taboos"])
 
-    # 综合评分（Layer 0 权重最高，新增 Layer 1/3/4 参与计算）
-    overall_score = (
-        layer0_result["score"] * 0.35
-        + layer1_result["score"] * 0.10
-        + layer2_result["score"] * 0.20
-        + layer3_result["score"] * 0.10
-        + layer4_result["score"] * 0.05
-        + layer5_result["score"] * 0.20
-    )
+    # 综合评分（Layer 0 权重最高，新增 Layer 1/3/4 参与计算；权重见 LAYER_WEIGHTS）
+    overall_score = _weighted_overall_score({
+        "layer0": layer0_result,
+        "layer1": layer1_result,
+        "layer2": layer2_result,
+        "layer3": layer3_result,
+        "layer4": layer4_result,
+        "layer5": layer5_result,
+    })
 
     return {
         "overall_score": round(overall_score, 1),
@@ -877,8 +978,7 @@ def validate_with_context(persona_path: str, context_path: str) -> dict:
     """
     persona = parse_persona(persona_path)
 
-    with open(context_path, encoding='utf-8') as f:
-        context = json.load(f)
+    context = json.loads(read_text_utf8(context_path))
 
     lines = context.get("annotated_lines", [])
 
@@ -1008,14 +1108,14 @@ def _validate_against_dialogues(persona: dict, dialogues: list[str]) -> dict:
     layer4_result = validate_layer4_relations(dialogues, persona["layer4_relations"])
     layer5_result = validate_layer5_taboos(dialogues, persona["layer5_taboos"])
 
-    overall_score = (
-        layer0_result["score"] * 0.35
-        + layer1_result["score"] * 0.10
-        + layer2_result["score"] * 0.20
-        + layer3_result["score"] * 0.10
-        + layer4_result["score"] * 0.05
-        + layer5_result["score"] * 0.20
-    )
+    overall_score = _weighted_overall_score({
+        "layer0": layer0_result,
+        "layer1": layer1_result,
+        "layer2": layer2_result,
+        "layer3": layer3_result,
+        "layer4": layer4_result,
+        "layer5": layer5_result,
+    })
 
     return {
         "overall_score": round(overall_score, 1),
@@ -1367,8 +1467,7 @@ def main():
 
     text = json.dumps(result, ensure_ascii=False, indent=2)
     if args.output:
-        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.output).write_text(text, encoding="utf-8")
+        atomic_write_text(args.output, text)
         print(f"验证报告已写入 {args.output}", file=sys.stderr)
     else:
         print(text)

@@ -26,11 +26,27 @@
 
 import argparse
 import json
+import logging
 import re
 import statistics
 import sys
 from collections import Counter
 from pathlib import Path
+
+# 确保 tools 目录在 import 路径中（同时支持 `python3 tools/dialogue_fingerprint.py`
+# 与 `import tools.dialogue_fingerprint` 两种方式）
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+import assets
+from shared_utils import atomic_write_text, read_text_utf8
+from shared_utils import split_sentences as _shared_split_sentences
+
+logger = logging.getLogger(__name__)
+
+# 本模块的分句符集合（与 3.x 的 `re.split(r"[。！？；…—]+", text)` 完全一致）
+_SENTENCE_DELIMITERS = "。！？；…—"
 
 # ──────────────────────────────────────────────
 # 中文情感词典（精简版，覆盖明日方舟角色常见情感表达）
@@ -40,8 +56,8 @@ from pathlib import Path
 # 每个词条为 (词, 权重) 元组，权重范围 0.5~1.5
 # 权重反映情感强度：高权重 = 强烈情感，低权重 = 轻微暗示
 #
-# 词典从 data/emotion_lexicon.json 加载；如文件不存在则使用以下内建默认值。
-# 要扩展词典，编辑 data/emotion_lexicon.json 即可，无需修改源码。
+# 词典从资产目录的 emotion_lexicon.json 加载（包内 tools/_data/，
+# 仓库根 data/ 优先作为用户覆盖位）；文件不存在时使用以下内建默认值。
 
 _EMOTION_LEXICON_BUILTIN: dict[str, list[tuple[str, float]]] = {
     "温柔": [
@@ -115,24 +131,21 @@ def _load_emotion_lexicon(filepath: str | None = None) -> dict[str, list[tuple[s
     JSON 文件格式: {"温柔": [{"word": "温柔", "weight": 1.0}, ...], ...}
 
     Args:
-        filepath: 自定义词典路径。None 时使用默认 data/emotion_lexicon.json
+        filepath: 自定义词典路径。None 时使用资产目录下的 emotion_lexicon.json
 
     Returns:
         情感 → [(词, 权重), ...] 映射
     """
-    json_path = Path(filepath) if filepath else Path(__file__).parent.parent / "data" / "emotion_lexicon.json"
+    json_path = Path(filepath) if filepath else assets.data_file("emotion_lexicon.json")
 
-    if not json_path.exists():
-        return _EMOTION_LEXICON_BUILTIN
-
-    try:
-        raw = json.loads(json_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        print(f"警告：情感词典文件解析失败 {json_path}: {e}，使用内建词典", file=sys.stderr)
+    # 读 + 解析（失败回退内建词典）统一走 assets.load_json_or
+    raw = assets.load_json_or(json_path, _EMOTION_LEXICON_BUILTIN, kind="情感词典")
+    if raw is _EMOTION_LEXICON_BUILTIN:
+        # 文件不存在（无告警）或解析失败（已告警）：直接使用内建词典
         return _EMOTION_LEXICON_BUILTIN
 
     if not isinstance(raw, dict):
-        print("警告：情感词典文件格式错误（应为对象），使用内建词典", file=sys.stderr)
+        logger.warning("情感词典文件格式错误（应为对象）%s，使用内建词典", json_path)
         return _EMOTION_LEXICON_BUILTIN
 
     result: dict[str, list[tuple[str, float]]] = {}
@@ -180,8 +193,7 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
         raise FileNotFoundError(f"文件不存在: {filepath}")
 
     if fmt == "prts-json":
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
+        data = json.loads(read_text_utf8(path))
         # PRTS JSON 格式: {"voice_lines": [...]} 或直接 [...]
         if isinstance(data, list):
             return data
@@ -199,7 +211,7 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
 
     elif fmt == "plain":
         # 纯文本格式，每行一条对话
-        content = path.read_text(encoding="utf-8")
+        content = read_text_utf8(path)
         lines = []
         for i, line in enumerate(content.strip().split("\n")):
             line = line.strip()
@@ -217,7 +229,7 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
 
     elif fmt == "csv":
         # 简易 CSV: label,text
-        content = path.read_text(encoding="utf-8")
+        content = read_text_utf8(path)
         lines = []
         for i, row in enumerate(content.strip().split("\n")):
             if i == 0 and "label" in row.lower():
@@ -238,9 +250,10 @@ def split_sentences(text: str) -> list[str]:
     按中文标点将文本分句，返回非空句子列表。
 
     被 temporal_slicer.py 共享使用，避免代码重复。
+    实现委托 `shared_utils.split_sentences`，但**显式传入本模块原有的标点集**
+    （。！？；…—），保证分句结果与 3.x 逐字相同（标点集不合并）。
     """
-    sentences = re.split(r"[。！？；…—]+", text)
-    return [s.strip() for s in sentences if s.strip()]
+    return _shared_split_sentences(text, keep=_SENTENCE_DELIMITERS)
 
 
 def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
@@ -249,118 +262,21 @@ def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
 
     分析角色对话的句子长度模式，使用统计分布而非硬阈值。
     输出百分位数、变异系数（CV）、节奏稳定性等指标。
+
+    实现委托 :func:`_result_sentence_length`（生产链路同一实现），
+    签名与返回结构与 3.x 完全一致。
     """
-    lengths: list[int] = []
-    for d in dialogues:
-        text = d.get("text", "")
-        # 按中文标点分句
-        for s in split_sentences(text):
-            lengths.append(len(s))
-
-    if not lengths:
-        return {"type": "unknown", "avg": 0, "distribution": {}}
-
-    avg_len = sum(lengths) / len(lengths)
-    total = len(lengths)
-
-    # ── 统计分布指标 ──
-    median_len = statistics.median(lengths)
-    stdev_len = statistics.stdev(lengths) if total > 1 else 0
-    cv = stdev_len / median_len if median_len > 0 else 0  # 变异系数
-
-    # 百分位数（使用 statistics.quantiles）
-    if total >= 4:
-        q1, q2, q3 = statistics.quantiles(lengths, n=4)
-    else:
-        q1 = min(lengths)
-        q2 = median_len
-        q3 = max(lengths)
-
-    # 自适应分界（基于百分位数而非硬编码阈值）
-    short = sum(1 for ln in lengths if ln <= q1)
-    medium = sum(1 for ln in lengths if q1 < ln <= q3)
-    long = sum(1 for ln in lengths if ln > q3)
-
-    distribution = {
-        "short_pct": round(short / total * 100, 1),
-        "medium_pct": round(medium / total * 100, 1),
-        "long_pct": round(long / total * 100, 1),
-    }
-
-    # 节奏稳定性判断（基于 CV）
-    if cv < 0.4:
-        rhythm = "稳定"
-    elif cv < 0.7:
-        rhythm = "多变"
-    else:
-        rhythm = "极端交替"
-
-    # 类型判断（结合分布和 CV）
-    if distribution["short_pct"] > 50:
-        stype = "短句型"
-    elif distribution["long_pct"] > 40:
-        stype = "长句型"
-    elif distribution["short_pct"] > 25 and distribution["long_pct"] > 25:
-        stype = "长短交替型"
-    else:
-        stype = "中句型"
-
-    return {
-        "type": stype,
-        "avg_length": round(avg_len, 1),
-        "median": round(median_len, 1),
-        "stdev": round(stdev_len, 1),
-        "cv": round(cv, 2),
-        "rhythm": rhythm,
-        "percentiles": {"p25": round(q1, 1), "p50": round(q2, 1), "p75": round(q3, 1)},
-        "min": min(lengths),
-        "max": max(lengths),
-        "distribution_pct": distribution,
-        "sample_count": total,
-    }
+    return _result_sentence_length(_collect_all_metrics(dialogues))
 
 
 def analyze_pause_markers(dialogues: list[dict]) -> dict:
     """
     维度 2：停顿与语气标记
 
-    量化角色的停顿习惯（省略号频率、破折号频率）
+    量化角色的停顿习惯（省略号频率、破折号频率）。
+    实现委托 :func:`_result_pause_markers`，签名与返回结构不变。
     """
-    total_lines = len(dialogues)
-    ellipsis_count = 0  # 省略号
-    dash_count = 0      # 破折号
-    exclamation_count = 0  # 感叹号
-    question_count = 0     # 问号
-    ellipsis_start = 0     # 以省略号开头
-
-    for d in dialogues:
-        text = d.get("text", "")
-        if "…" in text or "..." in text:
-            ellipsis_count += 1
-        if text.startswith("…") or text.startswith("...") or text.startswith("……"):
-            ellipsis_start += 1
-        if "——" in text or "—" in text:
-            dash_count += 1
-        if any(e in text for e in EXCLAMATION):
-            exclamation_count += 1
-        if any(q in text for q in QUESTION):
-            question_count += 1
-
-    if total_lines == 0:
-        return {"ellipsis_freq": 0, "exclamation_freq": 0}
-
-    return {
-        "ellipsis_pct": round(ellipsis_count / total_lines * 100, 1),
-        "ellipsis_start_pct": round(ellipsis_start / total_lines * 100, 1),
-        "dash_pct": round(dash_count / total_lines * 100, 1),
-        "exclamation_pct": round(exclamation_count / total_lines * 100, 1),
-        "question_pct": round(question_count / total_lines * 100, 1),
-        "interpretation": _interpret_pause(
-            ellipsis_count / total_lines,
-            exclamation_count / total_lines,
-            ellipsis_start / total_lines,
-        ),
-    }
+    return _result_pause_markers(_collect_all_metrics(dialogues))
 
 
 def _interpret_pause(ellipsis_ratio, exclamation_ratio, ellipsis_start_ratio):
@@ -383,182 +299,30 @@ def analyze_self_reference(dialogues: list[dict]) -> dict:
     """
     维度 3：自称模式
 
-    量化角色的第一人称使用偏好
+    量化角色的第一人称使用偏好。
+    实现委托 :func:`_result_self_reference`，签名与返回结构不变。
     """
-    counter = Counter()
-    total_first_person = 0
-    total_lines = len(dialogues)
-
-    for d in dialogues:
-        text = d.get("text", "")
-        for pronoun in FIRST_PERSON:
-            count = text.count(pronoun)
-            if count > 0:
-                counter[pronoun] += count
-                total_first_person += count
-
-    if total_first_person == 0:
-        return {
-            "primary": "省略自称",
-            "frequency_per_line": 0,
-            "distribution": {},
-            "interpretation": "极少使用第一人称，倾向省略主语或使用'我们'",
-        }
-
-    primary = counter.most_common(1)[0][0]
-    freq = round(total_first_person / total_lines, 2) if total_lines > 0 else 0
-
-    distribution = {
-        k: round(v / total_first_person * 100, 1)
-        for k, v in counter.most_common()
-    }
-
-    # 解读
-    if freq < 0.3:
-        interp = "极少自称，倾向省略主语"
-    elif primary == "我":
-        interp = "常用'我'，表达直接"
-    elif primary in ["吾", "本王", "朕"]:
-        interp = f"使用'{primary}'自称，体现特殊身份地位"
-    else:
-        interp = f"自称'{primary}'，有独特表达习惯"
-
-    return {
-        "primary": primary,
-        "frequency_per_line": freq,
-        "distribution_pct": distribution,
-        "interpretation": interp,
-    }
+    return _result_self_reference(_collect_all_metrics(dialogues))
 
 
 def analyze_emotion_vocabulary(dialogues: list[dict]) -> dict:
     """
     维度 4：情感词汇分布
 
-    量化角色的情感表达范围和偏好
+    量化角色的情感表达范围和偏好。
+    实现委托 :func:`_result_emotion_vocabulary`，签名与返回结构不变。
     """
-    emotion_counts: Counter = Counter()
-    total_emotion_words = 0
-    emotion_examples: dict[str, list[str]] = {}
-
-    for d in dialogues:
-        text = d.get("text", "")
-        for emotion, word_entries in EMOTION_LEXICON.items():
-            for word, weight in word_entries:
-                count = text.count(word)
-                if count > 0:
-                    weighted = count * weight
-                    emotion_counts[emotion] += weighted
-                    total_emotion_words += weighted
-                    if emotion not in emotion_examples:
-                        emotion_examples[emotion] = []
-                    if len(emotion_examples[emotion]) < 3:
-                        emotion_examples[emotion].append(word)
-
-    if total_emotion_words == 0:
-        return {"dominant": "unknown", "spectrum": {}, "interpretation": "未检测到明显情感词汇"}
-
-    # 按加权频率排序
-    sorted_emotions = emotion_counts.most_common()
-    dominant = sorted_emotions[0][0] if sorted_emotions else "unknown"
-
-    spectrum = {
-        k: round(v / total_emotion_words * 100, 1)
-        for k, v in sorted_emotions
-    }
-
-    # 判断情感宽度
-    active_emotions = sum(1 for k, v in sorted_emotions if v >= 2)
-    if active_emotions >= 5:
-        breadth = "宽谱"
-    elif active_emotions >= 3:
-        breadth = "中谱"
-    else:
-        breadth = "窄谱"
-
-    return {
-        "dominant": dominant,
-        "breadth": breadth,
-        "active_emotion_count": active_emotions,
-        "spectrum_pct": spectrum,
-        "examples": emotion_examples,
-        "interpretation": f"主导情感为'{dominant}'，情感谱系{breadth}（活跃情感{active_emotions}种）",
-    }
+    return _result_emotion_vocabulary(_collect_all_metrics(dialogues))
 
 
 def analyze_rhetoric_patterns(dialogues: list[dict]) -> dict:
     """
     维度 5：修辞模式
 
-    量化反问、比喻、排比等修辞手法的使用频率
+    量化反问、比喻、排比等修辞手法的使用频率。
+    实现委托 :func:`_result_rhetoric_patterns`，签名与返回结构不变。
     """
-    total_lines = len(dialogues)
-    rhetorical_question = 0  # 反问
-    metaphor = 0             # 比喻（含"像""如同""仿佛""似"）
-    parallelism = 0          # 排比（连续3个以上相似结构）
-    negation = 0             # 否定句
-
-    for d in dialogues:
-        text = d.get("text", "")
-
-        # 反问检测：含问号 + 否定词/反问词
-        has_question = any(q in text for q in QUESTION)
-        has_rhetorical = any(w in text for w in ["难道", "岂", "何不", "又怎么", "又如何", "不是吗"])
-        if has_question and has_rhetorical:
-            rhetorical_question += 1
-
-        # 比喻检测（扩展版：明喻 + 暗喻 + 借喻）
-        # 明喻：像/如同/仿佛/似/宛如/犹如/好比
-        # 暗喻：是/成了/化作/变为 + 自然意象
-        # 转化式：化作/变成/融为
-        metaphor_keywords = ["像", "如同", "仿佛", "似", "宛如", "犹如", "好比"]
-        dark_metaphor_patterns = [
-            r"(?:是|成了|化作|变为|变成).{1,8}(?:光|影|风|花|火|星|梦|尘|灰|夜|雨|雪|霜|露)",
-            r"(?:化作|变成|融为|化为).{0,6}(?:一|的)",
-        ]
-        if any(w in text for w in metaphor_keywords) or any(
-            re.search(pat, text) for pat in dark_metaphor_patterns
-        ):
-            metaphor += 1
-
-        # 排比检测：重复的逗号分隔短语
-        comma_phrases = re.split(r"[，、；]", text)
-        if len(comma_phrases) >= 3:
-            # 检查是否有相似的起始字
-            starts = [p.strip()[:2] for p in comma_phrases if len(p.strip()) >= 2]
-            if len(starts) >= 3:
-                start_counter = Counter(starts)
-                if start_counter.most_common(1)[0][1] >= 3:
-                    parallelism += 1
-
-        # 否定句检测：匹配否定词 + 动词/形容词的典型否定句式
-        negation_patterns = [
-            r"(不|未|莫|别)\s*[是能为会有在到想需该]",
-            r"(不|未|莫|别)\s*[让叫使把给向对]",
-            r"没有",
-            r"无法",
-            r"并非",
-            r"从不",
-            r"绝不|决不",
-            r"无人|无物|无端|无从",
-        ]
-        if any(re.search(pat, text) for pat in negation_patterns):
-            negation += 1
-
-    if total_lines == 0:
-        return {"rhetorical_question_freq": 0}
-
-    return {
-        "rhetorical_question_pct": round(rhetorical_question / total_lines * 100, 1),
-        "metaphor_pct": round(metaphor / total_lines * 100, 1),
-        "parallelism_pct": round(parallelism / total_lines * 100, 1),
-        "negation_pct": round(negation / total_lines * 100, 1),
-        "interpretation": _interpret_rhetoric(
-            rhetorical_question / total_lines,
-            metaphor / total_lines,
-            negation / total_lines,
-        ),
-    }
+    return _result_rhetoric_patterns(_collect_all_metrics(dialogues))
 
 
 def _interpret_rhetoric(rq_ratio, meta_ratio, neg_ratio):
@@ -580,105 +344,21 @@ def analyze_address_pattern(dialogues: list[dict]) -> dict:
     """
     维度 6：称呼模式
 
-    量化角色如何称呼他人（尊称/昵称/省略称呼）
+    量化角色如何称呼他人（尊称/昵称/省略称呼）。
+    实现委托 :func:`_result_address_pattern`，签名与返回结构不变。
     """
-    honorific = ["大人", "阁下", "殿下", "陛下", "先生", "小姐", "长官", "指挥官"]
-    # 使用 2 字词组避免单字误报（"小"→"小心", "老"→"老师", "姐"→"姐姐"）
-    intimate = ["亲爱的", "小家伙", "小可爱", "老朋友", "阿米娅", "姐姐", "哥哥", "妹妹", "弟弟", "姐", "哥"]
-
-    honorific_count = 0
-    intimate_count = 0
-    address_examples = {"honorific": [], "intimate": []}
-
-    for d in dialogues:
-        text = d.get("text", "")
-        for h in honorific:
-            if h in text:
-                honorific_count += 1
-                if len(address_examples["honorific"]) < 5:
-                    address_examples["honorific"].append(text[:50])
-                break
-        for i in intimate:
-            if i in text:
-                intimate_count += 1
-                if len(address_examples["intimate"]) < 5:
-                    address_examples["intimate"].append(text[:50])
-                break
-
-    total = len(dialogues)
-    if total == 0:
-        return {"pattern": "unknown"}
-
-    if honorific_count > intimate_count * 2:
-        pattern = "尊称型"
-    elif intimate_count > honorific_count * 2:
-        pattern = "亲昵型"
-    elif honorific_count > 0 and intimate_count > 0:
-        pattern = "切换型"
-    else:
-        pattern = "省略称呼型"
-
-    return {
-        "pattern": pattern,
-        "honorific_pct": round(honorific_count / total * 100, 1),
-        "intimate_pct": round(intimate_count / total * 100, 1),
-        "examples": address_examples,
-    }
+    return _result_address_pattern(_collect_all_metrics(dialogues))
 
 
 def analyze_natural_imagery(dialogues: list[dict]) -> dict:
     """
     维度 7：自然意象偏好
 
-    量化角色是否偏好使用自然意象（花、风、光、影等）
-    使用 2 字词组匹配以减少误报（如"花费"不含"花"意象）
+    量化角色是否偏好使用自然意象（花、风、光、影等）。
+    实现委托 :func:`_result_natural_imagery`，签名与返回结构不变。
+    「使用 2 字词组匹配以减少误报」的词表见模块常量 `_NATURE_WORDS`。
     """
-    nature_words = {
-        "植物": ["花朵", "花瓣", "花开", "花落", "草木", "树叶", "枝头", "藤蔓", "森林", "丛林", "花草"],
-        "天文": ["星空", "星辰", "月光", "阳光", "光影", "天空", "云霞", "彩虹", "星光", "夜空", "日光"],
-        "气象": ["风雨", "风声", "微风", "暴风", "雨幕", "雪花", "霜降", "雾气", "雷鸣", "露水", "晨露"],
-        "大地": ["山河", "大海", "大地", "土地", "岩石", "沙漠", "泉水", "山峦", "河川", "海洋", "山巅"],
-        "时间": ["清晨", "日暮", "夜晚", "白昼", "春天", "夏日", "秋色", "冬雪", "黄昏", "黎明", "破晓"],
-    }
-
-    category_counts = Counter()
-    total_nature = 0
-    top_words = Counter()
-
-    for d in dialogues:
-        text = d.get("text", "")
-        for category, words in nature_words.items():
-            for word in words:
-                count = text.count(word)
-                if count > 0:
-                    category_counts[category] += count
-                    total_nature += count
-                    top_words[word] += count
-
-    if total_nature == 0:
-        return {"density": 0, "interpretation": "极少使用自然意象"}
-
-    total_lines = len(dialogues)
-    density = round(total_nature / total_lines, 2) if total_lines > 0 else 0
-
-    # 密度解读
-    if density > 3:
-        density_level = "高频"
-    elif density > 1:
-        density_level = "中频"
-    else:
-        density_level = "低频"
-
-    return {
-        "density_per_line": density,
-        "density_level": density_level,
-        "category_distribution": {
-            k: round(v / total_nature * 100, 1)
-            for k, v in category_counts.most_common()
-        },
-        "top_5_words": dict(top_words.most_common(5)),
-        "interpretation": f"自然意象密度{density_level}（{density}个/句），偏好{_top_category(category_counts)}意象",
-    }
+    return _result_natural_imagery(_collect_all_metrics(dialogues))
 
 
 def _top_category(counter: Counter) -> str:
@@ -690,6 +370,12 @@ def _top_category(counter: Counter) -> str:
 # ──────────────────────────────────────────────
 # 维度 8：口头禅与标志性短语检测
 # ──────────────────────────────────────────────
+
+# 过滤用正则：纯标点/纯空白/纯数字的 n-gram（与 3.x 的内联正则逐字符一致，勿改）
+_PUNCT_ONLY_RE = re.compile(r"^[\s\d。！？…，、；：\u201c\u201d\u2018\u2019（）\u002d\u3000]+$")
+# n-gram 首/尾若为分句标点则一定被过滤（廉价前置判断，与 _PUNCT_ONLY_RE 同义）
+_PUNCT_EDGE = "。！？…，、；："
+
 
 def analyze_catchphrases(dialogues: list[dict], min_count: int = 3) -> dict:
     """
@@ -715,11 +401,11 @@ def analyze_catchphrases(dialogues: list[dict], min_count: int = 3) -> dict:
         for n in range(2, 6):
             for i in range(len(text) - n + 1):
                 gram = text[i:i + n]
-                # 过滤纯标点、纯空格、纯数字
-                if re.match(r'^[\s\d。！？…，、；：\u201c\u201d\u2018\u2019（）\u002d\u3000]+$', gram):
+                # 前置判断（廉价，结论与下面两条等价）：首/尾是分句标点则必然被过滤
+                if gram[0] in _PUNCT_EDGE or gram[-1] in _PUNCT_EDGE:
                     continue
-                # 过滤以标点开头或结尾的 n-gram
-                if gram[0] in "。！？…，、；：" or gram[-1] in "。！？…，、；：":
+                # 过滤纯标点、纯空格、纯数字（正则预编译于模块级）
+                if _PUNCT_ONLY_RE.match(gram):
                     continue
                 ngram_counter[gram] += 1
 
@@ -1268,8 +954,15 @@ def _generate_summary(dimensions: dict) -> str:
 # 语境化分析（升级新增）
 # ──────────────────────────────────────────────
 
-def _lines_to_dialogues(annotated_lines: list[dict], source_filter: str = None) -> list[dict]:
-    """将 context.json 的 annotated_lines 转为 fingerprint 兼容的 dialogues 格式"""
+def _lines_to_dialogues(annotated_lines: list[dict], source_filter: str | None = None) -> list[dict]:
+    """将 context.json 的 annotated_lines 转为 fingerprint 兼容的 dialogues 格式
+
+    Args:
+        annotated_lines: context.json 的台词列表
+        source_filter: 仅保留指定来源的台词；``None``（默认）表示不过滤。
+            类型标注为 ``str | None``（3.x 写作 ``str = None``，与默认值不一致）。
+            注：主管线当前以 ``None`` 调用，参数保留为兼容外部调用。
+    """
     result = []
     for line in annotated_lines:
         if source_filter and line.get("source") != source_filter:
@@ -1480,8 +1173,7 @@ def main():
 
     if args.context_json:
         # 语境化模式
-        with open(args.context_json, encoding='utf-8') as f:
-            context = json.load(f)
+        context = json.loads(read_text_utf8(args.context_json))
         report = generate_contextual_fingerprint(context)
     else:
         # 传统模式
@@ -1493,8 +1185,7 @@ def main():
 
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.output:
-        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.output).write_text(text, encoding="utf-8")
+        atomic_write_text(args.output, text)
         print(f"指纹报告已写入 {args.output}", file=sys.stderr)
     else:
         print(text)

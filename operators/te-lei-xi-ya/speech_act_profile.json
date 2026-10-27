@@ -1,80 +1,60 @@
 {
   "global": {
-    "commit": 0.474,
-    "evade": 0.158,
-    "comfort": 0.053,
-    "presence": 0.316
+    "commit": 0.333,
+    "evade": 0.333,
+    "comfort": 0.111,
+    "presence": 0.222
   },
   "global_raw": {
-    "commit": 9,
+    "commit": 3,
     "evade": 3,
     "comfort": 1,
-    "presence": 6
+    "presence": 2
   },
   "by_situation": {
     "casual": {
-      "commit": 9,
+      "commit": 3,
       "comfort": 1,
       "evade": 2,
-      "presence": 5
+      "presence": 2
     },
     "comfort": {
-      "evade": 1,
-      "presence": 1
+      "evade": 1
     }
   },
   "by_interlocutor": {
     "博士": {
-      "commit": 2,
-      "presence": 1
+      "commit": 2
     },
     "unknown": {
       "evade": 3,
       "comfort": 1,
-      "presence": 5,
-      "commit": 7
+      "presence": 2,
+      "commit": 1
     }
   },
   "by_phase": {
     "babel": {
-      "commit": 9,
+      "commit": 3,
       "evade": 3,
       "comfort": 1,
-      "presence": 6
+      "presence": 2
     }
   },
-  "total_acts": 19,
-  "lines_with_acts": 15,
+  "total_acts": 9,
+  "lines_with_acts": 8,
   "behavioral_patterns": [
     {
-      "pattern": "interlocutor_commit",
-      "rule": "对博士的对话中，承诺/表态行为占比最高（67%）——用承诺/表态的方式回应博士",
-      "layer": 4,
-      "confidence": 0.6666666666666666
-    },
-    {
       "pattern": "high_evade",
-      "rule": "在被追问时倾向回避直接回答（回避行为占比16%），常用省略号结尾或反问代替回答",
+      "rule": "在被追问时倾向回避直接回答（回避行为占比33%），常用省略号结尾或反问代替回答",
       "layer": 0,
-      "confidence": 0.474
+      "confidence": 0.9990000000000001
     },
     {
-      "pattern": "chain_commit_presence_presence",
-      "rule": "存在重复行为链「承诺/表态 → 存在表达 → 存在表达」（出现2次）——体现角色在特定场景中的固定行为序列",
-      "layer": 2,
-      "confidence": 0.4
-    },
-    {
-      "pattern": "chain_presence_presence_commit",
-      "rule": "存在重复行为链「存在表达 → 存在表达 → 承诺/表态」（出现2次）——体现角色在特定场景中的固定行为序列",
-      "layer": 2,
-      "confidence": 0.4
-    },
-    {
-      "pattern": "chain_commit_presence_presence_commit",
-      "rule": "存在重复行为链「承诺/表态 → 存在表达 → 存在表达 → 承诺/表态」（出现2次）——体现角色在特定场景中的固定行为序列",
-      "layer": 2,
-      "confidence": 0.4
+      "pattern": "interlocutor_commit",
+      "rule": "对博士的对话中，承诺/表态行为占比最高（100%）——用承诺/表态的方式回应博士",
+      "layer": 4,
+      "confidence": 0.9
     }
   ]
 }

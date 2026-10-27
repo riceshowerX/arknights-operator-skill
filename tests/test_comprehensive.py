@@ -25,7 +25,10 @@ from pathlib import Path
 TOOLS_DIR = Path(__file__).parent.parent / "tools"
 sys.path.insert(0, str(TOOLS_DIR))
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+# 数据资产目录由 tools.assets 统一解析（包内 tools/_data，仓库根 data/ 为覆盖位）
+from assets import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
 
 
 # ══════════════════════════════════════════════
@@ -98,19 +101,30 @@ class TestBoundarySharedUtils(unittest.TestCase):
             validate_slug("")
 
     def test_validate_path_allowed(self):
-        """合法路径验证（路径需在 cwd/home/tmp 之一下）"""
+        """合法路径验证（显式给出白名单，避免依赖 cwd/home 的偶然通过）"""
         from shared_utils import validate_path
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "test.json")
             Path(filepath).touch()
-            result = validate_path(filepath)
-            self.assertTrue(result.startswith(tmpdir))
+            result = validate_path(filepath, allowed_prefixes=[tmpdir])
+            self.assertEqual(Path(result), Path(filepath).resolve())
 
     def test_validate_path_escape(self):
-        """路径不在允许范围内抛出 ValueError"""
+        """穿越路径抛出 ValueError（真正构造 .. 穿越，而不是依赖平台差异）"""
         from shared_utils import validate_path
-        with self.assertRaises(ValueError):
-            validate_path("/etc/passwd")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            allowed = Path(tmpdir) / "allowed"
+            allowed.mkdir()
+            # 从白名单目录里用 .. 逃到兄弟目录：字符串前缀相同但解析后不在白名单内
+            escaping = str(allowed / ".." / "outside" / "secret.json")
+            with self.assertRaises(ValueError):
+                validate_path(escaping, allowed_prefixes=[str(allowed)])
+
+            # 同级前缀目录也必须被拒绝（防止 startswith 绕过）
+            sibling = Path(tmpdir) / "allowed-evil"
+            sibling.mkdir()
+            with self.assertRaises(ValueError):
+                validate_path(str(sibling / "x.json"), allowed_prefixes=[str(allowed)])
 
 
 class TestBoundaryGameDataParser(unittest.TestCase):

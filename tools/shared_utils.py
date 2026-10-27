@@ -99,25 +99,44 @@ def validate_path(path: str, allowed_prefixes: list[str] | None = None) -> str:
 # 句子分割
 # ──────────────────────────────────────────────
 
+# 默认分句符（keep="" 时的历史行为）
+_SENTENCE_SPLIT_DEFAULT_RE = re.compile(r"[。！？!?\n]+")
 
-def split_sentences(text: str) -> list[str]:
+# 自定义分句符 → 预编译正则缓存（`keep` 取值极少，字典天然有界）
+_KEEP_SPLIT_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def split_sentences(text: str, keep: str = "") -> list[str]:
     """将文本分割为句子
 
-    处理中文标点（。！？）和英文标点（.!?），
-    同时处理省略号（...）和中文省略号（……）。
+    两种模式：
+
+    * ``keep=""``（默认，历史行为）：处理中文标点（。！？）和英文标点（.!?），
+      先保护省略号（``……`` / ``...``）再按标点切分。
+    * ``keep="。！？；…—"`` 这类非空字符串：**直接把这些字符当作分句符**
+      （不做省略号保护、不改写文本），用于让各模块保留自己原有的标点集——
+      「实现 1 份、行为 N 份」，避免合并标点集导致数值漂移。
 
     Args:
         text: 输入文本
+        keep: 自定义分句符集合（每个字符都视为分隔符）；空字符串走默认模式。
 
     Returns:
-        句子列表
+        句子列表（已 strip，且过滤空串）
     """
+    if keep:
+        pattern = _KEEP_SPLIT_CACHE.get(keep)
+        if pattern is None:
+            pattern = re.compile("[" + "".join(re.escape(ch) for ch in keep) + "]+")
+            _KEEP_SPLIT_CACHE[keep] = pattern
+        return [p.strip() for p in pattern.split(text) if p.strip()]
+
     # 先保护省略号
     text = text.replace("……", "\x00ELLIPSIS\x00")
     text = text.replace("...", "\x00ELLIPSIS\x00")
 
     # 按标点分割
-    parts = re.split(r'[。！？!?\n]+', text)
+    parts = _SENTENCE_SPLIT_DEFAULT_RE.split(text)
 
     # 恢复省略号
     parts = [p.replace("\x00ELLIPSIS\x00", "……") for p in parts]
@@ -191,8 +210,41 @@ def atomic_write_json(filepath: str | Path, data: dict, indent: int = 2) -> None
         raise
 
 
+def atomic_write_text(filepath: str | Path, text: str) -> None:
+    """原子写入文本文件（与 atomic_write_json 同构，内容不做任何改写）
+
+    先写入临时文件，再原子性重命名，防止写入中断导致文件损坏。
+
+    Args:
+        filepath: 目标文件路径
+        text: 要写入的文本（逐字节写出，不追加换行）
+    """
+    import os
+    import tempfile
+
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+
+    fd, tmp_path = tempfile.mkstemp(
+        dir=filepath.parent,
+        prefix=f".{filepath.name}.",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        os.replace(tmp_path, filepath)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_path)
+        raise
+
+
 def load_json_safe(filepath: str | Path) -> dict | None:
     """安全加载 JSON 文件，文件不存在或格式错误时返回 None
+
+    内部走 read_text_utf8（BOM / GB18030 不再崩溃）；UTF-8 BOM 由
+    read_text_utf8 剥离，避免 json.loads 抛 "Unexpected UTF-8 BOM"。
 
     Args:
         filepath: JSON 文件路径
@@ -200,16 +252,55 @@ def load_json_safe(filepath: str | Path) -> dict | None:
     Returns:
         解析后的数据，或 None
     """
-    import json
-
     filepath = Path(filepath)
     if not filepath.exists():
         return None
     try:
-        with open(filepath, encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
+        return json.loads(read_text_utf8(filepath))
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return None
+
+
+# ──────────────────────────────────────────────
+# 文本读取（编码兼容）
+# ──────────────────────────────────────────────
+
+
+def read_text_utf8(filepath: str | Path) -> str:
+    """读取文本文件，兼容 UTF-8 / UTF-8 BOM / GB18030
+
+    回退链：utf-8-sig（含无 BOM 的 UTF-8）→ utf-8 → gb18030。
+    命中 gb18030 时必定 logger.warning，避免「乱码被当正常文本」的静默错误。
+
+    Args:
+        filepath: 文件路径
+
+    Returns:
+        文件文本内容（任何情况下都不抛 UnicodeDecodeError）
+
+    Raises:
+        OSError: 文件不存在或不可读（保持调用方原有的异常语义）
+    """
+    filepath = Path(filepath)
+    raw = filepath.read_bytes()
+
+    # utf-8-sig 同时覆盖「带 BOM」与「不带 BOM」两种情况
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        pass
+
+    try:
+        text = raw.decode("gb18030")
+    except UnicodeDecodeError:
+        logger.warning(
+            "文件 %s 既非 UTF-8 也非 GB18030，已用 UTF-8 + replace 兜底解码（可能乱码）",
+            filepath,
+        )
+        return raw.decode("utf-8", errors="replace")
+
+    logger.warning("文件 %s 不是合法 UTF-8，已按 GB18030 解码，建议另存为 UTF-8", filepath)
+    return text
 
 
 # ──────────────────────────────────────────────
@@ -501,8 +592,8 @@ def validate_context_file(path: str | Path, strict: bool = False) -> list[str]:
         return [f"context.json 文件不存在: {filepath}"]
 
     try:
-        data = json.loads(filepath.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        data = json.loads(read_text_utf8(filepath))
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
         return [f"context.json 解析失败: {e}"]
 
     if not isinstance(data, dict):

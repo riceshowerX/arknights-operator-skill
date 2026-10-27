@@ -1,17 +1,17 @@
 {
   "global": {
-    "comfort": 0.143,
-    "presence": 0.048,
-    "invite": 0.048,
-    "commit": 0.143,
-    "evade": 0.619
+    "comfort": 0.273,
+    "presence": 0.091,
+    "invite": 0.091,
+    "commit": 0.273,
+    "evade": 0.273
   },
   "global_raw": {
     "comfort": 3,
     "presence": 1,
     "invite": 1,
     "commit": 3,
-    "evade": 13
+    "evade": 3
   },
   "by_situation": {
     "casual": {
@@ -19,12 +19,9 @@
       "presence": 1,
       "invite": 1,
       "commit": 3,
-      "evade": 11
+      "evade": 2
     },
     "comfort": {
-      "evade": 1
-    },
-    "decide": {
       "evade": 1
     }
   },
@@ -34,16 +31,13 @@
       "presence": 1,
       "invite": 1,
       "commit": 3,
-      "evade": 5
+      "evade": 1
     },
     "博士": {
       "evade": 1
     },
     "孱弱的孩子": {
       "evade": 1
-    },
-    "坚强的孩子": {
-      "evade": 6
     }
   },
   "by_phase": {
@@ -55,65 +49,17 @@
       "evade": 2
     },
     "babel": {
-      "evade": 11
+      "evade": 1
     }
   },
-  "total_acts": 21,
-  "lines_with_acts": 21,
+  "total_acts": 11,
+  "lines_with_acts": 11,
   "behavioral_patterns": [
     {
       "pattern": "high_evade",
-      "rule": "在被追问时倾向回避直接回答（回避行为占比62%），常用省略号结尾或反问代替回答",
+      "rule": "在被追问时倾向回避直接回答（回避行为占比27%），常用省略号结尾或反问代替回答",
       "layer": 0,
-      "confidence": 1.0
-    },
-    {
-      "pattern": "interlocutor_evade",
-      "rule": "对坚强的孩子的对话中，回避/转移行为占比最高（100%）——用回避/转移的方式回应坚强的孩子",
-      "layer": 4,
-      "confidence": 0.9
-    },
-    {
-      "pattern": "phase_shift_early_evade",
-      "rule": "early时期，回避/转移行为显著减少（偏移42%）",
-      "layer": 2,
-      "confidence": 0.838
-    },
-    {
-      "pattern": "phase_shift_babel_evade",
-      "rule": "babel时期，回避/转移行为显著增多（偏移38%）",
-      "layer": 2,
-      "confidence": 0.762
-    },
-    {
-      "pattern": "phase_shift_early_comfort",
-      "rule": "early时期，宽慰/安抚行为显著增多（偏移16%）",
-      "layer": 2,
-      "confidence": 0.314
-    },
-    {
-      "pattern": "phase_shift_early_commit",
-      "rule": "early时期，承诺/表态行为显著增多（偏移16%）",
-      "layer": 2,
-      "confidence": 0.314
-    },
-    {
-      "pattern": "chain_evade_evade_evade",
-      "rule": "存在重复行为链「回避/转移 → 回避/转移 → 回避/转移」（出现9次）——连续重复回避/转移行为，体现角色在此类场景中的持续性",
-      "layer": 2,
-      "confidence": 0.9
-    },
-    {
-      "pattern": "chain_evade_evade_evade_evade",
-      "rule": "存在重复行为链「回避/转移 → 回避/转移 → 回避/转移 → 回避/转移」（出现8次）——连续重复回避/转移行为，体现角色在此类场景中的持续性",
-      "layer": 2,
-      "confidence": 0.9
-    },
-    {
-      "pattern": "chain_evade_evade_evade_evade_evade",
-      "rule": "存在重复行为链「回避/转移 → 回避/转移 → 回避/转移 → 回避/转移 → 回避/转移」（出现7次）——连续重复回避/转移行为，体现角色在此类场景中的持续性",
-      "layer": 2,
-      "confidence": 0.9
+      "confidence": 0.8190000000000001
     }
   ]
 }

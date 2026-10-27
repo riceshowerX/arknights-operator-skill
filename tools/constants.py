@@ -16,7 +16,32 @@ import re
 # ──────────────────────────────────────────────
 
 # 已知的时期列表（按时序排列）
-PHASE_ORDER: list[str] = ["early", "babel", "resurrected"]
+# 注意：一次「只插入、不改已有项相对序」的扩展（H-5）。
+#   - 既有 3 项 early → babel → resurrected 的相对顺序保持不变；
+#   - 新增 integration（整合运动）、chernobog（切尔诺伯格）、rhodes（罗德岛）。
+# PHASE_LABEL_MAP 早就能产出 6 个 id，此前 PHASE_ORDER 只有 3 项，
+# 导致时期排序失真、关系演变方向可能反。
+PHASE_ORDER: list[str] = [
+    "early",
+    "integration",
+    "chernobog",
+    "babel",
+    "resurrected",
+    "rhodes",
+]
+
+# 时期 → 时序索引（排序用）
+# 消费方一律使用 PHASE_SORT_INDEX.get(phase, len(PHASE_SORT_INDEX))，
+# 避免 list.index() 在遇到未知时期时抛 ValueError。
+PHASE_SORT_INDEX: dict[str, int] = {phase: idx for idx, phase in enumerate(PHASE_ORDER)}
+
+# 置信度字符串 → 关系强度数值映射
+# 供 data_injector 等消费方把 relationship_graph 的 confidence 字段转成可读强度使用。
+CONFIDENCE_TO_STRENGTH: dict[str, float] = {
+    "high": 0.9,
+    "medium": 0.6,
+    "low": 0.3,
+}
 
 # 中文时期标签 → 规范化英文 id 映射
 # 用于从 knowledge.md 的 timeline 标题（如 "### 893-898 早期"）生成标准化 id
@@ -293,5 +318,5 @@ class AnnotatedLine(_AnnotatedLineRequired, total=False):
     source_detail: str
     context: LineContext
     narration: list[str]
-    speech_acts: list[str]
+    speech_acts: list[dict]
     emotion: dict

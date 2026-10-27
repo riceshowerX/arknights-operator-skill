@@ -27,8 +27,10 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
+import assets
+import cli
 from constants import ACT_TYPE_ALIASES, ACT_TYPE_LABELS
-from shared_utils import atomic_write_json, setup_logging
+from shared_utils import atomic_write_json, read_text_utf8, setup_logging
 
 logger = setup_logging("speech_act_analyzer")
 
@@ -39,8 +41,8 @@ logger = setup_logging("speech_act_analyzer")
 
 # 每条规则：(正则, 行为类型, 置信度, 中文标签)
 #
-# 规则从 data/speech_act_rules.json 加载；如文件不存在则使用以下内建默认值。
-# 要调整规则，编辑 data/speech_act_rules.json 即可，无需修改源码。
+# 规则从资产目录的 speech_act_rules.json 加载（包内 tools/_data/，
+# 仓库根 data/ 优先作为用户覆盖位）；文件不存在时使用以下内建默认值。
 
 _SPEECH_ACT_RULES_BUILTIN = [
     # 邀请：用温和方式提出要求
@@ -95,24 +97,21 @@ def _load_speech_act_rules(filepath: str | None = None) -> list[tuple]:
     JSON 格式: [{"pattern": "...", "type": "...", "confidence": 0.85, "label": "..."}, ...]
 
     Args:
-        filepath: 自定义规则文件路径。None 时使用默认 data/speech_act_rules.json
+        filepath: 自定义规则文件路径。None 时使用资产目录下的 speech_act_rules.json
 
     Returns:
         [(pattern_str, act_type, confidence, label), ...] 列表
     """
-    json_path = Path(filepath) if filepath else Path(__file__).parent.parent / "data" / "speech_act_rules.json"
+    json_path = Path(filepath) if filepath else assets.data_file("speech_act_rules.json")
 
-    if not json_path.exists():
-        return _SPEECH_ACT_RULES_BUILTIN
-
-    try:
-        raw = json.loads(json_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        print(f"警告：话语行为规则文件解析失败 {json_path}: {e}，使用内建规则", file=sys.stderr)
+    # 读 + 解析（失败回退内建规则）统一走 assets.load_json_or
+    raw = assets.load_json_or(json_path, _SPEECH_ACT_RULES_BUILTIN, kind="话语行为规则")
+    if raw is _SPEECH_ACT_RULES_BUILTIN:
+        # 文件不存在（无告警）或解析失败（已告警）：直接使用内建规则
         return _SPEECH_ACT_RULES_BUILTIN
 
     if not isinstance(raw, list):
-        print("警告：话语行为规则文件应为 JSON 数组，使用内建规则", file=sys.stderr)
+        logger.warning("话语行为规则文件应为 JSON 数组 %s，使用内建规则", json_path)
         return _SPEECH_ACT_RULES_BUILTIN
 
     result = []
@@ -526,6 +525,8 @@ def detect_behavioral_patterns(profile: dict) -> list[dict]:
 # ──────────────────────────────────────────────
 
 def main():
+    cli.require_assets()
+
     parser = argparse.ArgumentParser(description="话语行为分析器")
     parser.add_argument(
         "--context-json", required=True,
@@ -537,8 +538,7 @@ def main():
     )
     args = parser.parse_args()
 
-    with open(args.context_json, encoding='utf-8') as f:
-        context = json.load(f)
+    context = json.loads(read_text_utf8(args.context_json))
 
     # 分类话语行为（使用上下文感知分类）
     annotated_lines = context.get("annotated_lines", [])

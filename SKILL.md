@@ -2,7 +2,7 @@
 name: create-operator
 description: "Distill an Arknights operator into an AI Skill. Generate Knowledge + Persona with 5-layer structure, evolution support. | 将明日方舟角色蒸馏成AI Skill，生成知识库+5层人格，支持持续进化。"
 argument-hint: "[operator-name-or-slug]"
-version: "3.5.1"
+version: "3.6.0"
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash
 ---
@@ -46,11 +46,31 @@ allowed-tools: Read, Write, Edit, Bash
 | 验证 Persona 一致性 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/persona_validator.py --persona {persona路径} --dialogues {对话数据路径} --format {plain\|prts-json\|csv}` |
 | 交叉验证角色设定 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/canon_checker.py --sources {来源1} {来源2} ... [--misconceptions {自定义误解库}]` |
 | 写入/更新 Skill 文件 | `Write` / `Edit` 工具 |
-| 注入量化数据到 Prompt | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/data_injector.py --fingerprint {fingerprint.json} --relationships {graph.json} --slices {slices.json} --output injected_prompts/` |
+| 注入量化数据到 Prompt | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/data_injector.py --slug {slug} --base-dir {base} [--section fingerprint\|speech_acts\|relationships\|temporal\|context] [--output injected.md]`（留空则输出到 stdout） |
 | 版本管理 | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/version_manager.py` |
 | 列出已有 Skill | `Bash` → `python3 ${OPERATOR_SKILL_DIR}/tools/skill_writer.py --action list` |
 
-**基础目录**：Skill 文件写入 `./operators/{slug}/`（相对于本项目目录）。
+**基础目录**：Skill 文件写入 `<项目根>/operators/{slug}/`（可用 `--base-dir` 覆盖；
+`ARKNIGHTS_OPERATORS_DIR` 环境变量优先，其次项目根 `operators/`，最后回退 `./operators`）。
+
+### 输出目录产物（v3.6.0 起）
+
+`operators/{slug}/` 下的产物文件名由 `tools/artifacts.py` 统一提供（禁止硬编码）：
+
+| 文件 | 生产者 | 说明 |
+|---|---|---|
+| `operator_data.json` | `game_data_parser.py` | 角色原始数据（语音/档案） |
+| `story_data.json` | `story_extractor.py` | 剧情对话（旧名 `story.json` 仍可读，会告警） |
+| `context.json` | `context_annotator.py` | 语境标注（场景/对象/时期） |
+| `fingerprint.json` | `dialogue_fingerprint.py` | 8 维语言指纹 |
+| `speech_act_profile.json` | `speech_act_analyzer.py` | 话语行为画像 |
+| `temporal_slices.json` | `temporal_slicer.py` | 时序切片与演变规则 |
+| `relationship_graph.json` | `relationship_graph.py` | 关系图谱 |
+| `validation.json` | `persona_validator.py` | Persona 一致性报告 |
+| `persona_validation.json` | `canon_checker.py` | 设定交叉验证报告 |
+| `meta.json` / `SKILL.md` | `skill_writer.py` | 元数据（字段级 merge）与入口文件 |
+
+**退出码**：`0` 成功；`1` 运行期失败；`2` 用法/前置错误（含资产自检失败、`confirm_required`）。
 
 ### 工具详情
 
@@ -124,7 +144,7 @@ allowed-tools: Read, Write, Edit, Bash
 从多个来源交叉验证角色设定，标注矛盾和可信度：
 - 自动提取设定声明（种族、阵营、身份、MBTI）
 - 多来源一致性比对（一致→confirmed / 不一致→conflicted / 单一来源→unverified）
-- **外置误解库**：从 `data/misconceptions.json` 加载，支持按角色扩展
+- **外置误解库**：从 `tools/_data/misconceptions.json` 加载，支持按角色扩展
 - **通用模式检测**：阵营混淆、关系误判、时间线错乱等通用误解模式
 - **角色一致性检查**：基于 persona.md 的 Layer 0 规则和 Layer 5 禁忌验证文本
 - 支持 `--misconceptions` 加载自定义误解库 JSON

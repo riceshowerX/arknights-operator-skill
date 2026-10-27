@@ -4,10 +4,11 @@
 
 明日方舟角色蒸馏工具，将游戏角色转化为结构化 AI Skill。采用 Knowledge + Persona 双轨分离架构，五层优先级 Persona 结构，支持资料导入、语境化分析、对话纠正和版本管理。
 
-**版本**: 3.5.1（单一来源：pyproject.toml）
+**版本**: 3.6.0（单一来源：pyproject.toml；变更见 `CHANGELOG.md`）
 **技术栈**: Python 3 (标准库), Markdown, JSON
 **已验证角色**: 特蕾西娅 (operators/te-lei-xi-ya/), W (operators/w/)
-**测试**: `python3 -m pytest tests/ -v` (269 项通过，含多阵营泛化测试与 v3.5.1 回归测试)
+**测试**: `python3 -m pytest tests/ -v` (311 项通过 + 0 skipped，含多阵营泛化测试、v3.5.1 回归测试与 v3.6.0 回归测试)
+**质量门禁**: `python3 -m ruff check tools/ tests/`（0 违规）
 **工程配置**: `pyproject.toml` (含 ruff、mypy、pytest 配置)
 
 ## 核心架构
@@ -100,7 +101,7 @@ shared_utils.py  ←── 所有工具
 
 | 工具 | 用途 | 关键参数 |
 |------|------|---------|
-| `pipeline.py` | **一键蒸馏编排器** | `--name {角色名} --full`（`--strict` 严格模式） |
+| `pipeline.py` | **一键蒸馏编排器** | `--name {角色名} --step full`（`--strict` 严格模式，`--resume` 断点续传） |
 | `game_data_parser.py` | PRTS Wiki 数据获取 | `--source prts --name {角色名}` |
 | `story_extractor.py` | 剧情页面提取 | `--chapter {页面名} --character {角色名}` |
 | `phase_inferrer.py` | 多层级时期自动推断 | `--operator {干员名}` / `--chapter {章节名}` |
@@ -113,6 +114,19 @@ shared_utils.py  ←── 所有工具
 | `canon_checker.py` | 设定交叉验证 | `--sources` |
 | `skill_writer.py` | 文件管理 | `--action {list/create/delete} --slug` |
 | `version_manager.py` | 版本管理 | `backup / rollback / list` |
+
+### 领域资产与产物（v3.6.0）
+
+- **资产目录**：`tools/_data/*.json`（随 wheel 分发）。解析顺序：`ARKNIGHTS_DATA_DIR` →
+  仓库根 `data/`（用户覆盖位）→ `tools/_data` → `importlib.resources`。
+  5 个 CLI（`pipeline` / `game_data_parser` / `speech_act_analyzer` / `relationship_graph` /
+  `canon_checker`）启动即自检，缺失即以退出码 2 结束。
+- **产物文件名**：唯一来源 `tools/artifacts.py`（`ARTIFACT` / `STEP_ARTIFACTS` / `ANALYZE_TOOLS`），
+  任何模块不得再写字面量文件名。`--step analyze` 产出 4 个分析 json，`--step validate` 产出
+  `validation.json` + `persona_validation.json`。
+- **退出码**：`0` 成功 / `1` 运行期失败 / `2` 用法或前置错误（统一经 `tools/cli.py::finish()`）。
+- **写盘**：JSON 用 `atomic_write_json`，文本用 `atomic_write_text`；读文本用 `read_text_utf8`
+  （UTF-8/BOM/GB18030 三档），读 JSON 用 `load_json_safe` / `assets.load_json_or`。
 | `semantic_matcher.py` | 语义匹配原型（v3.5） | `search / cluster / duplicates`（探索性，未接入主管线） |
 
 ## 关键字段映射

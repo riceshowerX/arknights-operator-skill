@@ -50,7 +50,7 @@ from constants import (
     WIKITEXT_DIALOGUE_RE,
 )
 from prts_client import fetch_page_wikitext
-from shared_utils import setup_logging
+from shared_utils import atomic_write_text, setup_logging
 
 logger = setup_logging("story_extractor")
 
@@ -407,29 +407,54 @@ def extract_emotion_from_stage_direction(narration: list[str]) -> str | None:
     return max(emotion_scores, key=emotion_scores.get)
 
 
-def infer_phase(scene: str, chapter: str) -> str:
-    """基于章节名和场景关键词推断时间阶段
+# 章节级时期推断缓存：同一章节的 N 条台词只推断 1 次
+# 键 = 章节名；值 = 章节级时期（空字符串表示「无章节级信息，交由行级场景判断」）
+_CHAPTER_PHASE_CACHE: dict[str, str] = {}
+
+
+def _infer_chapter_level_phase(chapter: str) -> str:
+    """章节级时期推断（与 scene 无关，结果可安全缓存）
 
     推断优先级：
-    1. 章节/活动代码快速映射（CHAPTER_PHASE_MAP）
-    2. phase_inferrer 自动推断（活动元数据 + 内容聚类）
-    3. 场景关键词匹配
+    1. 章节代码映射（CHAPTER_PHASE_MAP）—— 命中即返回（可能显式返回 "unknown"）
+    2. 活动名映射（ACTIVITY_PHASE_MAP）
+    3. phase_inferrer 活动元数据（可能触网，因此必须按章节缓存）
+
+    Returns:
+        时期 id；空字符串表示「本章节没有可用的章节级信息」
     """
-    # 优先用章节代码映射（快速路径）
     for ch_key, phase in CHAPTER_PHASE_MAP.items():
         if ch_key in chapter:
             return phase
 
-    # 活动名映射
     for activity, phase in ACTIVITY_PHASE_MAP.items():
         if activity in chapter:
             return phase
 
-    # phase_inferrer 自动推断（从 PRTS 获取元数据）
     if HAS_PHASE_INFERRER:
         result = infer_phase_from_activity_meta(chapter)
         if result and result.phase != "unknown":
             return result.phase
+
+    return ""
+
+
+def infer_phase(scene: str, chapter: str) -> str:
+    """基于章节名和场景关键词推断时间阶段
+
+    推断优先级：
+    1. 章节级推断（代码映射 / 活动名 / 活动元数据），结果按章节缓存
+    2. 场景关键词匹配（行级、纯本地，零网络）
+
+    性能说明：原实现逐条台词调用本函数，未命中章节映射时每条都会触发
+    一次 PRTS 元数据请求（O(台词数) 次 HTTP）。现在章节级结果只计算一次。
+    """
+    if chapter not in _CHAPTER_PHASE_CACHE:
+        _CHAPTER_PHASE_CACHE[chapter] = _infer_chapter_level_phase(chapter)
+
+    chapter_phase = _CHAPTER_PHASE_CACHE[chapter]
+    if chapter_phase:
+        return chapter_phase
 
     # 退而用场景关键词（使用更精确的词组减少误判）
     scene_lower = scene.lower()
@@ -558,7 +583,9 @@ def main():
 
     result = {
         "character": args.character,
-        "chapters": args.chapter,
+        # 使用合并后的章节列表：原实现写 args.chapter，
+        # 在 --discover 模式下为 None（甚至生成 "chapters": null）。
+        "chapters": chapters,
         "total_target_lines": sum(1 for d in all_dialogues if d["is_target"]),
         "total_context_lines": len(all_dialogues),
         "phase_distribution": phase_dist,
@@ -568,8 +595,7 @@ def main():
     output_json = json.dumps(result, ensure_ascii=False, indent=2)
 
     if args.output:
-        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.output).write_text(output_json, encoding='utf-8')
+        atomic_write_text(args.output, output_json)
         print(json.dumps({
             "success": True,
             "output": args.output,

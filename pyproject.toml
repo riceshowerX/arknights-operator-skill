@@ -1,26 +1,51 @@
 [project]
 name = "arknights-operator-skill"
-version = "3.5.1"
-description = "明日方舟角色蒸馏工具 — 将游戏角色转化为结构化的 AI Skill"
+version = "3.6.0"
+description = "把《明日方舟》角色蒸馏为结构化、可验证的 AI 人格档案 — 零运行期依赖的角色蒸馏工具链"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [
     {name = "riceshowerX"}
 ]
-keywords = ["arknights", "ai", "skill", "persona", "character-distillation"]
+keywords = [
+    "arknights",
+    "character-distillation",
+    "persona",
+    "agentskill",
+    "claude-skill",
+    "llm",
+    "prompt-engineering",
+    "data-pipeline",
+    "nlp",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: Chinese (Simplified)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Games/Entertainment",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
 ]
 
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/riceshowerX/arknights-operator-skill"
+Repository = "https://github.com/riceshowerX/arknights-operator-skill"
+Issues = "https://github.com/riceshowerX/arknights-operator-skill/issues"
+Changelog = "https://github.com/riceshowerX/arknights-operator-skill/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/riceshowerX/arknights-operator-skill/blob/main/SKILL.md"
 
 [project.optional-dependencies]
 full = ["pypinyin>=0.51.0"]
@@ -35,13 +60,19 @@ dev = [
 arknights-distill = "tools.pipeline:main"
 
 [build-system]
-requires = ["setuptools>=68.0"]
+# PEP 639（license 表达式与 license-files）需要 setuptools>=77
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 # 允许 pip install -e . 后通过 from tools.xxx import ... 导入
 # 这是消除 sys.path hack 的推荐方式（参见 tools/__init__.py）
 include = ["tools*"]
+
+[tool.setuptools.package-data]
+# 领域资产随包分发：安装态（wheel）下 data_dir() 命中 tools/_data/
+# 说明：不要用 [tool.setuptools.data-files]，它会把资产装到 sys.prefix（Windows 路径不可控、卸载残留）
+tools = ["_data/*.json"]
 
 [tool.ruff]
 line-length = 120

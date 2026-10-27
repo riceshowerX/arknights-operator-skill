@@ -26,25 +26,45 @@
     },
     "babel": {
       "metrics": {
-        "line_count": 114,
-        "avg_sentence_length": 12.3,
-        "ellipsis_pct": 18.4,
+        "line_count": 8,
+        "avg_sentence_length": 9.9,
+        "ellipsis_pct": 12.5,
         "exclamation_pct": 0.0,
-        "negation_pct": 11.4,
-        "self_reference_freq": 0.17,
+        "negation_pct": 0.0,
+        "self_reference_freq": 0.25,
         "speech_act_distribution": {
-          "evade": 11
+          "evade": 1
         },
         "interlocutor_distribution": {
-          "unknown": 45,
-          "坚强的孩子": 57,
-          "孱弱的孩子": 12
+          "unknown": 2,
+          "坚强的孩子": 5,
+          "孱弱的孩子": 1
         }
       },
-      "line_count": 114
+      "line_count": 8
     }
   },
   "temporal_rules": [
+    {
+      "rule": "babel时期相比early时期：句式偏短（20.2→9.9字）",
+      "layer": 2,
+      "metric": "avg_sentence_length",
+      "phases": [
+        "early",
+        "babel"
+      ],
+      "confidence": 0.95
+    },
+    {
+      "rule": "babel时期相比early时期：否定表达减少（18.4%→0.0%）",
+      "layer": 2,
+      "metric": "negation_pct",
+      "phases": [
+        "early",
+        "babel"
+      ],
+      "confidence": 0.95
+    },
     {
       "rule": "babel时期相比early时期：回避/转移行为显著增多（20.0%→100.0%）",
       "layer": 2,
@@ -54,26 +74,6 @@
         "babel"
       ],
       "confidence": 0.95
-    },
-    {
-      "rule": "babel时期相比early时期：句式偏短（20.2→12.3字）",
-      "layer": 2,
-      "metric": "avg_sentence_length",
-      "phases": [
-        "early",
-        "babel"
-      ],
-      "confidence": 0.782
-    },
-    {
-      "rule": "babel时期相比early时期：否定表达减少（18.4%→11.4%）",
-      "layer": 2,
-      "metric": "negation_pct",
-      "phases": [
-        "early",
-        "babel"
-      ],
-      "confidence": 0.76
     },
     {
       "rule": "babel时期相比early时期：宽慰/安抚行为显著减少（30.0%→0.0%）",

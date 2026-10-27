@@ -4,24 +4,24 @@
   "slices": {
     "babel": {
       "metrics": {
-        "line_count": 38,
-        "avg_sentence_length": 17.8,
-        "ellipsis_pct": 21.1,
-        "exclamation_pct": 2.6,
-        "negation_pct": 26.3,
-        "self_reference_freq": 1.16,
+        "line_count": 20,
+        "avg_sentence_length": 19.4,
+        "ellipsis_pct": 35.0,
+        "exclamation_pct": 0.0,
+        "negation_pct": 40.0,
+        "self_reference_freq": 1.55,
         "speech_act_distribution": {
-          "commit": 9,
+          "commit": 3,
           "evade": 3,
           "comfort": 1,
-          "presence": 6
+          "presence": 2
         },
         "interlocutor_distribution": {
-          "博士": 4,
-          "unknown": 34
+          "博士": 3,
+          "unknown": 17
         }
       },
-      "line_count": 38
+      "line_count": 20
     }
   },
   "temporal_rules": [],

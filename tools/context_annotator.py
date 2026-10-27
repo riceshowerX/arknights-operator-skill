@@ -47,6 +47,7 @@ from constants import (
 )
 from shared_utils import (
     atomic_write_json,
+    read_text_utf8,
     setup_logging,
     validate_context,
     validate_path,
@@ -87,15 +88,13 @@ def _validate_path(path: str) -> str:
 def load_operator_data(path: str) -> dict:
     """加载 game_data_parser 的输出"""
     safe_path = _validate_path(path)
-    with open(safe_path, encoding='utf-8') as f:
-        return json.load(f)
+    return json.loads(read_text_utf8(safe_path))
 
 
 def load_story_data(path: str) -> list[dict]:
     """加载 story_extractor 的输出"""
     safe_path = _validate_path(path)
-    with open(safe_path, encoding='utf-8') as f:
-        data = json.load(f)
+    data = json.loads(read_text_utf8(safe_path))
     return data.get("dialogues", [])
 
 
@@ -109,7 +108,7 @@ def load_timeline(knowledge_path: str) -> list[dict]:
     """
     try:
         safe_path = _validate_path(knowledge_path)
-        text = Path(safe_path).read_text(encoding='utf-8')
+        text = read_text_utf8(safe_path)
     except FileNotFoundError:
         return []
 
@@ -405,12 +404,18 @@ def _infer_phase_cached(operator_name: str) -> str:
     return result.phase
 
 
-def _get_default_phase(operator_name: str, operator_data: dict = None) -> str:
+def _get_default_phase(operator_name: str, operator_data: dict | None = None) -> str:
     """获取干员的默认时期
 
     推断优先级：
     1. OPERATOR_DEFAULT_PHASE 缓存（快速路径，离线可用）
     2. phase_inferrer 自动推断（PRTS 分类标签 + 阵营信息 + 内容聚类，带 lru_cache）
+
+    Args:
+        operator_name: 干员中文名
+        operator_data: 保留兼容（3.x 写作 ``dict = None``，与默认值不一致）；
+            当前实现不消费该参数——时期推断完全由 operator_name 驱动。
+            如需按 operator_data 覆盖时期，请显式设置 ``OPERATOR_DEFAULT_PHASE``。
     """
     # 快速路径：已有缓存
     if operator_name in OPERATOR_DEFAULT_PHASE:
@@ -467,6 +472,7 @@ def build_context_json(
     source_dist = {}
     phase_dist = {}
     situation_dist = {}
+    interlocutor_dist = {}
     for line in annotated_lines:
         src = line["source"]
         source_dist[src] = source_dist.get(src, 0) + 1
@@ -477,6 +483,10 @@ def build_context_json(
 
         sit = line["context"]["situation_type"]
         situation_dist[sit] = situation_dist.get(sit, 0) + 1
+
+        # 对话对象分布（P1-4 生产者侧：data_injector 的 --section context 需要）
+        interlocutor = line["context"].get("interlocutor") or "unknown"
+        interlocutor_dist[interlocutor] = interlocutor_dist.get(interlocutor, 0) + 1
 
     # 生成推断报告
     inference_report = generate_inference_report(inference_results) if HAS_PHASE_INFERRER else None
@@ -490,11 +500,15 @@ def build_context_json(
         "annotated_lines": annotated_lines,
         "annotated_relations": [],  # 由升级后的 relationship_graph 填充
         "inference_report": inference_report,
+        # 过渡期双写：顶层与 stats 各存一份，等待下游全部改用 stats 后再移除顶层键
+        "situation_distribution": situation_dist,
+        "interlocutor_distribution": interlocutor_dist,
         "stats": {
             "total_lines": len(annotated_lines),
             "source_distribution": source_dist,
             "phase_distribution": phase_dist,
             "situation_distribution": situation_dist,
+            "interlocutor_distribution": interlocutor_dist,
         },
     }
 

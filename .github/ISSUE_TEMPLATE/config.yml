@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞
+    url: https://github.com/riceshowerX/arknights-operator-skill/security/advisories/new
+    about: 请勿公开报告安全问题，使用私下漏洞报告渠道。
+  - name: 使用问题 / 讨论
+    url: https://github.com/riceshowerX/arknights-operator-skill/discussions
+    about: 「怎么用」「为什么会这样」类问题请走 Discussions，Issue 留给可复现的缺陷与建议。

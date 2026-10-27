@@ -1,0 +1,27 @@
+# sdist 内容清单（wheel 的资产分发由 pyproject 的
+# [tool.setuptools.package-data] 负责，两者需保持一致）
+
+include LICENSE
+include README.md
+include README_EN.md
+include CHANGELOG.md
+include SKILL.md
+include AGENTS.md
+include requirements.txt
+include requirements-optional.txt
+
+# 领域资产（operator_db / emotion_lexicon / speech_act_rules /
+# misconceptions / context.schema / pinyin_map）
+recursive-include tools/_data *.json
+
+# Prompt 模板
+recursive-include prompts *.md
+
+# 文档
+recursive-include docs *.md
+recursive-include docs/assets *.png
+
+# 排除构建产物与缓存
+global-exclude *.py[cod] __pycache__ .DS_Store
+recursive-include tests *.py *.md
+recursive-include operators *.json *.md

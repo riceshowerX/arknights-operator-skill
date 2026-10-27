@@ -11,23 +11,95 @@
     python -m tools.data_injector --slug theresa
     python -m tools.data_injector --slug theresa --section fingerprint
     python -m tools.data_injector --slug theresa --section relationships
+
+契约说明（关键）：
+    relationship_graph 写入的是 annotated_relations[{from, to, type, confidence, sources}]，
+    而旧版 data_injector 只读 target/strength/evidence_count → 关系段退化为
+    「未知：trust（强度 0.00，0 条证据）」。本模块对两组字段做双读：
+    新字段优先、旧字段兜底，旧调用方（含旧测试数据）输出保持不变。
+
+失败返回非 0，见 CHANGELOG 3.6.0。
 """
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
+# 确保 tools 目录在 import 路径中（支持脚本运行与包导入两种方式）
+_TOOLS_DIR = Path(__file__).parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+import assets
+import cli
+from artifacts import ARTIFACT
+from constants import CONFIDENCE_TO_STRENGTH
+from shared_utils import atomic_write_text, load_json_safe
+
 
 def load_json(path: Path) -> dict | list | None:
-    """安全加载 JSON 文件"""
-    if not path.exists():
-        return None
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
+    """安全加载 JSON 文件（内部走 read_text_utf8，BOM/GB18030 不再崩溃）"""
+    return load_json_safe(path)
+
+
+def _is_number(value) -> bool:
+    """判断是否为数字（排除 bool：bool 是 int 的子类）"""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _resolve_target(relation: dict) -> str:
+    """双读关系对象名：to（新）→ target → name"""
+    for key in ("to", "target", "name"):
+        value = relation.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return "未知"
+
+
+def _resolve_relation_type(relation: dict) -> str:
+    """双读关系类型：type（新）→ relation_type"""
+    for key in ("type", "relation_type"):
+        value = relation.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return "未知"
+
+
+def _resolve_strength(relation: dict) -> float:
+    """双读关系强度：strength（数字直用）→ confidence（字符串经映射）"""
+    strength = relation.get("strength")
+    if _is_number(strength):
+        return float(strength)
+
+    confidence = relation.get("confidence")
+    if _is_number(confidence):
+        return float(confidence)
+    if isinstance(confidence, str):
+        return CONFIDENCE_TO_STRENGTH.get(confidence.lower(), 0.0)
+    return 0.0
+
+
+def _resolve_evidence_count(relation: dict) -> int:
+    """双读证据数：len(sources)（新）→ evidence_count → count"""
+    sources = relation.get("sources")
+    if isinstance(sources, list) and sources:
+        return len(sources)
+    for key in ("evidence_count", "count"):
+        value = relation.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    return 0
+
+
+def _distribution(data: dict, key: str) -> dict:
+    """双读分布统计：优先 stats.<key>，回退顶层 <key>"""
+    stats = data.get("stats")
+    if isinstance(stats, dict):
+        value = stats.get(key)
+        if isinstance(value, dict) and value:
+            return value
+    value = data.get(key)
+    return value if isinstance(value, dict) else {}
 
 
 def _get_fingerprint_dim(data: dict, dim_key: str) -> dict:
@@ -35,15 +107,20 @@ def _get_fingerprint_dim(data: dict, dim_key: str) -> dict:
     - 嵌套结构（context 模式输出）：data["global"]["dimensions"]["1_sentence_length"]
     - 扁平结构（传统模式输出）：data["sentence_length"]
     """
+    # load_json 可能返回 list / None（非法结构），此处统一退化
+    if not isinstance(data, dict):
+        return {}
+
     # 嵌套结构
     global_data = data.get("global", {})
-    dimensions = global_data.get("dimensions", {})
-    if dim_key in dimensions:
-        return dimensions[dim_key]
-    # 按数字前缀匹配（如 "1_sentence_length"）
-    for k, v in dimensions.items():
-        if k.endswith(dim_key) or dim_key in k:
-            return v if isinstance(v, dict) else {}
+    dimensions = global_data.get("dimensions", {}) if isinstance(global_data, dict) else {}
+    if isinstance(dimensions, dict):
+        if dim_key in dimensions:
+            return dimensions[dim_key]
+        # 按数字前缀匹配（如 "1_sentence_length"）
+        for k, v in dimensions.items():
+            if k.endswith(dim_key) or dim_key in k:
+                return v if isinstance(v, dict) else {}
     # 扁平结构
     flat = data.get(dim_key, {})
     return flat if isinstance(flat, dict) else {}
@@ -51,7 +128,7 @@ def _get_fingerprint_dim(data: dict, dim_key: str) -> dict:
 
 def format_fingerprint(data: dict) -> str:
     """格式化对话指纹数据（兼容嵌套与扁平两种结构）"""
-    if not data:
+    if not data or not isinstance(data, dict):
         return "（对话指纹数据不可用）"
 
     lines = ["### 对话指纹数据（来自 dialogue_fingerprint 8 维度分析）\n"]
@@ -143,7 +220,7 @@ def format_fingerprint(data: dict) -> str:
 
 def format_speech_acts(data: dict) -> str:
     """格式化话语行为分析数据"""
-    if not data:
+    if not data or not isinstance(data, dict):
         return "（话语行为数据不可用）"
 
     lines = ["### 话语行为数据（来自 speech_act_analyzer）\n"]
@@ -185,7 +262,7 @@ def format_relationships(data: dict) -> str:
     - context.json 的 annotated_relations / relation_trajectories（语境化模式）
     - 独立 relationships.json 的 relations / evolutions（传统模式，旧测试兼容）
     """
-    if not data:
+    if not data or not isinstance(data, dict):
         return "（关系图谱数据不可用）"
 
     lines = ["### 关系图谱数据（来自 relationship_graph）\n"]
@@ -195,10 +272,12 @@ def format_relationships(data: dict) -> str:
     if relations:
         lines.append("**核心关系**：")
         for r in relations[:10]:
-            target = r.get("target", r.get("name", "未知"))
-            rel_type = r.get("type", r.get("relation_type", "未知"))
-            strength = r.get("strength", 0)
-            evidence = r.get("evidence_count", r.get("count", 0))
+            if not isinstance(r, dict):
+                continue
+            target = _resolve_target(r)
+            rel_type = _resolve_relation_type(r)
+            strength = _resolve_strength(r)
+            evidence = _resolve_evidence_count(r)
             lines.append(f"- **{target}**：{rel_type}（强度 {strength:.2f}，"
                           f"{evidence} 条证据）")
 
@@ -235,7 +314,7 @@ def format_relationships(data: dict) -> str:
 
 def format_temporal(data: dict) -> str:
     """格式化时序切片数据（匹配 temporal_slicer 实际输出结构）"""
-    if not data:
+    if not data or not isinstance(data, dict):
         return "（时序切片数据不可用）"
 
     lines = ["### 时序演变数据（来自 temporal_slicer）\n"]
@@ -281,21 +360,21 @@ def format_temporal(data: dict) -> str:
 
 def format_context(data: dict) -> str:
     """格式化语境标注数据"""
-    if not data:
+    if not data or not isinstance(data, dict):
         return "（语境标注数据不可用）"
 
     lines = ["### 语境标注数据（来自 context_annotator）\n"]
 
-    # 场景分布
-    situations = data.get("situation_distribution", {})
+    # 场景分布（双读：stats.situation_distribution 优先，回退顶层）
+    situations = _distribution(data, "situation_distribution")
     if situations:
         lines.append("**场景分布**：")
         sorted_sit = sorted(situations.items(), key=lambda x: x[1], reverse=True)
         for sit, count in sorted_sit[:5]:
             lines.append(f"- {sit}: {count} 条")
 
-    # 对象分布
-    interlocutors = data.get("interlocutor_distribution", {})
+    # 对象分布（双读：stats.interlocutor_distribution 优先，回退顶层）
+    interlocutors = _distribution(data, "interlocutor_distribution")
     if interlocutors:
         lines.append("\n**对话对象分布**：")
         sorted_int = sorted(interlocutors.items(), key=lambda x: x[1], reverse=True)
@@ -305,29 +384,31 @@ def format_context(data: dict) -> str:
     return "\n".join(lines)
 
 
-def generate_data_context(slug: str, base_dir: str = "./operators",
+def generate_data_context(slug: str, base_dir: str | None = None,
                           sections: list[str] | None = None) -> str:
     """
     生成完整的数据上下文
 
     Args:
         slug: 角色 slug
-        base_dir: 基础目录
+        base_dir: 基础目录；``None``（默认）时用 ``assets.default_base_dir()``
+            （``ARKNIGHTS_OPERATORS_DIR`` → ``<项目根>/operators`` → ``./operators``）
         sections: 要包含的数据段（None=全部）
 
     Returns:
         格式化的 Markdown 数据上下文
     """
-    operator_dir = Path(base_dir) / slug
+    root_dir = Path(base_dir) if base_dir else assets.default_base_dir()
+    operator_dir = root_dir / slug
     if not operator_dir.exists():
         return f"错误：角色目录 {operator_dir} 不存在"
 
     all_sections = {
-        "fingerprint": ("fingerprint.json", format_fingerprint),
-        "speech_acts": ("speech_act_profile.json", format_speech_acts),
-        "relationships": ("context.json", format_relationships),
-        "temporal": ("temporal_slices.json", format_temporal),
-        "context": ("context.json", format_context),
+        "fingerprint": (ARTIFACT.FINGERPRINT, format_fingerprint),
+        "speech_acts": (ARTIFACT.SPEECH_PROFILE, format_speech_acts),
+        "relationships": (ARTIFACT.CONTEXT, format_relationships),
+        "temporal": (ARTIFACT.TEMPORAL, format_temporal),
+        "context": (ARTIFACT.CONTEXT, format_context),
     }
 
     if sections is None:
@@ -360,15 +441,22 @@ def generate_data_context(slug: str, base_dir: str = "./operators",
 
 
 def main():
+    """CLI 入口
+
+    失败返回非 0，见 CHANGELOG 3.6.0（stdout 文本内容不变，只是退出码变化）。
+    """
     parser = argparse.ArgumentParser(description="数据注入器 - 格式化工具输出为 Prompt 数据上下文")
     parser.add_argument("--slug", required=True, help="角色 slug")
-    parser.add_argument("--base-dir", default="./operators", help="基础目录")
+    parser.add_argument("--base-dir", default=None,
+                        help="基础目录（默认 <项目根>/operators）")
     parser.add_argument("--section", action="append",
                         choices=["fingerprint", "speech_acts", "relationships", "temporal", "context"],
                         help="只输出指定数据段（可多次指定）")
     parser.add_argument("--output", help="输出文件路径（默认 stdout）")
 
     args = parser.parse_args()
+
+    operator_dir = (Path(args.base_dir) if args.base_dir else assets.default_base_dir()) / args.slug
 
     result = generate_data_context(
         slug=args.slug,
@@ -377,10 +465,14 @@ def main():
     )
 
     if args.output:
-        Path(args.output).write_text(result, encoding="utf-8")
+        atomic_write_text(args.output, result)
         print(f"数据上下文已写入: {args.output}", file=sys.stderr)
     else:
         print(result)
+
+    if operator_dir.exists():
+        cli.finish({"success": True})
+    cli.finish({"success": False, "error": f"角色目录 {operator_dir} 不存在"})
 
 
 if __name__ == "__main__":

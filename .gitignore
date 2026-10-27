@@ -1,53 +1,61 @@
-# Python
+# ── Python ──────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.egg
+*.egg-info/
+.installed.cfg
+
+# ── 构建产物 ────────────────────────────────────
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
+sdist/
+wheels/
+develop-eggs/
 .eggs/
 lib/
 lib64/
 parts/
-sdist/
 var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+downloads/
+*.whl
 
-# Virtual environments
+# ── 虚拟环境 ────────────────────────────────────
+.venv/
 venv/
 ENV/
 env/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
+# ── 测试与覆盖率 ────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
-# OS
-.DS_Store
-Thumbs.db
+# ── 静态检查与类型缓存 ──────────────────────────
+.ruff_cache/
+.mypy_cache/
+.typing_cache/
 
-# 项目生成文件
-# 注意：operators/ 目录下的角色 Skill 文件应被跟踪
-# 仅忽略版本备份和临时生成文件
+# ── 项目生成文件 ────────────────────────────────
+# operators/ 下的角色档案（含样例）应当被跟踪；
+# 只忽略版本归档（体积大、可重建）与日志
 operators/*/versions/
 *.log
 
-# 测试
-.pytest_cache/
-.coverage
-htmlcov/
-
-# 临时文件
+# ── 临时文件 ────────────────────────────────────
 tmp/
 temp/
 *.tmp
 .cozeproj/reduction
+
+# ── 编辑器与系统 ────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

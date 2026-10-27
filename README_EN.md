@@ -2,468 +2,414 @@
 
 <div align="center">
 
-# ◇ ARKNIGHTS OPERATOR SKILL
+<img src="docs/assets/banner.png" alt="Arknights Operator Skill — distill operators into runnable, verifiable persona archives" width="100%">
 
-**Rhodes Island Operator Mental Contour Distillation Protocol**
+# Arknights Operator Skill
 
-*"……I'm here."*
-
-Knowledge · Persona Dual-Track Separation ─ Five-Layer Priority Persona Structure ─ Contextual Analysis Pipeline ─ Continuous Evolution
+**Distill Arknights operators into runnable, verifiable, evolvable AI persona archives**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![AgentSkills](https://img.shields.io/badge/compatible-AgentSkills-green.svg)](https://github.com/perkfly/ex-skill)
-[![Tests](https://img.shields.io/badge/tests-269%20passed-brightgreen.svg)](tests/)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
+[![Tests](https://img.shields.io/badge/tests-311%20passed-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-47%25-yellow.svg)](tests/COVERAGE.md)
+[![Ruff](https://img.shields.io/badge/ruff-0%20errors-brightgreen.svg)](https://docs.astral.sh/ruff/)
+[![CI](https://img.shields.io/badge/CI-Linux%20%2B%20Windows-brightgreen.svg)](.github/workflows/ci.yml)
+[![AgentSkills](https://img.shields.io/badge/compatible-AgentSkills-green.svg)](SKILL.md)
+
+PRTS Wiki → contextualization → multi-dimensional language analysis → validation → **Knowledge + Persona** skill
 
 </div>
 
----
+> "…I'm here."
 
-> *Doctor, this archive documents our method of extracting operator mental contours from Originium and memories.*
-> *Not replication. Distillation.*
-> *Every soul deserves to be remembered—even when the scars of Terra finally heal, the names of those who fought for us must not fade into the wind.*
+<details>
+<summary>Contents</summary>
 
----
+- [Why this exists](#why-this-exists)
+- [Who it's for](#who-its-for)
+- [What you get in 30 seconds](#what-you-get-in-30-seconds)
+- [Quick start](#quick-start)
+- [How it works](#how-it-works)
+- [Two tracks](#two-tracks)
+- [Toolchain](#toolchain)
+- [Engineering quality](#engineering-quality)
+- [Fidelity and limits](#fidelity-and-limits)
+- [FAQ](#faq)
+- [Project layout](#project-layout)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Disclaimer](#disclaimer)
 
-## ◇ Table of Contents
-
-- [Protocol Overview](#-protocol-overview)
-- [Quick Deployment](#-quick-deployment)
-- [Core Architecture](#-core-architecture)
-- [Toolchain](#-toolchain)
-- [Archive Structure](#-archive-structure)
-- [Distillation Records](#-distillation-records)
-- [Fidelity Assessment](#-fidelity-assessment)
-- [Changelog](#-changelog)
-- [References & Acknowledgements](#-references--acknowledgements)
-- [Disclaimer](#-disclaimer)
-
----
-
-## ◇ Protocol Overview
-
-**arknights-operator-skill** is an **operator distillation protocol** — extracting, structuring, and solidifying the mental contours of operators, leaders, and nemeses across Terra from fragmented signals and memory shards into callable AI Skills.
-
-It reads raw records from the PRTS archives, processes them through a complete pipeline of **extraction → contextualization → multi-dimensional analysis → validation → generation**, and ultimately outputs **Knowledge** and **Persona** dual-track data.
-
-**Any character can be distilled**: the Demon King of the Sarkaz, Rhodes Island's bunny, the shadow of Kazdel, the lion of Victoria… even minor characters who left only a few words in a side story.
-
-**Architecture lineage**: Based on the distillation frameworks of [ex-skill](https://github.com/perkfly/ex-skill) and [colleague-skill](https://github.com/titanwings/colleague-skill). The core improvement — completely separating "what they know" from "how they exist", and implementing a prioritized five-layer Persona structure for predictable, verifiable, and continuously evolving character restoration.
+</details>
 
 ---
 
-## ◇ Quick Deployment
+## Why this exists
 
-### Installation
+Most roleplay prompts are "one lore dump plus a few catchphrases". The first ten turns feel right, then the character collapses: she knows things she shouldn't, speaks in cadences she never used, and picks randomly between contradictory settings.
+
+The problem isn't a lack of material — it's the **lack of structure**. "What she has lived through" and "how she speaks" are blended into a single blob of prose with no priorities and nothing to verify against.
+
+This project splits them into two independent tracks, each with checkable constraints:
+
+| Track | Question it answers | Artifact | Enforced by |
+|---|---|---|---|
+| **Knowledge** | What does she **know**? | `knowledge.md` | `canon_checker` cross-validates sources |
+| **Persona** | How does she **exist**? | `persona.md` | `persona_validator` tests it against her real lines |
+
+**Not a replica — a distillation.** Quantifiable language evidence is extracted from public wiki voices, archives, and story text, then frozen into a layered, rollback-able, correctable persona archive.
+
+---
+
+## Who it's for
+
+**It's for you if:**
+
+- You write long-form fan fiction or run tabletop campaigns, and the character starts "forgetting", "leaking", or "changing personality" around turn 50
+- You already have a pile of wiki material but hand-pick and paste it into the prompt every single time
+- You want her speech patterns to be **traceable to evidence**, not "I feel like she'd say it this way"
+- You want versioning and rollback for persona archives instead of rewriting from scratch
+
+**It's not for you if:**
+
+- You want a ready-to-chat front end — this repo ships data, a toolchain, and a protocol, no UI
+- You want the model to freely invent new stories for her — this project restores, it doesn't continue
+- You need 100% official canon — it's a distillation, self-rated 70–80%, see [Fidelity and limits](#fidelity-and-limits)
+
+### How it compares
+
+| Approach | Where it breaks | What this project does instead |
+|---|---|---|
+| One long system prompt | Everything flattened; on conflict the model picks at random | Five priority layers; higher layers **override** lower ones |
+| Hand-written character card (SillyTavern etc.) | Depends on the author's ear; one edit means re-reading everything | Quantified from real lines; change the data, not the prose style |
+| Dumping the whole wiki in | Lore drowns the style signal | Reduced to a 7-dimension fingerprint + relationship graph, injected on demand |
+| Fine-tuning / LoRA | Expensive, opaque, hard to roll back | No training, readable, diffable, rollback-able |
+
+---
+
+## What you get in 30 seconds
+
+A real excerpt ([`operators/te-lei-xi-ya/persona.md`](operators/te-lei-xi-ya/persona.md), Chinese):
+
+```markdown
+## Layer 0: Core Personality (highest priority, never violated)
+
+- Speaks like a whisper, yet the whole room falls silent to listen —
+  not out of authority, but out of gentleness
+- Says "we", never "my subjects" — she says "our people"
+- Never gives orders; always invites — "Will you come with me?"
+```
+
+An operator archive looks like this:
+
+```text
+operators/<slug>/
+├── operator_data.json       # Profile scraped from PRTS
+├── story_data.json          # Structured story dialogue (time/scene tagged)
+├── context.json             # Context model: who, where, to whom, which era
+├── speech_act_profile.json  # What she *does* with language
+├── fingerprint.json         # 7-dimension language fingerprint
+├── relationship_graph.json  # Relations with strength and evidence count
+├── temporal_slices.json     # How her language shifts across eras
+├── knowledge.md             # Knowledge track (generated by your AI agent)
+├── persona.md               # Persona track (5-layer priority structure)
+├── validation.json          # Cross-source canon check
+├── persona_validation.json  # Persona consistency score
+├── meta.json                # Metadata, corrections, version
+├── SKILL.md                 # Callable entry point
+└── versions/                # Archived versions, supports rollback
+```
+
+---
+
+## Quick start
+
+### Option 1 — As an Agent Skill
+
+Works with Claude Code and any client compatible with [AgentSkills](https://github.com/perkfly/ex-skill).
 
 ```bash
-# Claude Code (project-level)
+# Project-level
 mkdir -p .claude/skills
 git clone https://github.com/riceshowerX/arknights-operator-skill .claude/skills/create-operator
 
-# OpenClaw (global)
+# Global (OpenClaw)
 git clone https://github.com/riceshowerX/arknights-operator-skill ~/.openclaw/skills/arknights-operator-skill
 ```
 
-### Dependencies
+Then, in a conversation:
 
-The core toolchain depends only on the Python 3.10+ standard library. No additional installation required — self-sufficient, like the Rhodes Island infrastructure.
+```text
+/create-operator                 # create a new operator archive
+/te-lei-xi-ya                    # summon (both tracks)
+/te-lei-xi-ya-persona            # persona track only
+```
+
+### Option 2 — As a CLI
 
 ```bash
-# Run all tests (269 cases)
-python -m pytest tests/ -v
+git clone https://github.com/riceshowerX/arknights-operator-skill
+cd arknights-operator-skill
+pip install -e .
+
+arknights-distill --help
 ```
 
-### Creating an Operator Archive
+> Runtime dependencies: **none beyond the Python 3.10+ standard library**. `pip install ".[full]"` additionally pulls `pypinyin` (optional, used for name disambiguation).
 
-```
-/create-operator
-```
+### 30-second offline demo (no network, no scraping)
 
-Or trigger via natural language: "Help me create an Arknights character skill", "I want to distill a character".
+The repo ships a trimmed sample (`operators/w`, 20 dialogue lines only — it demonstrates the artifact shape, not full fidelity):
 
-### Invoking a Character
-
-```
-/te-lei-xi-ya           # Full version (Knowledge + Persona dual-track)
-/te-lei-xi-ya-knowledge # Knowledge only — what she knows
-/te-lei-xi-ya-persona   # Persona only — how she exists
+```bash
+cp -r operators/w /tmp/w-demo
+arknights-distill --name W --slug w --output-dir /tmp/w-demo --step full --skip-fetch
 ```
 
-### Evolution & Correction
+The output directory will contain all 13 artifacts listed above plus a `versions/` archive. For a real distillation, run `--step fetch` to pull the full corpus yourself.
+
+### Distill a new operator
+
+```bash
+# Full pipeline: fetch → annotate → analyze → validate → write
+arknights-distill --name 特蕾西娅
+
+# Step by step
+arknights-distill --name 特蕾西娅 --step fetch
+arknights-distill --name 特蕾西娅 --step annotate
+arknights-distill --name 特蕾西娅 --step analyze
+arknights-distill --name 特蕾西娅 --step validate
+arknights-distill --name 特蕾西娅 --step write
+
+# Resume: skip steps whose artifacts already exist
+arknights-distill --name 特蕾西娅 --resume
+
+# Dialogue only, no full archive (for minor characters with a few lines)
+arknights-distill --name 特蕾西娅 --discover <chapter-name>
+```
+
+### Run the tests
+
+```bash
+python -m pytest tests/ -q          # 311 passed
+python -m ruff check tools/ tests/  # All checks passed!
+```
+
+---
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[PRTS Wiki] -->|game_data_parser| B[operator_data.json]
+    A -->|story_extractor| C[story_data.json]
+    B --> D[context_annotator]
+    C --> D
+    D --> E[context.json]
+    E --> F1[speech_act_analyzer]
+    E --> F2[dialogue_fingerprint]
+    E --> F3[relationship_graph]
+    E --> F4[temporal_slicer]
+    F1 --> G[data_injector]
+    F2 --> G
+    F3 --> G
+    F4 --> G
+    G --> H[AI Agent]
+    H --> I[knowledge.md / persona.md]
+    I --> J[canon_checker + persona_validator]
+    J --> K[skill_writer + version_manager]
+```
+
+**Scripts own the quantifiable part**: fetching, cleaning, tagging, statistics, validation.
+**The AI agent owns the unquantifiable part**: turning measurements into prose with a pulse.
+
+The boundary is deliberate. Scripts never write prose, so results are reproducible and testable. The agent never touches raw data, so it cannot invent lines she never said.
+
+---
+
+## Two tracks
+
+### Knowledge — what she **knows**
+
+Facts, relations, timeline, ordered by source reliability. Every key setting cites its origin (voice / archive / story / event). Conflicts are resolved by source priority, not by averaging.
+
+### Persona — how she **exists**
+
+Five layers with strict precedence. On conflict, a higher layer **unconditionally overrides** a lower one — this is what keeps a character intact across long conversations.
+
+| Layer | Content | Example question |
+|---|---|---|
+| **Layer 0** | Core personality (inviolable) | What would she never do? |
+| **Layer 1** | Identity and allegiance | Who is she, who does she stand with? |
+| **Layer 2** | Expression style | Catchphrases, sentence length, pauses, tone by mood |
+| **Layer 3** | Judgment and decisions | How does she choose under doubt, sacrifice, betrayal? |
+| **Layer 4** | Relational behavior | How does she speak to a friend, an enemy, a stranger? |
+
+### Evolution and correction
 
 | Trigger | Effect |
-|---------|--------|
-| "I have new intel" / `/update-operator {slug}` | Append data,联动 update Persona |
-| "She wouldn't say that" / "She should be…" | Write to Correction layer, effective immediately — as irrefutable as Kal'tsit's corrections |
-| `/operator-rollback {slug} {version}` | Roll back to a historical version — time flows backward, but only for the archives |
+|---|---|
+| "I have new material" / `/update-operator {slug}` | Append material, update Persona in tandem |
+| "She wouldn't say that" | Write a Correction, effective immediately, counted in `meta.json` |
+| `/operator-rollback {slug} {version}` | Restore an archived version |
+
+Corrections are a **protected field**: re-running generation will not wipe the preferences you have accumulated.
 
 ---
 
-## ◇ Core Architecture
+## Toolchain
 
-### Dual-Track Separation: Knowledge + Persona
+| Tool | Responsibility | Key artifact |
+|---|---|---|
+| `game_data_parser` | Scrape operator profile from PRTS | `operator_data.json` |
+| `story_extractor` | Extract structured dialogue, infer era | `story_data.json` |
+| `context_annotator` | Tag context: time, scene, interlocutor | `context.json` |
+| `speech_act_analyzer` | From "which words" to "what act" | `speech_act_profile.json` |
+| `dialogue_fingerprint` | 7-dimension fingerprint | `fingerprint.json` |
+| `relationship_graph` | Extract relation network with evidence | `relationship_graph.json` |
+| `temporal_slicer` | Slice by era, detect drift | `temporal_slices.json` |
+| `canon_checker` | Cross-source canon validation | `validation.json` |
+| `persona_validator` | Test persona against real lines | `persona_validation.json` |
+| `data_injector` | Format measurements into prompt context | injected fragments |
+| `skill_writer` / `version_manager` | Write, archive, roll back | `SKILL.md` / `versions/` |
+| `pipeline` | Orchestrate everything | unified CLI |
 
-```
-┌───────────────────────────────────────────────────┐
-│              Communication Signal Input             │
-│                     ↓                              │
-│  ┌─────────────────────────────────────────────┐  │
-│  │  Persona                                     │  │
-│  │  Determine attitude → Style → Relationships  │  │
-│  │  "How she exists in this world"              │  │
-│  └─────────────────┬───────────────────────────┘  │
-│                    ↓ Retrieves context when needed  │
-│  ┌─────────────────────────────────────────────┐  │
-│  │  Knowledge                                   │  │
-│  │  Factions · Relations · Timeline · Philosophy │  │
-│  │  "What she knows — truths carved into Originium"│  │
-│  └─────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────┘
-```
-
-| Module | File | Responsibility |
-|--------|------|----------------|
-| **Knowledge** | `knowledge.md` | "What the character knows" — background, faction relations, event timeline, philosophy |
-| **Persona** | `persona.md` | "How the character exists" — five-layer priority personality + Correction layer |
-
-**Separation benefits**: Independent evolution (add data → only change Knowledge; correct behavior → only change Persona), flexible reuse, traceable conflicts.
-
-### Persona Five-Layer Priority
-
-```
-Layer 0 · Core Personality    ← Highest priority, unshakable foundation — like Originium imprints on the Infected
-Correction · Correction Layer ← "She wouldn't do this" → Written immediately, overrides Layer 1-4
-Layer 1 · Identity            ← Self-perception — race, faction, position on this earth
-Layer 2 · Expression Style    ← Speech patterns, catchphrases, emotional temperature in silence
-Layer 3 · Decision & Judgment ← Value priorities — when dilemmas strike, what does she choose?
-Layer 4 · Relational Behavior ← Differentiated behavior toward different people — comrades, nemeses, strangers
-Layer 5 · Boundaries          ← Bottom lines — behaviors she cannot tolerate; touch them and she strikes back
-```
-
-**The criticality of Layer 0**: Don't write empty adjectives — write **specific, executable behavioral rules**.
-
-| ❌ Wrong | ✅ Right |
-|----------|----------|
-| She is gentle | Never uses imperative tone; uses invitations — "Would you like to come with me?" |
-| She gets sad | Doesn't cry at sacrifice — instead becomes quieter, slower speech, more ellipses |
-| She is strong | The last to leave her post when everyone wavers, but double-checks the door locks when alone |
-
-### Evolution Mechanism
-
-| Path | Description |
-|------|-------------|
-| Append data | New data → knowledge.md → linked persona check → synchronized update |
-| Dialogue correction | "She wouldn't say that" → scene + counter-example + positive-example triple → write to Correction → effective immediately |
-| Version management | Auto-backup before each change to `versions/v{n}/`, supports rollback — history doesn't disappear |
-
-### Conflict Resolution Priority
-
-```
-Layer 0 new rules > Layer 0 old rules
-Correction: higher index = newer = higher priority
-Cross-layer: Layer 0 > Correction > Layer 1-5
-Knowledge conflict: story text > official Wiki > community research
-```
+`semantic_matcher` is experimental and not wired into the main pipeline — see [`docs/SEMANTIC_MATCHER_DESIGN.md`](docs/SEMANTIC_MATCHER_DESIGN.md).
 
 ---
 
-## ◇ Toolchain
+## Engineering quality
 
-> *The following tools form the complete distillation pipeline. Each module is standalone — callable individually, or orchestrated via Pipeline in one command.*
+Credibility here comes from reproducible numbers, not adjectives:
 
-### Data Acquisition
+| Item | Status | How to check |
+|---|---|---|
+| Tests | **311 passing** | `python -m pytest tests/ -q` |
+| Coverage | 51.0% line / 47.0% combined | `pytest --cov=tools --cov-branch` |
+| Lint | ruff, 0 violations | `python -m ruff check tools/ tests/` |
+| Dependencies | **zero runtime third-party deps** | `dependencies = []` |
+| CI | Linux + Windows × Python 3.10–3.13 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| Behavior equivalence | Golden-file diffs before/after refactor | [`tests/test_regression_v360.py`](tests/test_regression_v360.py) |
 
-| Tool | Function |
-|------|----------|
-| `game_data_parser.py` | PRTS Wiki API / local file parsing, auto-generates pinyin slug, includes parse diagnostics report |
-| `story_extractor.py` | PRTS story pages → structured dialogue extraction (supports `--discover` for auto subpage discovery), with phase auto-inference |
-
-### Contextual Analysis
-
-| Tool | Function |
-|------|----------|
-| `context_annotator.py` | Multi-signal scene classification + dialogue target inference → `context.json` (with versioned schema validation) |
-| `speech_act_analyzer.py` | Context-aware speech act classification (7 core types) + act chain detection (rules externalized as JSON) |
-| `dialogue_fingerprint.py` | 8-dimensional quantitative language fingerprint (catchphrase detection + weighted emotion lexicon, lexicon externalized as JSON) |
-| `relationship_graph.py` | 12 relationship types + Aho-Corasick entity recognition + strength quantification + evolution tracking (name DB externalized + PRTS dynamic fetch) |
-| `temporal_slicer.py` | Mann-Whitney U statistical test + Cohen's d effect size + emotional arc detection → Persona Layer 2 rules |
-
-### Validation & Generation
-
-| Tool | Function |
-|------|----------|
-| `persona_validator.py` | Four-dimension multi-slice validation + style consistency validation + A-D scoring |
-| `canon_checker.py` | Multi-source cross-validation + externalized misconception DB + universal pattern detection + AST-level ReDoS protection |
-| `data_injector.py` | Injects tool quantitative data into Prompt template placeholders — bridging quantitative analysis and LLM generation |
-| `skill_writer.py` | Skill file management (list / create / delete) |
-| `version_manager.py` | Semantic version snapshots and rollback (`_SemVer` dataclass) |
-
-### Shared Modules
-
-| Module | Responsibility |
-|--------|----------------|
-| `constants.py` | Domain knowledge constants (phase mapping, relationship types, character aliases, core TypedDict definitions) |
-| `prts_client.py` | Unified PRTS API calls + rate limiting + exponential backoff retry (thread-safe) |
-| `shared_utils.py` | Common utilities (path validation, slug validation, atomic write, sentence splitting, context schema validation) |
-| `pipeline.py` | One-click orchestration, dual-mode execution (subprocess process isolation / function in-process debugging) |
+> v3.6.0 was a behavior-preserving refactor: ~390 lines of duplicated logic removed, 3 silent-failure bugs fixed, relationship extraction from 479 ms to under 20 ms. See [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## ◇ Archive Structure
+## Fidelity and limits
 
-```
-arknights-operator-skill/
-├── SKILL.md                       # AI Agent entry — the protocol's activation command
-├── README.md                      # Chinese documentation — the archive you're reading now
-├── README_EN.md                   # English documentation
-├── pyproject.toml                 # Project configuration (ruff / mypy / pytest)
-├── AGENTS.md                      # Developer specifications (with data flow diagram)
-├── prompts/                       # Prompt templates — the core logic of the distillation pipeline
-│   ├── intake.md                  #   Step 1: Three-question data intake
-│   ├── knowledge_analyzer.md      #   Step 3A: Knowledge analysis dimensions
-│   ├── knowledge_builder.md       #   Step 4A: Knowledge generation template
-│   ├── persona_analyzer.md        #   Step 3B: Persona analysis dimensions
-│   ├── persona_builder.md         #   Step 4B: Persona generation template
-│   ├── merger.md                  #   Evolution: Merge logic and conflict resolution
-│   └── correction_handler.md      #   Evolution: Dialogue correction handling
-├── tools/                         # Python toolchain — the engine of the distillation pipeline
-│   ├── __init__.py                #   Unified module path setup
-│   ├── constants.py               #   Domain knowledge constants + TypedDict
-│   ├── prts_client.py             #   PRTS API client
-│   ├── shared_utils.py            #   Common utilities + schema validation
-│   ├── pipeline.py                #   One-click orchestrator (dual-mode + checkpoint resume)
-│   ├── game_data_parser.py        #   Game data parsing (with diagnostic report)
-│   ├── story_extractor.py         #   Story extractor
-│   ├── context_annotator.py       #   Context annotator
-│   ├── speech_act_analyzer.py     #   Speech act analyzer
-│   ├── dialogue_fingerprint.py    #   Dialogue fingerprint analyzer
-│   ├── relationship_graph.py      #   Relationship graph builder
-│   ├── temporal_slicer.py         #   Temporal slice analyzer
-│   ├── persona_validator.py       #   Persona validator
-│   ├── canon_checker.py           #   Canon cross-validator
-│   ├── data_injector.py           #   Data injector
-│   ├── skill_writer.py            #   Skill file manager
-│   ├── version_manager.py         #   Version archiver and rollback
-│   └── phase_inferrer.py          #   Phase auto-inference
-├── data/                          # Configuration & rules — extensible externalized data
-│   ├── pinyin_map.json            #   Pinyin mapping
-│   ├── misconceptions.json        #   Externalized misconception database
-│   ├── context.schema.json        #   context.json versioned Schema
-│   ├── emotion_lexicon.json       #   Emotion lexicon (12 categories, 140+ entries)
-│   ├── operator_db.json           #   Operator name DB + alias mapping
-│   └── speech_act_rules.json      #   Speech act rules (30 rules)
-├── operators/                     # Generated operator archives — each one is the contour of a soul
-│   ├── te-lei-xi-ya/              #   Theresa · Demon King of the Sarkaz
-│   │   ├── knowledge.md           #     Knowledge layer — what she knows
-│   │   ├── persona.md             #     Persona layer — how she exists
-│   │   ├── meta.json              #     Metadata + common misconceptions
-│   │   ├── SKILL.md               #     Skill entry + core rules
-│   │   ├── context.json           #     Contextualized data (with schema_version)
-│   │   ├── speech_act_profile.json
-│   │   ├── fingerprint.json
-│   │   ├── temporal_slices.json
-│   │   └── versions/              #     Version snapshots — history doesn't disappear
-│   └── w/                         #   W · Sarkaz Mercenary
-├── tests/
-│   ├── test_smoke.py              #   Smoke tests (98 cases)
-│   └── test_comprehensive.py      #   Comprehensive tests (126 cases)
-├── requirements.txt               #   Core dependencies — standard library only
-├── requirements-optional.txt      #   Optional dependencies (pypinyin)
-├── .gitignore
-└── LICENSE
+Self-assessed overall: **70–80%**, with large variance by dimension.
+
+| Dimension | Fidelity | Note |
+|---|---|---|
+| Facts | ~90% | Race, faction, identity, key events, cross-validated |
+| Language style | ~75–85% | Measured and injected — "alike", not "identical" |
+| Relations | ~65–75% | Depends on explicit statements in the text |
+| Emotional depth | ~50–60% | Lexicon + context; contradictory emotions escape it |
+| Decision logic | ~40–50% | Tendencies only, no causal model |
+
+Known gaps: irony and implicature break keyword matching; voice text outnumbers story text, skewing scenes; some characters yield an empty relation graph. Full assessment and dialogue transcripts: **[docs/FIDELITY.md](docs/FIDELITY.md)**.
+
+---
+
+## FAQ
+
+**Does it need an API key or call an LLM?**
+No. The scripts only fetch and measure. Generating `knowledge.md` / `persona.md` is done by whatever AI agent you use.
+
+**Does it modify game files or touch my account?**
+No. It only reads public PRTS Wiki pages.
+
+**Which characters are supported?**
+Any character with a PRTS page. For minor characters with very few lines, use `--discover` to extract dialogue only.
+
+**What if I have no network?**
+Use `--skip-fetch` to reuse existing data, or place `story.json` / `story_data.json` in the output directory (the legacy filename is detected and reported).
+
+**Does it run on Windows?**
+Yes — CI includes `windows-latest`. GBK console encoding and file BOMs are handled.
+
+**Why is `relationship_graph.json` sometimes empty?**
+Extraction depends on explicitly stated relations in `context.json`. When the story text lacks them, you get an empty graph. This is a known capability gap, not a runtime failure.
+
+---
+
+## Project layout
+
+```text
+.
+├── tools/                  # All Python tools (zero third-party deps)
+│   ├── pipeline.py         # Orchestration entry
+│   ├── artifacts.py        # Artifact contract (single source of names)
+│   ├── assets.py           # Asset resolution (wheel / source / env var)
+│   ├── cli.py              # Unified exit codes 0/1/2
+│   └── _data/              # Domain assets (lexicons, rules, schemas)
+├── prompts/                # Generation templates for AI agents
+├── operators/              # Distilled archives (samples included)
+├── tests/                  # 311 tests + coverage baseline
+├── docs/                   # Design and fidelity docs
+├── SKILL.md                # Agent usage protocol
+├── AGENTS.md               # Engineering conventions for contributors
+└── CHANGELOG.md
 ```
 
 ---
 
-## ◇ Distillation Records
+## Documentation
 
-> *The following are dialogue test records for the Theresa character Skill.*
-> *Her contour, slowly emerging from the fragments.*
-
-**Scene 1: Facing a follower's sacrifice**
-
-```
-User > Report, frontline units wiped out...
-
-Character > ...I see.
-           Record their names. Every single one.
-           One day, we will build a new home,
-           so they won't have to fight for us anymore.
-           ...They chose to believe in me. I will spend my life honoring that trust.
-```
-
-**Scene 2: Facing doubt**
-
-```
-User > Is this worth it? So many sacrifices...
-
-Character > You ask me if it's worth it.
-           I understand your doubt. Let me ask you something:
-           If not this way, what would you do?
-           ...
-           I'm not questioning you. I genuinely want to know.
-           Because sometimes, I want to find a gentler path than sacrifice.
-```
-
-**Scene 3: Conversation with Amiya**
-
-```
-User > Amiya, there's something I want to tell you...
-
-Character > (Her gaze softens)
-           What is it, Amiya?
-           You don't have to be strong like you are in front of everyone.
-           With me, you can just be yourself.
-           ...No matter what happens, I'm here.
-```
-
-**Scene 4: Dialogue correction**
-
-```
-User > She wouldn't say "sacrifice", she'd say "choice"
-
-Character > Received. Written to Correction #1:
-           [Scenario: asked about personal sacrifice] Should not use "sacrifice",
-           should use "choice" — "This isn't sacrifice. It's the path I chose."
-           This rule is effective immediately.
-```
-
-**Scene 5: Confrontation with Theresis**
-
-```
-User > Theresis is right ahead. What do you plan to do?
-
-Character > ...
-           He chose his path. And I chose mine.
-           I don't want to stand against him — but I won't back down.
-           Some things must be done, even if it means losing.
-           ...Let's go. Not out of hatred, but because we must move forward.
-```
+| Document | Audience |
+|---|---|
+| [SKILL.md](SKILL.md) | Anyone invoking this skill from an agent |
+| [AGENTS.md](AGENTS.md) | Contributors changing code or adding operators |
+| [CHANGELOG.md](CHANGELOG.md) | Anyone tracking what changed |
+| [tests/COVERAGE.md](tests/COVERAGE.md) | Anyone checking the test baseline |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Anyone opening a PR |
 
 ---
 
-## ◇ Fidelity Assessment
+## Roadmap
 
-> *Doctor, I must be honest — there's still a long way between what we can achieve and the characters themselves.*
-> *But every step brings her closer to the truth.*
+| Priority | Item | Status |
+|---|---|---|
+| **P1** | Relationship recall: some operators yield an empty graph (see [FAQ](#faq), not a crash) | Open |
+| **P2** | Wire `semantic_matcher` into the main pipeline (currently experimental) | Designing |
+| **P2** | Full mypy typing (CI is `continue-on-error` today) | Open |
+| **P3** | More operator samples, cross-faction regression corpora | Contributions welcome |
 
-### Overall Assessment: ~70–80%
-
-| Dimension | Fidelity | Notes |
-|-----------|----------|-------|
-| Factual restoration | ~90% | Race, faction, identity, core events — PRTS API + canon_checker cross-validation |
-| Surface language mimicry | ~75–85% | 8-dimension dialogue fingerprint + catchphrase detection + weighted emotion lexicon + Prompt data injection |
-| Relationship restoration | ~65–75% | 12 relationship types + strength quantification (0.0-1.0) + cross-phase evolution tracking |
-| Emotional depth | ~50–60% | Context-aware classification + act chain detection + Mann-Whitney U significance test + emotional arc identification |
-| Decision restoration | ~40–50% | Target-differentiated analysis + multi-signal scene classification + style consistency validation |
-
-### Algorithm Highlights (v3.4)
-
-1. **8-Dimension Dialogue Fingerprint** — catchphrase/high-frequency phrase extraction (n-gram analysis), sentence length distribution using statistical measures (percentiles + CV)
-2. **Weighted Emotion Lexicon** — 12 emotion categories, per-word weights (0.5–1.5), externalized as extensible JSON
-3. **Mann-Whitney U Statistical Test** — zero-dependency hand-written implementation, paired with Cohen's d effect size, replacing rough "statistical significance" estimates
-4. **Relationship Strength Quantification** — composite of co-occurrence frequency, emotion word density, direct dialogue count, output as 0.0–1.0 strength values
-5. **Aho-Corasick Entity Recognition** — efficient multi-pattern matching, operator name DB externalized + PRTS API dynamic fetch
-6. **AST-Level ReDoS Protection** — regex safety audit based on sre_parse, covering both check_patterns and exclude_patterns
-7. **context.json Schema Validation** — versioned JSON Schema, auto-validation before output, secondary validation on downstream read
-8. **Pipeline Dual-Mode** — subprocess (process isolation) and function (in-process debugging), PipelineRunner programmatic interface
-9. **TypedDict Type Tightening** — OperatorData separates required/optional fields, AnnotatedLine/LineContext structured definitions
-10. **_SemVer Version Management** — semantic version dataclass, invalid version numbers raise explicit errors instead of silent passthrough
-
-### Limitations
-
-1. **Quantification ≠ Understanding** — we can count ellipsis frequency, but cannot grasp the weight behind silence
-2. **Keyword Matching Ceiling** — subtle expressions may be missed (metaphor detection partially mitigates this)
-3. **Emotional Complexity Gap** — cannot capture contradictory emotions or emotional turning points — those "smiling through tears" moments
-4. **Decision Logic Black Box** — "why she did this" can only be left to LLM inference
-5. **Data Coverage Bias** — voice data volume far exceeds story data, and scenes are limited
-
-### Improvement Directions
-
-1. **Deep Semantic Analysis** — upgrade from keyword matching to semantic embeddings, understanding metaphors and implied meaning
-2. **Dialogue Simulation Validation** — generate simulated dialogues for character Skill self-testing
-3. **Multi-Character Interaction** — multi-Skill dialogue simulation, detecting relational behavior consistency
-4. **Originium Arts Adaptation** — incorporate character Originium Arts traits into Persona Layer 1
+If you want to take any of these on, say so in an issue first so we don't collide.
 
 ---
 
-## ◇ Changelog
+## Contributing
 
-### v3.4.0 — Current Version
+Issues and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first — it covers the dev setup, test requirements (**PRs that weaken assertions to go green will be rejected**), and how to add an operator or a data source.
 
-- Unified version management (pyproject.toml / SKILL.md / AGENTS.md → single source of truth)
-- Unified import mechanism: eliminated `try/except ImportError` dual-path, `__init__.py` centralized path setup
-- Pipeline dual-mode: `subprocess` process isolation + `function` in-process debugging
-- TypedDict type tightening: `OperatorData` separates required/optional, `AnnotatedLine` / `LineContext` structured definitions
-- ReDoS protection enhancement: AST-level analysis + exclude_patterns safety check
-- context.json Schema: versioned validation + auto-validation before output
-- Emotion lexicon externalized: `data/emotion_lexicon.json`
-- Operator name DB externalized: `data/operator_db.json` + PRTS API dynamic fetch
-- Speech act rules externalized: `data/speech_act_rules.json`
-- Statistical test enhancement: Mann-Whitney U + Cohen's d (zero-dependency hand-written implementation)
-- Version management refactor: `_SemVer` dataclass + explicit error on invalid input
-- Parse diagnostic report: `_parse_report` field
-- Comprehensive test enhancement: 224 cases (126 new covering boundary/exception/security/integration/invariant)
+If this project saved you time, a ⭐ is the most direct way to help; for bugs, open an issue with the operator name and the exact command that reproduces it.
 
-### v3.1 — Algorithm Upgrade
-
-- 8-dimension dialogue fingerprint, weighted emotion lexicon, relationship strength quantification
-- Context-aware classification, Prompt data injection, statistical significance testing
-- Multi-evidence fusion inference
+By participating you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, use [SECURITY.md](SECURITY.md) instead of a public issue.
 
 ---
 
-## ◇ References & Acknowledgements
+## Disclaimer
 
-This project references the distillation architecture of the following open-source projects:
-
-- **[ex-skill](https://github.com/perkfly/ex-skill)** — Predecessor distillation skill
-- **[colleague-skill](https://github.com/titanwings/colleague-skill)** — Colleague distillation skill
-
-### Differences from ex-skill / colleague-skill
-
-| Dimension | ex/colleague-skill | arknights-operator-skill |
-|-----------|-------------------|-------------------------|
-| Distillation target | Real people (predecessor/colleague) | Game characters (with official canon to verify against) |
-| Architecture | Single-layer personality description | Knowledge + Persona dual-track + five-layer priority |
-| Language style | Subjective description | 8-dimension quantitative language fingerprint + catchphrase detection + Prompt data injection |
-| Relationship network | Manual listing | Auto-extraction (12 relationship types + strength quantification + evolution tracking) |
-| Consistency validation | None | Persona validator (style consistency + A-D scoring) |
-| Canon accuracy | Relies on subjective memory | Multi-source cross-validation + externalized misconception DB + universal pattern detection |
-| Correction method | Regenerate | Correction layer instant write |
-| Version management | None | Semantic version snapshots + rollback + conflict resolution |
-| Security protection | None | AST-level ReDoS protection + path traversal protection + atomic writes |
-| Type safety | None | TypedDict required/optional separation + mypy strict mode |
+- This is an **unofficial fan project**, not affiliated with, endorsed by, or authorized by Hypergryph.
+- All Arknights characters, text, and settings are the property of Hypergryph. This repository only stores structured data compiled from public wikis, for study and research.
+- Samples in this repo are **abridged excerpts for format demonstration** (20 dialogue lines each), not the full corpus; fetch the data yourself for a complete distillation. If a rights holder objects to anything here, open an issue and we will remove it promptly.
+- **Non-commercial use only.** Do not use it to impersonate official sources, mislead others, or for any unlawful purpose.
+- Generated archives may deviate from official canon; official material always takes precedence.
+- Code is MIT licensed; game text and settings remain with their rights holders.
 
 ---
 
-## ◇ Disclaimer
+## License
 
-1. **Unofficial project**: Not affiliated with Arknights developer Hypergryph or PRTS Wiki in any way. All game characters, story content, and settings are copyrighted by their respective rights holders.
+[MIT](LICENSE) © 2024-2026 Arknights Operator Skill Project
 
-2. **Data source**: Page data is obtained through the publicly available PRTS Wiki API, for personal learning and research only. Please comply with PRTS Wiki terms of use and avoid high-frequency requests — at Rhodes Island, we respect every information provider.
+## Acknowledgements
 
-3. **Character setting accuracy**: The toolchain auto-parses Wiki wikitext, which may produce deviations due to page format changes. **No guarantee of complete consistency with official settings** — for important content, please refer to in-game text.
-
-4. **AI character roleplay risks**: AI-generated dialogue may deviate from the character's original settings. Do not treat it as official story or canon — distillation is approximation, not replication.
-
-5. **Usage boundaries**: For learning, research, and technical exploration only. Commercial use or any scenario that may harm the original work's rights is prohibited.
-
----
-
-## ◇ License
-
-This project is open-sourced under the [MIT License](LICENSE).
-
----
+Architecture inspired by [ex-skill](https://github.com/perkfly/ex-skill) and [colleague-skill](https://github.com/titanwings/colleague-skill). Data from [PRTS Wiki](https://prts.wiki/) and everyone who maintains it.
 
 <div align="center">
 
-*"……I will remember every one of you."*
-
----
-
-*The stories on this earth must not be forgotten.*
+*Every soul deserves to be remembered — even after the scars of Terra heal, the names that fought for us should not fade with the wind.*
 
 </div>
