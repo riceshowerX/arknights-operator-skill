@@ -47,10 +47,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      # 单行写法：Windows runner 默认 shell 是 PowerShell，bash 的「\」续行会被
+      # 解析成「-- 一元运算符」而报 ParserError（v3.6.0 首次 Windows CI 即因此失败）
       - name: Run tests with coverage
-        run: |
-          python -m pytest tests/ --cov=tools --cov-branch \
-            --cov-report=xml --cov-report=term-missing --cov-fail-under=44
+        run: python -m pytest tests/ --cov=tools --cov-branch --cov-report=xml --cov-report=term-missing --cov-fail-under=44
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
