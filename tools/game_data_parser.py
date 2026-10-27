@@ -25,7 +25,7 @@ import sys
 import time
 import urllib.error
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict, cast
 from urllib.parse import quote
 
 # 确保 tools 目录在 import 路径中
@@ -69,8 +69,8 @@ class OperatorData(_OperatorDataRequired, total=False):
     personality_type: str
     core_traits: list[str]
     speech_style: str
-    archives: list[dict]
-    voice_lines: list[dict]
+    archives: list[dict[str, Any]]
+    voice_lines: list[dict[str, Any]]
     tags: list[str]
     page_type: str
 
@@ -117,7 +117,7 @@ def _get_page_wikitext(title: str) -> str | None:
         Wikitext 字符串，页面不存在或获取失败时返回 None
     """
     # 优先使用 prts_client 的 parse API（自动跟随 redirect）
-    wikitext = _prts_fetch_wikitext(title, follow_redirects=True)
+    wikitext: str | None = _prts_fetch_wikitext(title, follow_redirects=True)
     if wikitext:
         return wikitext
 
@@ -135,7 +135,8 @@ def _get_page_wikitext(title: str) -> str | None:
             return None
         revisions = page.get("revisions", [])
         if revisions:
-            return revisions[0].get("*", "")
+            page_content: str = revisions[0].get("*", "")
+            return page_content
 
     return None
 
@@ -251,7 +252,7 @@ def _clean_voice_line(raw: str) -> str:
 # PRTS Wiki 解析 — 元数据
 # ──────────────────────────────────────────────
 
-def parse_prts_operator_name(name: str) -> dict:
+def parse_prts_operator_name(name: str) -> dict[str, str]:
     """
     从 PRTS Wiki 角色名构造 URL 和 slug
 
@@ -266,11 +267,11 @@ def parse_prts_operator_name(name: str) -> dict:
 # PRTS Wiki 解析 — 干员信息
 # ──────────────────────────────────────────────
 
-def _extract_charinfo(wikitext: str) -> dict:
+def _extract_charinfo(wikitext: str) -> dict[str, Any]:
     """
     从干员页面的 CharinfoV2 或 Charinfo 模板中提取基本信息
     """
-    info = {}
+    info: dict[str, Any] = {}
 
     # 使用深度计数匹配，正确处理嵌套 {{}}
     # 拆分为精确匹配，避免 Charinfo 误匹配 CharinfoV2 的内容
@@ -323,12 +324,12 @@ def _extract_charinfo(wikitext: str) -> dict:
     return info
 
 
-def _extract_enemy_info(wikitext: str) -> dict:
+def _extract_enemy_info(wikitext: str) -> dict[str, Any]:
     """
     从敌人/NPC 页面的 敌人信息 模板中提取基本信息
     （适用于特蕾西娅等非干员角色）
     """
-    info = {}
+    info: dict[str, Any] = {}
 
     # 匹配 {{敌人信息/xxx ... }}，使用深度计数处理嵌套
     # 先找出所有敌人信息模板的名称
@@ -376,7 +377,7 @@ def _extract_enemy_info(wikitext: str) -> dict:
     return info
 
 
-def _extract_archives(wikitext: str) -> list[dict]:
+def _extract_archives(wikitext: str) -> list[dict[str, Any]]:
     """
     从干员档案模板中提取档案文本
 
@@ -435,7 +436,7 @@ def _extract_archives(wikitext: str) -> list[dict]:
     return archives
 
 
-def _extract_voice_lines(wikitext: str) -> list[dict]:
+def _extract_voice_lines(wikitext: str) -> list[dict[str, str]]:
     """
     从语音记录模板中提取语音台词
 
@@ -453,11 +454,11 @@ def _extract_voice_lines(wikitext: str) -> list[dict]:
     return lines
 
 
-def _extract_profile_fields(wikitext: str) -> dict:
+def _extract_profile_fields(wikitext: str) -> dict[str, Any]:
     """
     从 {{人员档案set}} 模板中提取基础档案字段（种族、出身地等）
     """
-    info = {}
+    info: dict[str, Any] = {}
 
     fields = _extract_template_body(wikitext, "人员档案set")
     if not fields:
@@ -488,11 +489,11 @@ def _extract_profile_fields(wikitext: str) -> dict:
     return info
 
 
-def _extract_attribute_fields(wikitext: str) -> dict:
+def _extract_attribute_fields(wikitext: str) -> dict[str, Any]:
     """
     从 {{属性}} 模板提取属性信息（所属势力等）
     """
-    info = {}
+    info: dict[str, Any] = {}
 
     fields = _extract_template_body(wikitext, "属性")
     if not fields:
@@ -538,7 +539,7 @@ def fetch_and_parse_prts(name: str, lang: str = "zh") -> OperatorData:
     Returns:
         结构化角色数据 dict
     """
-    result = {
+    result: dict[str, Any] = {
         **parse_prts_operator_name(name),
         "source": "prts",
         "lang": lang,
@@ -555,7 +556,7 @@ def fetch_and_parse_prts(name: str, lang: str = "zh") -> OperatorData:
             "2) 该角色在 PRTS 上使用不同名称（如特蕾西娅的干员版为「魔王」）；"
             "3) 该角色尚未有独立页面。"
         )
-        return result
+        return cast(OperatorData, result)
 
     # Step 2: 识别页面类型并提取基本信息
     page_type = _detect_page_type(wikitext)
@@ -622,7 +623,7 @@ def fetch_and_parse_prts(name: str, lang: str = "zh") -> OperatorData:
                 result[key] = m.group(1).strip()
 
     result["fetch_time"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
-    return result
+    return cast(OperatorData, result)
 
 
 def _detect_page_type(wikitext: str) -> str:
@@ -641,7 +642,7 @@ def _detect_page_type(wikitext: str) -> str:
     return "unknown"
 
 
-def _fetch_voice_subpage(name: str) -> list[dict]:
+def _fetch_voice_subpage(name: str) -> list[dict[str, str]]:
     """
     尝试从「角色名/语音记录」子页面获取语音数据
     """
@@ -656,7 +657,7 @@ def _fetch_voice_subpage(name: str) -> list[dict]:
 # 旧接口兼容：从 wikitext 提取（供 --source local 使用）
 # ──────────────────────────────────────────────
 
-def extract_operator_data_from_wikitext(wikitext: str, name: str) -> dict:
+def extract_operator_data_from_wikitext(wikitext: str, name: str) -> dict[str, Any]:
     """从 PRTS Wiki 的 wikitext 中提取角色信息
 
     此函数保留用于向后兼容，推荐使用 fetch_and_parse_prts() 获取更完整的数据。
@@ -671,7 +672,7 @@ def extract_operator_data_from_wikitext(wikitext: str, name: str) -> dict:
         - ``wikitext_snippet``: 前 200 字符预览（用于调试格式问题）
     """
     # 解析报告
-    report = {
+    report: dict[str, Any] = {
         "parsed_fields": [],
         "missing_fields": [],
         "warnings": [],
@@ -682,7 +683,7 @@ def extract_operator_data_from_wikitext(wikitext: str, name: str) -> dict:
     # 期望提取的字段
     expected_fields = ["race", "faction", "profession", "archives", "voice_lines"]
 
-    data = {
+    data: dict[str, Any] = {
         "name_zh": name,
         "slug": to_slug(name),
         "source": "prts",
@@ -775,7 +776,7 @@ def extract_operator_data_from_wikitext(wikitext: str, name: str) -> dict:
 # 本地文件解析
 # ──────────────────────────────────────────────
 
-def parse_local_file(filepath: str) -> dict:
+def parse_local_file(filepath: str) -> dict[str, Any]:
     """
     解析本地 Markdown 文件中的角色信息
 
@@ -884,7 +885,7 @@ def to_slug(name: str) -> str:
 # CLI 入口
 # ──────────────────────────────────────────────
 
-def main():
+def main() -> None:
     cli.require_assets()
 
     parser = argparse.ArgumentParser(
@@ -939,7 +940,7 @@ def main():
     if args.slug_only:
         if not args.name:
             parser.error("--slug-only 需要 --name 参数")
-        result = {"name": args.name, "slug": to_slug(args.name)}
+        result: dict[str, Any] = {"name": args.name, "slug": to_slug(args.name)}
         _output(result, args.output)
         return
 
@@ -962,7 +963,7 @@ def main():
         else:
             # 完整解析模式
             try:
-                result = fetch_and_parse_prts(args.name, args.lang)
+                result = cast(dict[str, Any], fetch_and_parse_prts(args.name, args.lang))
             except (urllib.error.URLError, OSError) as e:
                 # 网络不可用（DNS/连接/超时/HTTP 错误）时降级为元数据模式
                 # 注：3.x 此处捕获的是 RuntimeError，但取数链路从不会抛该异常（死分支），
@@ -980,7 +981,7 @@ def main():
     _output(result, args.output)
 
 
-def _output(data: dict, filepath: str | None = None):
+def _output(data: dict[str, Any], filepath: str | None = None) -> None:
     """输出 JSON 数据"""
     text = json.dumps(data, ensure_ascii=False, indent=2)
     if filepath:

@@ -10,7 +10,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-311%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-327%20passed-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-47%25-yellow.svg)](tests/COVERAGE.md)
 [![Ruff](https://img.shields.io/badge/ruff-0%20errors-brightgreen.svg)](https://docs.astral.sh/ruff/)
 [![CI](https://img.shields.io/badge/CI-Linux%20%2B%20Windows-brightgreen.svg)](.github/workflows/ci.yml)
@@ -283,9 +283,10 @@ flowchart LR
 
 | 项目 | 现状 | 怎么验证 |
 |---|---|---|
-| 测试 | **311 个用例全通过** | `python -m pytest tests/ -q` |
-| 覆盖率 | 行 51.0% / 综合 47.0% | `pytest --cov=tools --cov-branch` |
+| 测试 | **327 个用例全通过** | `python -m pytest tests/ -q` |
+| 覆盖率 | 行 54.7% / 综合 51.2% | `pytest --cov=tools --cov-branch` |
 | 静态检查 | ruff 0 违规 | `python -m ruff check tools/ tests/` |
+| 类型检查 | mypy 0 错误（CI 阻断项） | `python -m mypy tools/` |
 | 依赖 | 运行期**零第三方依赖** | `dependencies = []` |
 | CI | Linux + Windows × Python 3.10–3.13 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 | 行为等价 | 重构前后用 golden 文件逐字段比对 | [`tests/test_regression_v360.py`](tests/test_regression_v360.py) |
@@ -306,7 +307,7 @@ flowchart LR
 | 情感深度 | ~50–60% | 词典 + 上下文分类，抓不住矛盾情感 |
 | 决策逻辑 | ~40–50% | 只能给倾向，给不出因果 |
 
-已知短板：含蓄/反讽表达会失效；语音文本多于剧情文本导致场景偏差；部分角色的关系图为空。完整评估、算法依据与对话测试记录见 **[docs/FIDELITY.md](docs/FIDELITY.md)**。
+已知短板：含蓄/反讽表达会失效；语音文本多于剧情文本导致场景偏差。关系图谱自 v3.6.1 起有三层证据（关键词分类 / 说话人限定 / 对话对象与共现），但名库未覆盖的称呼仍可能漏检。完整评估、算法依据与对话测试记录见 **[docs/FIDELITY.md](docs/FIDELITY.md)**。
 
 ---
 
@@ -345,7 +346,7 @@ flowchart LR
 │   ├── assets.py           # 资产定位（wheels / 源码 / 环境变量）
 │   ├── cli.py              # 统一退出码 0/1/2
 │   └── _data/              # 领域资产（词典、规则、schema）
-├── prompts/                # 给 AI Agent 的生成模板
+├── tools/_prompts/         # 给 AI Agent 的生成模板（随 wheel 分发）
 ├── operators/              # 已蒸馏的角色档案（含样例）
 ├── tests/                  # 311 个用例 + 覆盖率基线
 ├── docs/                   # 设计文档
@@ -362,6 +363,7 @@ flowchart LR
 |---|---|
 | [SKILL.md](SKILL.md) | 想在 Agent 里调用这个 Skill 的人 |
 | [AGENTS.md](AGENTS.md) | 想改代码 / 加角色的贡献者 |
+| [docs/ARTIFACTS.md](docs/ARTIFACTS.md) | 想知道每个产物谁写谁读的人 |
 | [CHANGELOG.md](CHANGELOG.md) | 想知道改了什么的人 |
 | [tests/COVERAGE.md](tests/COVERAGE.md) | 关心测试与覆盖率基线的人 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 准备提 PR 的人 |
@@ -372,9 +374,9 @@ flowchart LR
 
 | 优先级 | 事项 | 状态 |
 |---|---|---|
-| **P1** | 关系抽取召回：部分角色得到空关系图（[已知限制](#常见问题)，非运行失败） | 待办 |
+| **P1** | 关系抽取召回：真实数据 0 边（对话对象/共现/说话人限定三层证据） | ✅ v3.6.1 |
 | **P2** | `semantic_matcher` 接入主管线（当前为实验模块） | 设计中 |
-| **P2** | mypy 全量类型化（CI 目前 `continue-on-error`） | 待办 |
+| **P2** | mypy 全量类型化（CI 已转为阻断项） | ✅ v3.6.1 |
 | **P3** | 更多角色样例、跨阵营回归语料 | 欢迎贡献 |
 
 想认领其中任何一项，先在 Issue 里说一声，避免撞车。

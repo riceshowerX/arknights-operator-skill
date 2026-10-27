@@ -1,9 +1,12 @@
 {
   "mode": "contextual",
   "character": "特蕾西娅",
-  "global_edges": 0,
-  "global_nodes": 0,
-  "phase_graphs": {},
+  "global_edges": 4,
+  "global_nodes": 4,
+  "inferred_edges": 19,
+  "phase_graphs": {
+    "babel": 4
+  },
   "trajectories": [],
-  "annotated_relations_count": 0
+  "annotated_relations_count": 4
 }

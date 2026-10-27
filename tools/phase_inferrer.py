@@ -19,7 +19,9 @@ phase_inferrer.py — 多层级时期自动推断引擎
 import json
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any, cast
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
@@ -43,13 +45,15 @@ logger = setup_logging("phase_inferrer")
 
 def fetch_page_categories(page_title: str) -> list[str]:
     """获取 PRTS 页面的分类标签（委托给 prts_client）"""
-    return _fetch_page_categories(page_title)
+    categories: list[str] = _fetch_page_categories(page_title)
+    return categories
 
 
 def fetch_activity_info(page_title: str) -> dict:
     """从 PRTS 活动页面提取 {{活动信息}} 模板数据（委托给 prts_client）"""
     from prts_client import fetch_activity_info as _prts_fetch_activity_info
-    return _prts_fetch_activity_info(page_title)
+    info: dict[str, Any] = _prts_fetch_activity_info(page_title)
+    return info
 
 
 # ──────────────────────────────────────────────
@@ -72,7 +76,7 @@ class PhaseInferenceResult:
         # 证据链与投票分布：在 __init__ 中显式声明，
         # 避免调用方 hasattr/getattr 探测时行为不一致（此前仅部分构造路径会设置）。
         self.evidence: list[dict] = []
-        self.votes: dict[str, int] = {}
+        self.votes: dict[str, float] = {}
 
     def to_dict(self) -> dict:
         return {
@@ -182,7 +186,7 @@ def infer_phase_from_content_cluster(texts: list[str]) -> PhaseInferenceResult |
     选择得分最高的时期。
     """
     scores = {phase: 0 for phase in PHASE_ORDER}
-    matched_keywords = {phase: [] for phase in PHASE_ORDER}
+    matched_keywords: dict[str, list[str]] = {phase: [] for phase in PHASE_ORDER}
 
     for text in texts:
         for phase, keywords in CLUSTER_KEYWORDS.items():
@@ -443,7 +447,7 @@ def infer_phase_ensemble(
     if not votes:
         return PhaseInferenceResult("unknown", "无证据", "low")
 
-    best_phase = max(votes, key=votes.get)
+    best_phase = max(votes, key=cast(Callable[[str], float], votes.get))
     total_weight = sum(votes.values())
     best_weight = votes[best_phase]
     ratio = best_weight / total_weight if total_weight > 0 else 0
@@ -563,9 +567,9 @@ def generate_inference_report(
         报告 dict，包含统计和建议
     """
     total = len(results)
-    by_phase = {}
-    by_source = {}
-    by_confidence = {}
+    by_phase: dict[str, int] = {}
+    by_source: dict[str, int] = {}
+    by_confidence: dict[str, int] = {}
     unknown_count = 0
 
     for r in results:

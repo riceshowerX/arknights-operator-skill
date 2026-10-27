@@ -32,6 +32,7 @@ import statistics
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 # 确保 tools 目录在 import 路径中（同时支持 `python3 tools/dialogue_fingerprint.py`
 # 与 `import tools.dialogue_fingerprint` 两种方式）
@@ -142,7 +143,8 @@ def _load_emotion_lexicon(filepath: str | None = None) -> dict[str, list[tuple[s
     raw = assets.load_json_or(json_path, _EMOTION_LEXICON_BUILTIN, kind="情感词典")
     if raw is _EMOTION_LEXICON_BUILTIN:
         # 文件不存在（无告警）或解析失败（已告警）：直接使用内建词典
-        return _EMOTION_LEXICON_BUILTIN
+        builtin: dict[str, list[tuple[str, float]]] = _EMOTION_LEXICON_BUILTIN
+        return builtin
 
     if not isinstance(raw, dict):
         logger.warning("情感词典文件格式错误（应为对象）%s，使用内建词典", json_path)
@@ -199,7 +201,8 @@ def load_dialogues(filepath: str, fmt: str = "plain") -> list[dict]:
             return data
         if isinstance(data, dict):
             if "voice_lines" in data:
-                return data["voice_lines"]
+                voice_lines: list[dict] = data["voice_lines"]
+                return voice_lines
             # 尝试从 game_data_parser 输出格式提取
             if "archives" in data:
                 return [
@@ -253,7 +256,8 @@ def split_sentences(text: str) -> list[str]:
     实现委托 `shared_utils.split_sentences`，但**显式传入本模块原有的标点集**
     （。！？；…—），保证分句结果与 3.x 逐字相同（标点集不合并）。
     """
-    return _shared_split_sentences(text, keep=_SENTENCE_DELIMITERS)
+    sentences: list[str] = _shared_split_sentences(text, keep=_SENTENCE_DELIMITERS)
+    return sentences
 
 
 def analyze_sentence_length_distribution(dialogues: list[dict]) -> dict:
@@ -364,7 +368,8 @@ def analyze_natural_imagery(dialogues: list[dict]) -> dict:
 def _top_category(counter: Counter) -> str:
     if not counter:
         return "无"
-    return counter.most_common(1)[0][0]
+    top_word: str = counter.most_common(1)[0][0]
+    return top_word
 
 
 # ──────────────────────────────────────────────
@@ -897,7 +902,7 @@ def generate_fingerprint(dialogues: list[dict], operator_name: str = "unknown") 
     """
     metrics = _collect_all_metrics(dialogues)
 
-    report = {
+    report: dict[str, Any] = {
         "operator": operator_name,
         "dialogue_count": len(dialogues),
         "dimensions": {
@@ -996,7 +1001,7 @@ def generate_contextual_fingerprint(context: dict) -> dict:
     }
 
     # ── 按场景分片 ──
-    by_situation = {}
+    by_situation: dict[str, list[dict]] = {}
     for line in lines:
         if line.get("source") == "archive":
             continue
@@ -1010,7 +1015,7 @@ def generate_contextual_fingerprint(context: dict) -> dict:
         result["slices"][f"situation:{sit}"] = generate_fingerprint(dialogues, operator_name)
 
     # ── 按对话对象分片 ──
-    by_interlocutor = {}
+    by_interlocutor: dict[str, list[dict]] = {}
     for line in lines:
         if line.get("source") == "archive":
             continue
@@ -1024,7 +1029,7 @@ def generate_contextual_fingerprint(context: dict) -> dict:
         result["slices"][f"interlocutor:{person}"] = generate_fingerprint(dialogues, operator_name)
 
     # ── 按时期分片 ──
-    by_phase = {}
+    by_phase: dict[str, list[dict]] = {}
     for line in lines:
         if line.get("source") == "archive":
             continue

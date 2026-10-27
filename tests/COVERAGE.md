@@ -26,18 +26,18 @@ python -m pytest tests/ --cov=tools --cov-report=xml
 - **统计范围**：`source = ["tools"]`（仅统计 tools 目录）
 - **排除项**：`__init__.py`、`if __name__ == "__main__"`、`pragma: no cover` 标记的代码
 
-## 当前基线（v3.6.0 · 实测快照）
+## 当前基线（v3.6.1 · 实测快照）
 
 > 数字由 `python -m pytest tests/ --cov=tools --cov-branch` 实测生成，口径与
 > `pyproject.toml` 的 `branch = true` 一致。**不要手改数字**：测试增删后请重跑并整体替换本表。
-> 快照时间：v3.6.0 收口时（含 `tests/test_regression_v360.py`）。
+> 快照时间：v3.6.1 收口时（含 `tests/test_regression_v360.py` 与 `tests/test_regression_v361.py`）。
 
 | 指标 | 实测 | 说明 |
 |---|---|---|
-| 用例数 | **311 passed** | v3.5.1 为 269 |
-| 行覆盖（Stmts） | **51.00%**（2627 / 5151） | 语句覆盖 |
-| 分支覆盖（Branch） | **38.70%**（945 / 2442） | 需 `branch = true` 才统计 |
-| **综合（Cover）** | **47.04%** | `(2627 + 945) / (5151 + 2442)`，即 CI 门禁口径 |
+| 用例数 | **327 passed** | v3.6.0 为 311 |
+| 行覆盖（Stmts） | **54.71%**（2888 / 5279） | 语句覆盖 |
+| 分支覆盖（Branch） | **43.59%**（1081 / 2480） | 需 `branch = true` 才统计 |
+| **综合（Cover）** | **51.15%** | `(2888 + 1081) / (5279 + 2480)`，即 CI 门禁口径 |
 
 **CI 门禁：`--cov-fail-under=44`**，是「地板值」（floor）：低于 44% 说明有实质回退，必须修复；
 高于 44% 属正常波动，不设上行门禁，真实提升由后续用例自然完成。

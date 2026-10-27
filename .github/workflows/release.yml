@@ -55,9 +55,11 @@ jobs:
           wheel = glob.glob("dist/*.whl")[0]
           names = zipfile.ZipFile(wheel).namelist()
           data = [n for n in names if "_data/" in n and n.endswith(".json")]
-          print(f"{wheel}: {len(names)} entries, {len(data)} data assets")
+          prompts = [n for n in names if "_prompts/" in n and n.endswith(".md")]
+          print(f"{wheel}: {len(names)} entries, {len(data)} data assets, {len(prompts)} prompts")
           # 领域资产缺失 = 安装态必崩，直接失败
-          sys.exit(0 if len(data) == 6 else "打包缺少 tools/_data/*.json")
+          sys.exit(0 if len(data) == 6 and len(prompts) == 7
+                   else f"打包不完整：_data={len(data)}/6, _prompts={len(prompts)}/7")
           PY
 
       - uses: actions/upload-artifact@v4

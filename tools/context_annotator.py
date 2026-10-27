@@ -29,7 +29,9 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any, cast
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
@@ -78,27 +80,30 @@ from functools import lru_cache as _lru_cache
 
 def _validate_path(path: str) -> str:
     """验证文件路径是否在允许范围内，防止路径遍历攻击"""
-    return validate_path(path)
+    validated: str = validate_path(path)
+    return validated
 
 
 # ──────────────────────────────────────────────
 # 加载函数
 # ──────────────────────────────────────────────
 
-def load_operator_data(path: str) -> dict:
+def load_operator_data(path: str) -> dict[str, Any]:
     """加载 game_data_parser 的输出"""
     safe_path = _validate_path(path)
-    return json.loads(read_text_utf8(safe_path))
+    data: dict[str, Any] = json.loads(read_text_utf8(safe_path))
+    return data
 
 
-def load_story_data(path: str) -> list[dict]:
+def load_story_data(path: str) -> list[dict[str, Any]]:
     """加载 story_extractor 的输出"""
     safe_path = _validate_path(path)
-    data = json.loads(read_text_utf8(safe_path))
-    return data.get("dialogues", [])
+    data: dict[str, Any] = json.loads(read_text_utf8(safe_path))
+    dialogues: list[dict[str, Any]] = data.get("dialogues", [])
+    return dialogues
 
 
-def load_timeline(knowledge_path: str) -> list[dict]:
+def load_timeline(knowledge_path: str) -> list[dict[str, Any]]:
     """从 knowledge.md 中提取时间线定义
 
     使用 PHASE_LABEL_MAP 将中文时期标签（如"早期"、"巴别塔时期"）映射为
@@ -112,7 +117,7 @@ def load_timeline(knowledge_path: str) -> list[dict]:
     except FileNotFoundError:
         return []
 
-    timeline = []
+    timeline: list[dict[str, Any]] = []
     for match in TIMELINE_RE.finditer(text):
         label = match.group(3).strip()
         # 通过 PHASE_LABEL_MAP 将中文标签映射为英文 id
@@ -139,8 +144,8 @@ def load_timeline(knowledge_path: str) -> list[dict]:
 # 标注函数
 # ──────────────────────────────────────────────
 
-def annotate_voice_line(line: dict, index: int, default_phase: str = "unknown",
-                        all_voice_texts: list[str] | None = None) -> dict:
+def annotate_voice_line(line: dict[str, Any], index: int, default_phase: str = "unknown",
+                        all_voice_texts: list[str] | None = None) -> dict[str, Any]:
     """标注单条语音行
 
     Args:
@@ -230,7 +235,7 @@ def annotate_voice_line(line: dict, index: int, default_phase: str = "unknown",
     return result
 
 
-def annotate_story_line(line: dict, index: int) -> dict:
+def annotate_story_line(line: dict[str, Any], index: int) -> dict[str, Any]:
     """标注单条剧情对话行"""
     return {
         "id": f"S{index:03d}",
@@ -250,7 +255,7 @@ def annotate_story_line(line: dict, index: int) -> dict:
     }
 
 
-def annotate_archive_text(archive_text: str, index: int) -> dict:
+def annotate_archive_text(archive_text: str, index: int) -> dict[str, Any]:
     """标注档案段落（作为背景知识，不参与对话分析）"""
     return {
         "id": f"A{index:03d}",
@@ -322,7 +327,7 @@ def classify_situation_v2(
             content_scores[sit_type] = score
 
     if content_scores:
-        best_content_sit = max(content_scores, key=content_scores.get)
+        best_content_sit = max(content_scores, key=cast(Callable[[str], int], content_scores.get))
         signals["content"] = best_content_sit
 
     # 信号 3：对话对象
@@ -401,10 +406,11 @@ def _infer_phase_cached(operator_name: str) -> str:
         OPERATOR_DEFAULT_PHASE[operator_name] = result.phase
         logger.info("自动推断: %s → %s (来源: %s, 置信度: %s)",
                      operator_name, result.phase, result.source, result.confidence)
-    return result.phase
+    phase: str = result.phase
+    return phase
 
 
-def _get_default_phase(operator_name: str, operator_data: dict | None = None) -> str:
+def _get_default_phase(operator_name: str, operator_data: dict[str, Any] | None = None) -> str:
     """获取干员的默认时期
 
     推断优先级：
@@ -419,18 +425,19 @@ def _get_default_phase(operator_name: str, operator_data: dict | None = None) ->
     """
     # 快速路径：已有缓存
     if operator_name in OPERATOR_DEFAULT_PHASE:
-        return OPERATOR_DEFAULT_PHASE[operator_name]
+        cached_phase: str = OPERATOR_DEFAULT_PHASE[operator_name]
+        return cached_phase
 
     # 自动推断（带 lru_cache，上限 128 条）
     return _infer_phase_cached(operator_name)
 
 
 def build_context_json(
-    operator_data: dict,
-    story_data_list: list[list[dict]],
-    timeline: list[dict],
+    operator_data: dict[str, Any],
+    story_data_list: list[list[dict[str, Any]]],
+    timeline: list[dict[str, Any]],
     interactive: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     """构建完整的 context.json"""
     annotated_lines = []
     inference_results = []  # 推断记录，用于生成报告
@@ -469,10 +476,10 @@ def build_context_json(
             annotated_lines.append(annotate_archive_text(text, i))
 
     # 统计
-    source_dist = {}
-    phase_dist = {}
-    situation_dist = {}
-    interlocutor_dist = {}
+    source_dist: dict[str, int] = {}
+    phase_dist: dict[str, int] = {}
+    situation_dist: dict[str, int] = {}
+    interlocutor_dist: dict[str, int] = {}
     for line in annotated_lines:
         src = line["source"]
         source_dist[src] = source_dist.get(src, 0) + 1
@@ -517,7 +524,7 @@ def build_context_json(
 # CLI 入口
 # ──────────────────────────────────────────────
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="语境标注器")
     parser.add_argument(
         "--operator-json", required=True,

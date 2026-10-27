@@ -34,7 +34,9 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
@@ -116,13 +118,13 @@ def fetch_chapter_wikitext(chapter: str, _depth: int = 0) -> str:
         return ""
 
     # 使用统一的 prts_client（含重试和速率限制）
-    wikitext = fetch_page_wikitext(chapter, follow_redirects=True)
+    wikitext: str = fetch_page_wikitext(chapter, follow_redirects=True)
 
     # 如果内容为空，尝试查找 /NBT 子页面
     if not wikitext:
         # 尝试 chapter/NBT
         nbt_page = f"{chapter}/NBT"
-        nbt_wikitext = fetch_page_wikitext(nbt_page, follow_redirects=True)
+        nbt_wikitext: str = fetch_page_wikitext(nbt_page, follow_redirects=True)
         if nbt_wikitext:
             logger.info("自动切换到 NBT 子页面: '%s'", nbt_page)
             return nbt_wikitext
@@ -304,7 +306,8 @@ def detect_situation_type(scene: str, text: str, narration: list) -> str:
     # 按优先级检查（confront 最特殊，优先匹配）
     for sit_type, keywords in SITUATION_KEYWORDS.items():
         if any(kw in combined for kw in keywords):
-            return sit_type
+            matched_sit: str = sit_type
+            return matched_sit
 
     return "casual"
 
@@ -404,7 +407,7 @@ def extract_emotion_from_stage_direction(narration: list[str]) -> str | None:
         return None
 
     # 返回得分最高的情感
-    return max(emotion_scores, key=emotion_scores.get)
+    return max(emotion_scores, key=cast(Callable[[str], int], emotion_scores.get))
 
 
 # 章节级时期推断缓存：同一章节的 N 条台词只推断 1 次
@@ -425,16 +428,19 @@ def _infer_chapter_level_phase(chapter: str) -> str:
     """
     for ch_key, phase in CHAPTER_PHASE_MAP.items():
         if ch_key in chapter:
-            return phase
+            mapped_phase: str = phase
+            return mapped_phase
 
     for activity, phase in ACTIVITY_PHASE_MAP.items():
         if activity in chapter:
-            return phase
+            activity_phase: str = phase
+            return activity_phase
 
     if HAS_PHASE_INFERRER:
         result = infer_phase_from_activity_meta(chapter)
         if result and result.phase != "unknown":
-            return result.phase
+            inferred_phase: str = result.phase
+            return inferred_phase
 
     return ""
 

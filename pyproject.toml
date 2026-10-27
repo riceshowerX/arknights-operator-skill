@@ -1,6 +1,6 @@
 [project]
 name = "arknights-operator-skill"
-version = "3.6.0"
+version = "3.6.1"
 description = "把《明日方舟》角色蒸馏为结构化、可验证的 AI 人格档案 — 零运行期依赖的角色蒸馏工具链"
 readme = "README.md"
 license = "MIT"
@@ -72,7 +72,7 @@ include = ["tools*"]
 [tool.setuptools.package-data]
 # 领域资产随包分发：安装态（wheel）下 data_dir() 命中 tools/_data/
 # 说明：不要用 [tool.setuptools.data-files]，它会把资产装到 sys.prefix（Windows 路径不可控、卸载残留）
-tools = ["_data/*.json"]
+tools = ["_data/*.json", "_prompts/*.md"]
 
 [tool.ruff]
 line-length = 120

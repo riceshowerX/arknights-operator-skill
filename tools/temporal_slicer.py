@@ -93,7 +93,7 @@ def compute_slice_metrics(lines: list[dict]) -> dict:
     negation_pct = round(negation_count / total * 100, 1) if total else 0
 
     # 话语行为分布
-    speech_act_dist = {}
+    speech_act_dist: dict[str, int] = {}
     for line in lines:
         for act in line.get("speech_acts", []):
             act_type = act.get("type", "unknown")
@@ -105,7 +105,7 @@ def compute_slice_metrics(lines: list[dict]) -> dict:
     fp_freq = round(fp_count / total, 2) if total else 0
 
     # 对话对象分布
-    interlocutor_dist = {}
+    interlocutor_dist: dict[str, int] = {}
     for line in lines:
         person = line.get("context", {}).get("interlocutor") or "unknown"
         interlocutor_dist[person] = interlocutor_dist.get(person, 0) + 1
@@ -538,7 +538,7 @@ def generate_temporal_rules(
     timeline: list[dict],
 ) -> list[dict]:
     """从切片差异生成可写入 Persona Layer 2 的行为演变规则"""
-    rules = []
+    rules: list[dict] = []
     phase_names = sorted(slice_metrics.keys())
 
     if len(phase_names) < 2:

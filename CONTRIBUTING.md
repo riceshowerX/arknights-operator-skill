@@ -82,7 +82,7 @@ CI 会在 Linux 与 Windows、Python 3.10–3.13 上重复这两步，并带覆�
    - `fingerprint.json`、`speech_act_profile.json`、`temporal_slices.json` 非空；
    - `relationship_graph.json` 允许为空（已知限制），但要在 PR 里说明。
 
-3. 用 AI Agent 按 `prompts/` 下的模板生成 `knowledge.md` 与 `persona.md`，并跑：
+3. 用 AI Agent 按 `tools/_prompts/` 下的模板生成 `knowledge.md` 与 `persona.md`，并跑：
 
    ```bash
    python tools/persona_validator.py --persona operators/<slug>/persona.md \

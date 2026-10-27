@@ -14,8 +14,8 @@ include requirements-optional.txt
 # misconceptions / context.schema / pinyin_map）
 recursive-include tools/_data *.json
 
-# Prompt 模板
-recursive-include prompts *.md
+# Prompt 模板（v3.6.1 起位于包内 tools/_prompts/，随 sdist 与 wheel 分发）
+recursive-include tools/_prompts *.md
 
 # 文档
 recursive-include docs *.md

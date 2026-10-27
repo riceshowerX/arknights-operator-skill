@@ -10,7 +10,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-311%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-327%20passed-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-47%25-yellow.svg)](tests/COVERAGE.md)
 [![Ruff](https://img.shields.io/badge/ruff-0%20errors-brightgreen.svg)](https://docs.astral.sh/ruff/)
 [![CI](https://img.shields.io/badge/CI-Linux%20%2B%20Windows-brightgreen.svg)](.github/workflows/ci.yml)
@@ -284,9 +284,10 @@ Credibility here comes from reproducible numbers, not adjectives:
 
 | Item | Status | How to check |
 |---|---|---|
-| Tests | **311 passing** | `python -m pytest tests/ -q` |
-| Coverage | 51.0% line / 47.0% combined | `pytest --cov=tools --cov-branch` |
+| Tests | **327 passing** | `python -m pytest tests/ -q` |
+| Coverage | 54.7% line / 51.2% combined | `pytest --cov=tools --cov-branch` |
 | Lint | ruff, 0 violations | `python -m ruff check tools/ tests/` |
+| Typing | mypy, 0 errors (blocking CI job) | `python -m mypy tools/` |
 | Dependencies | **zero runtime third-party deps** | `dependencies = []` |
 | CI | Linux + Windows × Python 3.10–3.13 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 | Behavior equivalence | Golden-file diffs before/after refactor | [`tests/test_regression_v360.py`](tests/test_regression_v360.py) |
@@ -329,7 +330,7 @@ Use `--skip-fetch` to reuse existing data, or place `story.json` / `story_data.j
 Yes — CI includes `windows-latest`. GBK console encoding and file BOMs are handled.
 
 **Why is `relationship_graph.json` sometimes empty?**
-Extraction depends on explicitly stated relations in `context.json`. When the story text lacks them, you get an empty graph. This is a known capability gap, not a runtime failure.
+Since v3.6.1 the graph is built from three evidence layers: keyword classification, speaker-scoped first-person patterns, and per-line interlocutor/mention evidence (see `docs/ARTIFACTS.md`). A graph can still come out empty when the corpus is very small or the names in text are absent from `operator_db.json` — extend the db with `--operator-db`. This is a data-coverage limit, not a runtime failure.
 
 ---
 
@@ -343,7 +344,7 @@ Extraction depends on explicitly stated relations in `context.json`. When the st
 │   ├── assets.py           # Asset resolution (wheel / source / env var)
 │   ├── cli.py              # Unified exit codes 0/1/2
 │   └── _data/              # Domain assets (lexicons, rules, schemas)
-├── prompts/                # Generation templates for AI agents
+├── tools/_prompts/         # Generation templates for AI agents (shipped in wheel)
 ├── operators/              # Distilled archives (samples included)
 ├── tests/                  # 311 tests + coverage baseline
 ├── docs/                   # Design and fidelity docs
@@ -360,6 +361,7 @@ Extraction depends on explicitly stated relations in `context.json`. When the st
 |---|---|
 | [SKILL.md](SKILL.md) | Anyone invoking this skill from an agent |
 | [AGENTS.md](AGENTS.md) | Contributors changing code or adding operators |
+| [docs/ARTIFACTS.md](docs/ARTIFACTS.md) | Anyone wondering which tool writes/reads each artifact |
 | [CHANGELOG.md](CHANGELOG.md) | Anyone tracking what changed |
 | [tests/COVERAGE.md](tests/COVERAGE.md) | Anyone checking the test baseline |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Anyone opening a PR |
@@ -370,9 +372,9 @@ Extraction depends on explicitly stated relations in `context.json`. When the st
 
 | Priority | Item | Status |
 |---|---|---|
-| **P1** | Relationship recall: some operators yield an empty graph (see [FAQ](#faq), not a crash) | Open |
+| **P1** | Relationship recall: 0-edge graphs on real data (interlocutor / mention / speaker-scoped evidence) | ✅ v3.6.1 |
 | **P2** | Wire `semantic_matcher` into the main pipeline (currently experimental) | Designing |
-| **P2** | Full mypy typing (CI is `continue-on-error` today) | Open |
+| **P2** | Full mypy typing (now a blocking CI job) | ✅ v3.6.1 |
 | **P3** | More operator samples, cross-faction regression corpora | Contributions welcome |
 
 If you want to take any of these on, say so in an issue first so we don't collide.

@@ -29,6 +29,7 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 # 确保 tools 目录在 import 路径中
 _TOOLS_DIR = Path(__file__).parent
@@ -528,7 +529,8 @@ def _is_negation_context(s: str) -> bool:
 
 def _split_sentences(text: str) -> list[str]:
     """按本模块原有标点集分句（委托 `shared_utils.split_sentences`，标点集不变）"""
-    return _shared_split_sentences(text, keep=_SENTENCE_DELIMITERS)
+    sentences: list[str] = _shared_split_sentences(text, keep=_SENTENCE_DELIMITERS)
+    return sentences
 
 
 def _build_sentence_index(sentences: list[str], entities: list[str] | tuple[str, ...]) -> dict[str, set[int]]:
@@ -659,7 +661,7 @@ def merge_relationships(all_rels: list[dict], operator_db: dict | None = None) -
         "edges": [...]
     }
     """
-    edge_map = defaultdict(lambda: {"sources": [], "contexts": [], "confidences": []})
+    edge_map: defaultdict = defaultdict(lambda: {"sources": [], "contexts": [], "confidences": []})
 
     for rel in all_rels:
         key = (rel["from"], rel["to"], rel["type"])
@@ -766,6 +768,10 @@ def enrich_edges_with_strength(
     }
 
     for edge in graph.get("edges", []):
+        # 推断边（dialogue/mention）已带按证据条数计算的 strength，
+        # 文本共现口径对它们不适用（对话对象常是元数据，不在行文本里）
+        if "strength" in edge:
+            continue
         from_name = edge["from"]
         to_name = edge["to"]
 
@@ -896,6 +902,165 @@ def load_text(filepath: str, fmt: str = "markdown") -> list[tuple[str, str]]:
 # 语境化分析（升级新增）
 # ──────────────────────────────────────────────
 
+# ──────────────────────────────────────────────
+# 行级关系推断（v3.6.1 新增：修复真实数据召回 0 的能力缺口）
+# ──────────────────────────────────────────────
+
+# 这些「对话对象」值不指向具体身份，不能作为关系节点
+_PLACEHOLDER_INTERLOCUTORS = frozenset({
+    "", "未知", "无", "独白", "未标注", "未标注场景", "旁白", "自言自语",
+    "-", "—", "N/A", "n/a", "none", "null",
+})
+
+
+def _resolve_interlocutor(raw: object, db: dict, aliases: dict) -> str | None:
+    """把行内 interlocutor 解析成可作节点的关系对象。
+
+    能经由名库/别名归一化的（如「博士」）归一化；解析不出但也不是占位符的
+    （如剧情里的「坚强的孩子」）保留原文——它是标注器给出的真实对话对象，
+    只是名库未收录，丢弃会损失真实证据。
+    """
+    if not isinstance(raw, str):
+        return None
+    name = raw.strip()
+    if not name or name in _PLACEHOLDER_INTERLOCUTORS:
+        return None
+    return normalize_name(name, db, aliases) or name
+
+
+# 说话人限定模式：只匹配**第一人称**关系表述。
+# 非归档行都是目标角色本人的话，所以「我的战友」「教导我」里的关系
+# 主语就是角色本人——这让我们能在说话人名字不出现在行文本时
+# （角色极少自称）也给出语义分类，且不会把「战争结束了」这类
+# 第三人称叙事误判成角色间关系（那是通用 RELATIONSHIP_PATTERNS 的风险）。
+_SPEAKER_PATTERNS: list[tuple[str, str]] = [
+    (r"我最信任|我信任|信任我|依赖我|依靠我", "trust"),
+    (r"背叛了我|出卖了我|欺骗我", "betrayal"),
+    (r"我的战友|与我并肩|和我并肩", "comrade"),
+    (r"教导我|教会我|我的老师|我的师父|我的师傅", "mentor"),
+    (r"我最珍视|我最在乎|我牵挂", "affection"),
+    (r"我的敌人|我的对手|与我为敌", "opponent"),
+]
+
+
+def _infer_line_relations(
+    lines: list[dict],
+    character: str,
+    db: dict,
+    aliases: dict,
+) -> list[tuple[str, dict]]:
+    """逐行推断角色关系（recall 修复的主体）。
+
+    旧实现只消费 context["annotated_relations"]，而标注器从不填充该字段，
+    且 ``context["character"]`` 读了即丢——于是真实数据永远是 0 边。
+
+    按可信度递减的三类证据补链（都可回溯到具体台词行）：
+    1. 关键词语义边 —— 行文本命中说话人限定模式（第一人称关系表述）
+    2. dialogue    —— 该行的对话对象：说话人直接对谁说话（元数据级证据）
+    3. mention     —— 同一行文本中提及的已知角色（纯共现，无任何语义词）
+
+    由通用 RELATIONSHIP_PATTERNS 在全文分类出的 typed 对不产 mention
+    （信息重复）；dialogue 保留——直接对话是独立证据。
+
+    Returns:
+        (phase, rel) 列表；rel 形如 merge_relationships 的输入，
+        ``source`` 为证据行 id（可在 persona 文档中回溯到具体台词）。
+    """
+    inferred: list[tuple[str, dict]] = []
+    char_key = normalize_name(character, db, aliases) or character
+
+    # 预扫描：每个非归档行的提及实体、参与方、对话对象
+    # 元素：(line_id, phase, text, mentioned, others, interlocutor)
+    line_infos: list[tuple[str, str, str, set[str], set[str], str | None]] = []
+    for idx, line in enumerate(lines):
+        if line.get("source") == "archive":
+            continue
+        text = line.get("text", "")
+        if not text:
+            continue
+        phase = line.get("context", {}).get("phase", "unknown")
+        line_id = line.get("id") or f"L{idx:03d}"
+
+        mentioned = set(extract_entities(text, db, aliases))
+        interlocutor = _resolve_interlocutor(
+            line.get("context", {}).get("interlocutor"), db, aliases
+        )
+
+        others: set[str] = set(mentioned)
+        if interlocutor:
+            others.add(interlocutor)
+        others.discard(char_key)
+        others.discard(character)
+
+        line_infos.append((line_id, phase, text, mentioned, others, interlocutor))
+
+    # 第一遍：说话人限定模式 → 语义边（最高优先，存在即压制 mention）。
+    # 只作用于**行文本中实际提及**的实体——句子的语义只关乎句内出现的名字；
+    # 对话对象是元数据，不在句内，不应继承句子的关系表述。
+    semantic_pairs: set[tuple[str, str]] = set()
+    for line_id, phase, text, mentioned, _others, _interlocutor in line_infos:
+        for other in sorted(mentioned):
+            for pat, rel_type in _SPEAKER_PATTERNS:
+                if re.search(pat, text):
+                    semantic_pairs.add((character, other))
+                    inferred.append((phase, {
+                        "from": character,
+                        "to": other,
+                        "type": rel_type,
+                        "confidence": _calc_confidence(text, pat),
+                        "source": line_id,
+                        "context": text[:100],
+                    }))
+
+    # 第二遍：dialogue / mention
+    for line_id, phase, text, _mentioned, others, interlocutor in line_infos:
+        for other in sorted(others):
+            if (character, other) in semantic_pairs:
+                continue
+            is_dialogue = other == interlocutor
+            inferred.append((phase, {
+                "from": character,
+                "to": other,
+                "type": "dialogue" if is_dialogue else "mention",
+                # 单行证据置 low，由 merge_relationships 按证据条数升级
+                "confidence": "low",
+                "source": line_id,
+                "context": text[:100],
+            }))
+
+    return inferred
+
+
+# 推断边的强度曲线与置信度阈值：证据越多越强，但同一证据量下
+# 共现（mention）比直接对话（dialogue）更弱，两者都应比关键词分类保守
+_INFERRED_STRENGTH = {
+    # type: (strength_base, strength_step, strength_cap, high_n, medium_n)
+    "dialogue": (0.35, 0.04, 0.90, 4, 2),
+    "mention": (0.20, 0.08, 0.80, 6, 3),
+}
+
+
+def _apply_inferred_strength(graph: dict) -> dict:
+    """给 dialogue/mention 边按证据条数写 strength 与 confidence。
+
+    与 enrich_edges_with_strength 的文本共现口径不同：这两类边的「对话对象/
+    提及」本身不要求出现在行文本里（如语音行的对话对象是元数据），共现
+    统计会恒为 0，所以直接用 sources（证据行）计数。
+
+    置信度阈值比 merge_relationships 的通用规则（>=3 条即 high）更严：
+    关键词命中是语义证据，共现只是统计证据，不应享受同一升级曲线。
+    """
+    for edge in graph.get("edges", []):
+        params = _INFERRED_STRENGTH.get(edge.get("type", ""))
+        if params is None:
+            continue
+        base, step, cap, high_n, medium_n = params
+        n = len(edge.get("sources", []))
+        edge["strength"] = round(min(base + step * max(0, n - 1), cap), 3)
+        edge["confidence"] = "high" if n >= high_n else ("medium" if n >= medium_n else "low")
+    return graph
+
+
 def generate_contextual_relationships(
     context: dict,
     operator_db: dict | None = None,
@@ -911,7 +1076,8 @@ def generate_contextual_relationships(
     aliases = alias_map or _ALIAS_MAP_BUILTIN
 
     lines = context.get("annotated_lines", [])
-    context.get("character", "unknown")
+    character = normalize_name(context.get("character", "unknown"), db, aliases) \
+        or context.get("character", "unknown")
 
     # 按时期分组文本
     phase_texts: dict[str, list[str]] = defaultdict(list)
@@ -927,12 +1093,31 @@ def generate_contextual_relationships(
         if line.get("source") != "archive":
             all_texts.append(line.get("text", ""))
 
-    # 提取全局关系
+    # 行级推断（dialogue / mention）：修复「真实数据 0 召回」——
+    # 旧实现只认关键词共现，而角色自己的台词极少同时包含两个名字和关系词
+    inferred = _infer_line_relations(lines, character, db, aliases)
+
+    # 提取全局关系（关键词分类，行为不变）
     global_text = "\n".join(all_texts)
-    global_rels = extract_relationships_from_text(
+    global_typed = extract_relationships_from_text(
         global_text, "context:global", db, aliases
     )
+
+    # 已有分类关系的对不再产 mention（信息重复；dialogue 保留——直接对话
+    # 是独立于关键词的证据）
+    typed_pairs = {(r["from"], r["to"]) for r in global_typed}
+    typed_pairs |= {(t, f) for t, f in typed_pairs}
+    inferred_global = [
+        rel
+        for _phase, rel in inferred
+        if rel["type"] != "mention" or (rel["from"], rel["to"]) not in typed_pairs
+    ]
+
+    global_rels = global_typed + inferred_global
     global_graph = merge_relationships(global_rels, db)
+
+    # 推断边先按证据条数定 strength，再由 enrich 补 typed 边的文本共现强度
+    global_graph = _apply_inferred_strength(global_graph)
 
     # 为全局图谱添加关系强度
     global_graph = enrich_edges_with_strength(global_graph, all_texts, db)
@@ -946,8 +1131,19 @@ def generate_contextual_relationships(
         phase_rels = extract_relationships_from_text(
             phase_text, f"context:phase:{phase}", db, aliases
         )
+        # 与全局口径一致：已有分类关系的对不重复产 mention
+        phase_typed_pairs = {(r["from"], r["to"]) for r in phase_rels}
+        phase_typed_pairs |= {(t, f) for t, f in phase_typed_pairs}
+        phase_rels.extend(
+            rel
+            for ph, rel in inferred
+            if ph == phase and (
+                rel["type"] != "mention" or (rel["from"], rel["to"]) not in phase_typed_pairs
+            )
+        )
         if phase_rels:
             phase_graph = merge_relationships(phase_rels, db)
+            phase_graph = _apply_inferred_strength(phase_graph)
             # 为分期图谱添加关系强度
             phase_graph = enrich_edges_with_strength(phase_graph, texts, db)
             phase_graphs[phase] = phase_graph
@@ -965,6 +1161,7 @@ def generate_contextual_relationships(
             "to": edge["to"],
             "type": edge["type"],
             "confidence": edge["confidence"],
+            "strength": edge.get("strength"),
             "sources": edge.get("sources", []),
             "contexts": edge.get("contexts", [])[:2],
         }
@@ -999,6 +1196,7 @@ def generate_contextual_relationships(
         "trajectories": trajectories,
         "quantified_evolutions": quantified_evolutions,
         "annotated_relations": annotated_relations,
+        "inferred_edges": len(inferred_global),
     }
 
 
@@ -1045,7 +1243,7 @@ def compute_relation_trajectories(
         from_name, to_name, rel_type = key
 
         # 收集该关系在各时期的出现情况
-        phase_presence = {}
+        phase_presence: dict[str, dict[str, Any]] = {}
         for phase in phases_sorted:
             graph = phase_graphs[phase]
             found = False
@@ -1172,6 +1370,7 @@ def main():
             "character": context.get("character", "unknown"),
             "global_edges": len(result["global_graph"].get("edges", [])),
             "global_nodes": len(result["global_graph"].get("nodes", [])),
+            "inferred_edges": result["inferred_edges"],
             "phase_graphs": {
                 phase: len(graph.get("edges", []))
                 for phase, graph in result["phase_graphs"].items()
@@ -1179,6 +1378,13 @@ def main():
             "trajectories": result["trajectories"],
             "annotated_relations_count": len(result["annotated_relations"]),
         }
+
+        if report["global_edges"] == 0:
+            logger.warning(
+                "关系图谱为 0 边：所有行都未产生 dialogue/mention/关键词证据。"
+                "常见原因：语料过少（非 archive 行 <3）、名库不覆盖文本中的称呼"
+                "（可用 --operator-db 扩展）、或 interlocutor 全是占位值。"
+            )
 
         text = json.dumps(report, ensure_ascii=False, indent=2)
         if args.output:

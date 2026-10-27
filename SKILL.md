@@ -163,7 +163,7 @@ allowed-tools: Read, Write, Edit, Bash
 
 ### Step 1：基础信息录入（3 个问题）
 
-参考 `${OPERATOR_SKILL_DIR}/prompts/intake.md` 的问题序列，只问 3 个问题：
+参考 `${OPERATOR_SKILL_DIR}/tools/_prompts/intake.md` 的问题序列，只问 3 个问题：
 
 1. **角色名称/代号**（必填）
 2. **基本信息**（一句话：阵营、身份、身份特征、关系网络）
@@ -232,12 +232,12 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 将收集到的所有资料和用户填写的基础信息汇总，按以下两条线分析：
 
 **线路 A（Knowledge Skill）**：
-- 参考 `${OPERATOR_SKILL_DIR}/prompts/knowledge_analyzer.md` 中的提取维度
+- 参考 `${OPERATOR_SKILL_DIR}/tools/_prompts/knowledge_analyzer.md` 中的提取维度
 - 运行 `relationship_graph.py` 自动提取关系网络（如有剧情文本）
 - 运行 `canon_checker.py` 交叉验证设定一致性（如有多个来源）
 
 **线路 B（Persona）**：
-- 参考 `${OPERATOR_SKILL_DIR}/prompts/persona_analyzer.md` 中的提取维度
+- 参考 `${OPERATOR_SKILL_DIR}/tools/_prompts/persona_analyzer.md` 中的提取维度
 - 运行 `dialogue_fingerprint.py` 提取语言指纹（如有语音/对话数据）
 - 语言指纹结果直接用于支撑 Layer 2 表达风格的量化描述
 
@@ -298,8 +298,8 @@ python3 ${OPERATOR_SKILL_DIR}/tools/game_data_parser.py \
 
 ### Step 4：生成并预览
 
-参考 `${OPERATOR_SKILL_DIR}/prompts/knowledge_builder.md` 生成 Knowledge Skill 内容。
-参考 `${OPERATOR_SKILL_DIR}/prompts/persona_builder.md` 生成 Persona 内容（5 层结构）。
+参考 `${OPERATOR_SKILL_DIR}/tools/_prompts/knowledge_builder.md` 生成 Knowledge Skill 内容。
+参考 `${OPERATOR_SKILL_DIR}/tools/_prompts/persona_builder.md` 生成 Persona 内容（5 层结构）。
 
 **自动验证**（如有对话数据）：
 - 运行 `persona_validator.py` 验证生成的 Persona 与角色实际对话的一致性

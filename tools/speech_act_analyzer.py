@@ -108,7 +108,8 @@ def _load_speech_act_rules(filepath: str | None = None) -> list[tuple]:
     raw = assets.load_json_or(json_path, _SPEECH_ACT_RULES_BUILTIN, kind="话语行为规则")
     if raw is _SPEECH_ACT_RULES_BUILTIN:
         # 文件不存在（无告警）或解析失败（已告警）：直接使用内建规则
-        return _SPEECH_ACT_RULES_BUILTIN
+        builtin_rules: list[tuple] = _SPEECH_ACT_RULES_BUILTIN
+        return builtin_rules
 
     if not isinstance(raw, list):
         logger.warning("话语行为规则文件应为 JSON 数组 %s，使用内建规则", json_path)

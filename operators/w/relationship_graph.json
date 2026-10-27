@@ -1,9 +1,50 @@
 {
   "mode": "contextual",
   "character": "W",
-  "global_edges": 0,
-  "global_nodes": 0,
-  "phase_graphs": {},
-  "trajectories": [],
-  "annotated_relations_count": 0
+  "global_edges": 6,
+  "global_nodes": 6,
+  "inferred_edges": 18,
+  "phase_graphs": {
+    "early": 4,
+    "babel": 2
+  },
+  "trajectories": [
+    {
+      "from": "W",
+      "to": "凯尔希",
+      "type": "mention",
+      "evolution": "仅在early时期出现后消失"
+    },
+    {
+      "from": "W",
+      "to": "博士",
+      "type": "dialogue",
+      "evolution": "仅在early时期出现后消失；同时early时期为mention"
+    },
+    {
+      "from": "W",
+      "to": "博士",
+      "type": "mention",
+      "evolution": "仅在early时期出现后消失；同时early时期为dialogue"
+    },
+    {
+      "from": "W",
+      "to": "坚强的孩子",
+      "type": "dialogue",
+      "evolution": "在babel时期新出现"
+    },
+    {
+      "from": "W",
+      "to": "孱弱的孩子",
+      "type": "dialogue",
+      "evolution": "在babel时期新出现"
+    },
+    {
+      "from": "W",
+      "to": "阿米娅",
+      "type": "mention",
+      "evolution": "仅在early时期出现后消失"
+    }
+  ],
+  "annotated_relations_count": 6
 }

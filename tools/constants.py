@@ -65,7 +65,7 @@ PHASE_LABEL_MAP: dict[str, str] = {
 }
 
 # 内容精确匹配（正则）— 优先级最高
-PHASE_PATTERNS: list[tuple[re.Pattern, str]] = [
+PHASE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"魔王.{0,10}(?:卡兹戴尔|回归|归来)"), "babel"),
     (re.compile(r"(?:复活|苏醒|重获).{0,10}(?:身体|力量|记忆)"), "resurrected"),
 ]
@@ -231,7 +231,7 @@ PRTS_REQUEST_INTERVAL: float = 0.3  # 最小请求间隔（秒），适度放宽
 # ──────────────────────────────────────────────
 
 # slug 格式验证正则：仅允许小写字母、数字和连字符
-SLUG_RE: re.Pattern = re.compile(r'^[a-z0-9][-a-z0-9]*$')
+SLUG_RE: re.Pattern[str] = re.compile(r'^[a-z0-9][-a-z0-9]*$')
 
 # 正则复杂度限制（防止 ReDoS）
 MAX_REGEX_LENGTH: int = 500
@@ -242,34 +242,34 @@ MAX_REGEX_REPETITION_NESTING: int = 3
 # ──────────────────────────────────────────────
 
 # 场景标题正则（wikitext 中 === 标题 === 或 == 标题 ==）
-SCENE_HEADER_RE: re.Pattern = re.compile(r'^={2,4}\s*(.+?)\s*={2,4}', re.MULTILINE)
+SCENE_HEADER_RE: re.Pattern[str] = re.compile(r'^={2,4}\s*(.+?)\s*={2,4}', re.MULTILINE)
 
 # Wikitext 对话行正则（'''角色名'''：台词）
-WIKITEXT_DIALOGUE_RE: re.Pattern = re.compile(
+WIKITEXT_DIALOGUE_RE: re.Pattern[str] = re.compile(
     r"""[''\u2018\u2019]{2,3}(.+?)[''\u2018\u2019]{2,3}[：:]\s*(.+?)(?:\n|$)"""
 )
 
 # 剧情模拟器脚本格式正则：[name="角色名"]对话内容
-SCRIPT_DIALOGUE_RE: re.Pattern = re.compile(
+SCRIPT_DIALOGUE_RE: re.Pattern[str] = re.compile(
     r'\[name="([^"]+)"\]([\s\S]*?)(?=\[name=|\[dialog\]|\[Decision\]|\[HEADER\]|\[Blocker\]|\[stopmusic\]|\[playMusic\]|$)',
     re.DOTALL,
 )
 
 # 脚本控制指令正则（需要过滤掉）
-SCRIPT_CONTROL_RE: re.Pattern = re.compile(
+SCRIPT_CONTROL_RE: re.Pattern[str] = re.compile(
     r'\[PlayMusic[^\]]*\]|\[StopMusic[^\]]*\]'
     r'|\[soundchannel[^\]]*\]|\[SoundChannel[^\]]*\]'
     r'|\[delay[^\]]*\]|\[Delay[^\]]*\]'
 )
 
 # 时间线正则（从 knowledge.md 提取）
-TIMELINE_RE: re.Pattern = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
+TIMELINE_RE: re.Pattern[str] = re.compile(r'###\s*(\d{3,4})\s*[-–—]\s*(\d{3,4})\s*(.+)')
 
 # ──────────────────────────────────────────────
 # 核心类型定义
 # ──────────────────────────────────────────────
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 
 class _LineContextRequired(TypedDict):
@@ -318,5 +318,5 @@ class AnnotatedLine(_AnnotatedLineRequired, total=False):
     source_detail: str
     context: LineContext
     narration: list[str]
-    speech_acts: list[dict]
-    emotion: dict
+    speech_acts: list[dict[str, Any]]
+    emotion: dict[str, Any]

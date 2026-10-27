@@ -425,9 +425,13 @@ class PipelineRunner:
             return True
 
         if not Path(knowledge_md).exists():
+            builder = assets.prompt_file("knowledge_builder.md")
+            # 安装态也能给出真实路径（v3.6.1 起模板随 wheel 分发）；
+            # 找不到时给出通用指引而不是一个必然不存在的相对路径
+            hint = str(builder) if builder.exists() else "仓库内 prompts/knowledge_builder.md"
             msg = (
                 "knowledge.md 不存在，跳过语境标注。"
-                "请先使用 AI Agent 根据 prompts/knowledge_builder.md 生成 knowledge.md"
+                f"请先使用 AI Agent 根据 {hint} 生成 knowledge.md"
             )
             if cfg.strict:
                 logger.error(msg + "（--strict 模式：视为失败）")

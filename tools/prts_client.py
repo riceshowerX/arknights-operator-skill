@@ -92,7 +92,8 @@ def prts_api_get(params: dict, timeout: int = PRTS_REQUEST_TIMEOUT) -> dict:
         try:
             req = urllib.request.Request(url, headers={"User-Agent": PRTS_USER_AGENT})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                payload: dict = json.loads(resp.read().decode("utf-8"))
+                return payload
         except Exception as e:
             last_error = e
             if attempt < _MAX_RETRIES - 1 and _is_retryable_error(e):
@@ -124,7 +125,8 @@ def fetch_page_wikitext(page_title: str, follow_redirects: bool = True) -> str:
         "prop": "wikitext",
         "redirects": "true" if follow_redirects else "",
     })
-    return data.get("parse", {}).get("wikitext", {}).get("*", "")
+    wikitext: str = data.get("parse", {}).get("wikitext", {}).get("*", "")
+    return wikitext
 
 
 def fetch_page_categories(page_title: str) -> list[str]:
@@ -175,7 +177,8 @@ def fetch_page_revisions(page_title: str) -> str:
     revisions = page.get("revisions", [])
     if not revisions:
         return ""
-    return revisions[0].get("*", "")
+    page_content: str = revisions[0].get("*", "")
+    return page_content
 
 
 def fetch_activity_info(page_title: str) -> dict:

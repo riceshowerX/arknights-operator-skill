@@ -6,6 +6,38 @@
 
 ---
 
+## [3.6.1] — 2026-10-27
+
+### Fixed
+- **关系抽取对真实剧情数据召回 0**（QA 报告 R1）：旧实现只消费 `context.json` 的
+  `annotated_relations`（标注器从不填充），且读了 `character` 即丢、行内
+  `interlocutor` 完全未用——真实语料永远是 0 边。现按三层可回溯证据补链：
+  1. **说话人限定模式**（第一人称关系表述，如「我最信任的战友」→ trust）
+  2. **dialogue**——行内对话对象（语音行元数据级证据）
+  3. **mention**——同行文本提及的已知角色（共现证据，置信阈值比关键词更严）
+  证据 `sources` 统一为台词行 id，可在 persona 文档中回溯；输出全 0 边时报告
+  带 `inferred_edges` 并打告警，便于区分「语料不足」与「运行失败」。
+- **Prompt 模板只进 sdist 不进 wheel**：`prompts/` 迁入包内 `tools/_prompts/`，
+  新增 `assets.prompts_dir()` / `prompt_file()` / `missing_prompt_files()`
+  （环境变量 `ARKNIGHTS_PROMPTS_DIR` 可覆盖；旧仓库根布局自动兼容）。
+  CI 与 Release 工作流对模板数量（7 个 md）加断言。
+- **mypy 125 → 0 错误**，CI 类型检查从 `continue-on-error` 转为阻断项。
+- **新增 `docs/ARTIFACTS.md`**：产物契约（谁写谁读、`--resume` 判据、边类型与
+  证据口径）的人类可读版。
+
+### Changed
+- **模板路径变更**：`prompts/*.md` → `tools/_prompts/*.md`。`SKILL.md` /
+  `AGENTS.md` / README / CONTRIBUTING 中的引用已同步更新；克隆旧仓库布局的
+  工作副本仍可被 `assets.prompts_dir()` 兜底识别。
+- 行为说明：关系图输出较 v3.6.0 有意变化（新增边类型 `dialogue` / `mention`），
+  金标准文件 `refactor/golden_temporal_relations.json` 已随新行为重录。
+
+### Tests
+- 327 passed（+16：`tests/test_regression_v361.py`，逐条对应召回修复的可观察断言）
+- 覆盖率：行 54.7% / 分支 43.6% / 综合 51.2%（v3.6.0 为 51.0 / 38.7 / 47.0）
+
+---
+
 ## [3.6.0] — 2026-10-27
 
 一次**行为保持型**重构：产物字段集合、判定阈值、CLI 参数全部向后兼容；

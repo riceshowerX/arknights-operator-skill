@@ -26,6 +26,7 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import cast
 
 # 确保 tools 目录在 import 路径中，支持从任意位置运行
 _TOOLS_DIR = Path(__file__).parent
@@ -51,7 +52,8 @@ def _ast_level_check(pattern: str) -> list[str]:
 
     保留此函数以兼容既有调用方与测试。
     """
-    return analyze_regex_safety(pattern)
+    issues_found: list[str] = analyze_regex_safety(pattern)
+    return issues_found
 
 
 def _validate_regex_safety(pattern: str, source_id: str = "") -> None:
@@ -384,7 +386,7 @@ def check_misconceptions(
             pattern = cp["pattern"] if isinstance(cp, dict) else cp
             warning_text = cp.get("warning", "") if isinstance(cp, dict) else f"匹配到误解模式: {pattern}"
 
-            match = re.search(pattern, text)
+            match = re.search(cast(str, pattern), text)
             if not match:
                 continue
 
@@ -394,7 +396,7 @@ def check_misconceptions(
             surrounding_text = text[ctx_start:ctx_end]
 
             for exc_pat in m.get("exclude_patterns", []):
-                if re.search(exc_pat, surrounding_text):
+                if re.search(cast(str, exc_pat), surrounding_text):
                     excluded = True
                     break
 
@@ -451,7 +453,7 @@ def check_generic_misconceptions(
             pattern = cp["pattern"] if isinstance(cp, dict) else cp
             warning_text = cp.get("warning", "") if isinstance(cp, dict) else f"匹配到通用模式: {pattern}"
 
-            match = re.search(pattern, text)
+            match = re.search(cast(str, pattern), text)
             if not match:
                 continue
 
@@ -462,7 +464,7 @@ def check_generic_misconceptions(
             surrounding_text = text[ctx_start:ctx_end]
 
             for exc_pat in p.get("exclude_patterns", []):
-                if re.search(exc_pat, surrounding_text):
+                if re.search(cast(str, exc_pat), surrounding_text):
                     excluded = True
                     break
 
@@ -506,7 +508,7 @@ def check_character_consistency(
 
     返回: [{"type": "taboo_violation", "detail": "...", "severity": "warning"}, ...]
     """
-    issues = []
+    issues: list[dict] = []
 
     if not persona:
         return issues
@@ -600,7 +602,7 @@ def cross_validate(all_claims: list[dict]) -> list[dict]:
 
     for field, claims in sorted(field_claims.items()):
         # 归一化值（去空格、统一标点）
-        normalized_values = {}
+        normalized_values: dict[str, list] = {}
         for c in claims:
             nv = c["value"].replace(" ", "").replace("（", "(").replace("）", ")")
             normalized_values.setdefault(nv, []).append(c)

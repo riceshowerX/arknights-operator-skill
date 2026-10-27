@@ -79,10 +79,9 @@ jobs:
       - name: Run ruff
         run: ruff check tools/ tests/
 
-      # 类型检查暂不阻断：存量 100+ 条告警需要分阶段清理
-      - name: Run mypy (non-blocking)
+      # v3.6.1 起 mypy 清零（125 → 0），类型检查转为阻断项
+      - name: Run mypy
         run: mypy tools/
-        continue-on-error: true
 
   package:
     name: Package (wheel + sdist)
@@ -104,22 +103,25 @@ jobs:
       - name: Check metadata (twine)
         run: twine check dist/*
 
-      - name: Assert wheel ships tools/_data/*.json
+      - name: Assert wheel ships tools/_data/*.json and tools/_prompts/*.md
         run: |
           python - <<'PY'
           import glob
           import zipfile
 
           wheel = glob.glob("dist/*.whl")[0]
-          names = [n for n in zipfile.ZipFile(wheel).namelist() if n.startswith("tools/_data/")]
+          names = zipfile.ZipFile(wheel).namelist()
+          data = [n for n in names if n.startswith("tools/_data/")]
+          prompts = [n for n in names if n.startswith("tools/_prompts/")]
           print("wheel:", wheel)
-          print("tools/_data entries:", len(names))
-          for name in names:
+          print("tools/_data entries:", len(data), "| tools/_prompts entries:", len(prompts))
+          for name in data:
               print("  -", name)
-          assert len(names) == 6, f"期望 6 个 tools/_data/*.json，实际 {len(names)}"
+          assert len(data) == 6, f"期望 6 个 tools/_data/*.json，实际 {len(names)}"
+          assert len(prompts) == 7, f"期望 7 个 tools/_prompts/*.md，实际 {len(prompts)}"
           PY
 
-      - name: Assert sdist ships prompts/ and tools/_data/
+      - name: Assert sdist ships tools/_prompts/ and tools/_data/
         run: |
           python - <<'PY'
           import glob
@@ -127,11 +129,11 @@ jobs:
 
           sdist = glob.glob("dist/*.tar.gz")[0]
           names = tarfile.open(sdist).getnames()
-          prompts = [n for n in names if "/prompts/" in n and n.endswith(".md")]
+          prompts = [n for n in names if "/tools/_prompts/" in n and n.endswith(".md")]
           data = [n for n in names if "/tools/_data/" in n and n.endswith(".json")]
           print("sdist:", sdist)
           print("prompts:", len(prompts), "| tools/_data:", len(data))
-          assert prompts, "sdist 缺少 prompts/*.md"
+          assert prompts, "sdist 缺少 tools/_prompts/*.md"
           assert len(data) == 6, f"期望 6 个 tools/_data/*.json，实际 {len(data)}"
           PY
 

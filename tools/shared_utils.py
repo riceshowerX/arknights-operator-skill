@@ -256,7 +256,8 @@ def load_json_safe(filepath: str | Path) -> dict | None:
     if not filepath.exists():
         return None
     try:
-        return json.loads(read_text_utf8(filepath))
+        parsed: dict | None = json.loads(read_text_utf8(filepath))
+        return parsed
     except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return None
 

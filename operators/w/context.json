@@ -909,7 +909,144 @@
       "emotion": {}
     }
   ],
-  "annotated_relations": [],
+  "annotated_relations": [
+    {
+      "from": "W",
+      "to": "凯尔希",
+      "type": "mention",
+      "confidence": "medium",
+      "strength": 0.52,
+      "sources": [
+        "V001",
+        "V002",
+        "V004",
+        "V006",
+        "V037"
+      ],
+      "contexts": [
+        "问我去了哪里？不能说诶，凯尔希绕过了你直接给我下达了命令......你不信？好，你对她的信任真是令人信服呢。好啦，只是去挥霍了一下财产。衣服而已，已经检查过了，怎么，很意外吗？",
+        "有几个小干员总是会咬牙切齿地看着我，他们什么时候才会真的动手呢......凯尔希解释过？在忍耐？什么嘛，尊重个人欲望可是很重要的一件事哦，就让他们放开手做吧，我正无聊呢。"
+      ],
+      "phases": {
+        "early": {
+          "confidence": "medium",
+          "source_count": 5
+        }
+      },
+      "trajectory": "仅在early时期出现后消失"
+    },
+    {
+      "from": "W",
+      "to": "博士",
+      "type": "dialogue",
+      "confidence": "high",
+      "strength": 0.47,
+      "sources": [
+        "V000",
+        "V004",
+        "V005",
+        "V032"
+      ],
+      "contexts": [
+        "我倒是想过无数种回到这里的可能性，看见她当日看见的这幅风景......可怎么也没想到会和你站在一起，这还真过分啊，“博士”。",
+        "拯救感染者？几乎所有卡兹戴尔的萨卡兹都是感染者，压迫和矛盾却多种多样......“拯救”具体来说能做到哪一步？连她一个萨卡兹都保护不好的凯尔希和现在的你，又打算怎么做？"
+      ],
+      "phases": {
+        "early": {
+          "confidence": "high",
+          "source_count": 4
+        }
+      },
+      "trajectory": "仅在early时期出现后消失；同时early时期为mention"
+    },
+    {
+      "from": "W",
+      "to": "博士",
+      "type": "mention",
+      "confidence": "low",
+      "strength": 0.2,
+      "sources": [
+        "V036"
+      ],
+      "contexts": [
+        "是今天吧？罗德岛博士的详细资料，这么容易就能被我偷到手，你们的防护系统和我三岁时搓出来的炸弹一样糟糕啊。而且你居然在过生日哎？听到了几首充满爱意的生日歌啊？"
+      ],
+      "phases": {
+        "early": {
+          "confidence": "low",
+          "source_count": 1
+        }
+      },
+      "trajectory": "仅在early时期出现后消失；同时early时期为dialogue"
+    },
+    {
+      "from": "W",
+      "to": "坚强的孩子",
+      "type": "dialogue",
+      "confidence": "high",
+      "strength": 0.51,
+      "sources": [
+        "S001",
+        "S002",
+        "S003",
+        "S004",
+        "S007"
+      ],
+      "contexts": [
+        "不进行治疗的话，你会感染的。",
+        "魔族、魔族呢。"
+      ],
+      "phases": {
+        "babel": {
+          "confidence": "high",
+          "source_count": 5
+        }
+      },
+      "trajectory": "在babel时期新出现"
+    },
+    {
+      "from": "W",
+      "to": "孱弱的孩子",
+      "type": "dialogue",
+      "confidence": "low",
+      "strength": 0.35,
+      "sources": [
+        "S005"
+      ],
+      "contexts": [
+        "嗯哼......"
+      ],
+      "phases": {
+        "babel": {
+          "confidence": "low",
+          "source_count": 1
+        }
+      },
+      "trajectory": "在babel时期新出现"
+    },
+    {
+      "from": "W",
+      "to": "阿米娅",
+      "type": "mention",
+      "confidence": "low",
+      "strength": 0.28,
+      "sources": [
+        "V006",
+        "V007"
+      ],
+      "contexts": [
+        "你啊，阿米娅身上的那个，怎么看凯尔希都有事情瞒着你吧？亏你能在什么都记不得的时候取得其他人的信任，不，你会信任其他人才更奇怪，真不知道那两个人看见你现在的样子会怎么想。",
+        "这里还真是什么人都有啊。比起过去，奇怪的家伙更多了。啊，别误会，那些人的想法我完全不在乎，只是，阿米娅做得似乎还不错，至少她也努力想成为那个人的样子，我还不算讨厌。"
+      ],
+      "phases": {
+        "early": {
+          "confidence": "low",
+          "source_count": 2
+        }
+      },
+      "trajectory": "仅在early时期出现后消失"
+    }
+  ],
   "inference_report": {
     "total_lines": 38,
     "phase_distribution": {

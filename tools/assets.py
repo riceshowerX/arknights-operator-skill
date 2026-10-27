@@ -66,6 +66,22 @@ _PROJECT_MARKERS: tuple[str, ...] = ("pyproject.toml", ".git")
 ENV_DATA_DIR = "ARKNIGHTS_DATA_DIR"
 #: 环境变量：显式指定 operators 目录
 ENV_OPERATORS_DIR = "ARKNIGHTS_OPERATORS_DIR"
+#: 环境变量：显式指定 Prompt 模板目录
+ENV_PROMPTS_DIR = "ARKNIGHTS_PROMPTS_DIR"
+
+#: 包内 Prompt 模板目录名（相对 `tools/`）
+PACKAGE_PROMPTS_DIRNAME = "_prompts"
+
+#: Prompt 模板目录必须包含的文件（供自检；缺任一视为「模板缺失」）
+REQUIRED_PROMPT_FILES: tuple[str, ...] = (
+    "knowledge_builder.md",
+    "knowledge_analyzer.md",
+    "persona_builder.md",
+    "persona_analyzer.md",
+    "intake.md",
+    "correction_handler.md",
+    "merger.md",
+)
 
 
 # ──────────────────────────────────────────────
@@ -170,6 +186,47 @@ def data_file(name: str) -> Path:
         资产文件的绝对/相对路径（不保证存在）。
     """
     return data_dir() / name
+
+
+def prompts_dir() -> Path:
+    """解析 Prompt 模板目录（三级，优先级从高到低）。
+
+    1. 环境变量 ``ARKNIGHTS_PROMPTS_DIR``：显式覆盖。
+    2. ``tools/_prompts``：包内权威副本（v3.6.1 起随 wheel 分发；
+       源码态与安装态命中同一路径）。
+    3. ``<项目根>/prompts``：v3.6.0 及更早的仓库根布局（老工作副本兼容位）。
+
+    Returns:
+        模板目录路径（不保证存在，调用方需自行判存在性）。
+    """
+    env_dir = os.environ.get(ENV_PROMPTS_DIR)
+    if env_dir:
+        return Path(env_dir).expanduser()
+
+    packaged = Path(__file__).parent / PACKAGE_PROMPTS_DIRNAME
+    if packaged.is_dir():
+        return packaged
+
+    return project_root() / "prompts"
+
+
+def prompt_file(name: str) -> Path:
+    """返回模板目录下某个文件的完整路径。
+
+    Args:
+        name: 文件名（如 ``knowledge_builder.md``）。
+
+    Returns:
+        模板文件的绝对/相对路径（不保证存在）。
+    """
+    return prompts_dir() / name
+
+
+def missing_prompt_files(required: tuple[str, ...] | None = None) -> list[str]:
+    """返回模板目录中缺失的必需文件名列表（空列表表示模板完整）。"""
+    names = REQUIRED_PROMPT_FILES if required is None else required
+    directory = prompts_dir()
+    return [name for name in names if not (directory / name).exists()]
 
 
 def default_base_dir() -> Path:

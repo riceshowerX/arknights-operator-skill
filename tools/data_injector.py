@@ -30,6 +30,8 @@ _TOOLS_DIR = Path(__file__).parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
+from typing import cast
+
 import assets
 import cli
 from artifacts import ARTIFACT
@@ -39,7 +41,8 @@ from shared_utils import atomic_write_text, load_json_safe
 
 def load_json(path: Path) -> dict | list | None:
     """安全加载 JSON 文件（内部走 read_text_utf8，BOM/GB18030 不再崩溃）"""
-    return load_json_safe(path)
+    data: dict | list | None = load_json_safe(path)
+    return data
 
 
 def _is_number(value) -> bool:
@@ -69,13 +72,14 @@ def _resolve_strength(relation: dict) -> float:
     """双读关系强度：strength（数字直用）→ confidence（字符串经映射）"""
     strength = relation.get("strength")
     if _is_number(strength):
-        return float(strength)
+        return float(cast(float, strength))
 
     confidence = relation.get("confidence")
     if _is_number(confidence):
-        return float(confidence)
+        return float(cast(float, confidence))
     if isinstance(confidence, str):
-        return CONFIDENCE_TO_STRENGTH.get(confidence.lower(), 0.0)
+        mapped: float = CONFIDENCE_TO_STRENGTH.get(confidence.lower(), 0.0)
+        return mapped
     return 0.0
 
 
@@ -116,7 +120,8 @@ def _get_fingerprint_dim(data: dict, dim_key: str) -> dict:
     dimensions = global_data.get("dimensions", {}) if isinstance(global_data, dict) else {}
     if isinstance(dimensions, dict):
         if dim_key in dimensions:
-            return dimensions[dim_key]
+            dim_value: dict = dimensions[dim_key]
+            return dim_value
         # 按数字前缀匹配（如 "1_sentence_length"）
         for k, v in dimensions.items():
             if k.endswith(dim_key) or dim_key in k:
@@ -434,7 +439,7 @@ def generate_data_context(slug: str, base_dir: str | None = None,
         seen_files.add(str(filepath))
         data = load_json(filepath)
         if data:
-            parts.append(formatter(data))
+            parts.append(formatter(cast(dict, data)))
             parts.append("")  # 空行分隔
 
     return "\n".join(parts)

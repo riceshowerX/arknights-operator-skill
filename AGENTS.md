@@ -4,10 +4,10 @@
 
 明日方舟角色蒸馏工具，将游戏角色转化为结构化 AI Skill。采用 Knowledge + Persona 双轨分离架构，五层优先级 Persona 结构，支持资料导入、语境化分析、对话纠正和版本管理。
 
-**版本**: 3.6.0（单一来源：pyproject.toml；变更见 `CHANGELOG.md`）
+**版本**: 3.6.1（单一来源：pyproject.toml；变更见 `CHANGELOG.md`）
 **技术栈**: Python 3 (标准库), Markdown, JSON
 **已验证角色**: 特蕾西娅 (operators/te-lei-xi-ya/), W (operators/w/)
-**测试**: `python3 -m pytest tests/ -v` (311 项通过 + 0 skipped，含多阵营泛化测试、v3.5.1 回归测试与 v3.6.0 回归测试)
+**测试**: `python3 -m pytest tests/ -v` (327 项通过 + 0 skipped，含多阵营泛化测试、v3.5.1/v3.6.0/v3.6.1 回归测试；类型检查 `mypy tools/` 0 错误)
 **质量门禁**: `python3 -m ruff check tools/ tests/`（0 违规）
 **工程配置**: `pyproject.toml` (含 ruff、mypy、pytest 配置)
 
@@ -66,16 +66,16 @@ shared_utils.py  ←── 所有工具
 │                        AI Agent 调用层                              │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  prompts/intake.md ──→ AI Agent 调用 game_data_parser.py            │
+│  tools/_prompts/intake.md ──→ AI Agent 调用 game_data_parser.py            │
 │                          + story_extractor.py                       │
 │                          → 产出 operator_data.json + story.json     │
 │                                                                     │
-│  prompts/knowledge_analyzer.md ──→ AI Agent 分析原始数据            │
+│  tools/_prompts/knowledge_analyzer.md ──→ AI Agent 分析原始数据            │
 │                                      → 产出知识要点                 │
 │                                                                     │
-│  prompts/knowledge_builder.md ──→ AI Agent 生成 knowledge.md        │
+│  tools/_prompts/knowledge_builder.md ──→ AI Agent 生成 knowledge.md        │
 │                                                                     │
-│  prompts/persona_analyzer.md ──→ AI Agent 调用分析工具链:           │
+│  tools/_prompts/persona_analyzer.md ──→ AI Agent 调用分析工具链:           │
 │                                    speech_act_analyzer.py           │
 │                                    dialogue_fingerprint.py          │
 │                                    relationship_graph.py            │
@@ -83,13 +83,13 @@ shared_utils.py  ←── 所有工具
 │                                    persona_validator.py             │
 │                                    → 产出分析画像                   │
 │                                                                     │
-│  prompts/persona_builder.md ──→ AI Agent 生成 persona.md            │
+│  tools/_prompts/persona_builder.md ──→ AI Agent 生成 persona.md            │
 │                                  + skill_writer.py 写入文件         │
 │                                                                     │
-│  prompts/correction_handler.md ──→ AI Agent 处理用户纠正            │
+│  tools/_prompts/correction_handler.md ──→ AI Agent 处理用户纠正            │
 │                                      → 更新 persona.md              │
 │                                                                     │
-│  prompts/merger.md ──→ AI Agent 合并多源数据                        │
+│  tools/_prompts/merger.md ──→ AI Agent 合并多源数据                        │
 │                         → 产出最终 SKILL.md                         │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
